@@ -1,0 +1,144 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="01. Core">
+      <UniqueIdentifier>{fa7b97df-0baf-4935-b709-d20e5e7b7999}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Render">
+      <UniqueIdentifier>{5e7da233-5b75-4d5f-a7b0-70fe48f3988d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03. UI">
+      <UniqueIdentifier>{bfdf57db-8bd6-4a61-98a6-3520922541a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Animation">
+      <UniqueIdentifier>{893f716a-c8d1-4f42-a98c-ee8672fd3a8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. TileMap">
+      <UniqueIdentifier>{8c723a93-1da5-4060-8816-bfb034080716}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="06. Collision">
+      <UniqueIdentifier>{d5951406-08ed-4c73-ae76-0809d8a1bf80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Physics">
+      <UniqueIdentifier>{1820c359-ec1f-4fd2-8d00-a48cecb7c865}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Audio">
+      <UniqueIdentifier>{dace8721-2113-4e04-bd96-9661834ff6fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="09. System">
+      <UniqueIdentifier>{c31bbba0-3228-4de7-968a-2d8f2d00ad4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Debug">
+      <UniqueIdentifier>{1620ff62-7279-477a-b094-843a14b0335a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\01. SmartPointer">
+      <UniqueIdentifier>{5da9768f-cff8-4479-9b4d-4d94ee2cf6d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\02. Math">
+      <UniqueIdentifier>{e6dc112d-3c6d-4d00-94ba-0373d6ca97c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\03. String">
+      <UniqueIdentifier>{5825c573-8745-470a-851a-092e2166ce49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\04. Cast">
+      <UniqueIdentifier>{f0c0f7b2-3700-409d-a778-15d19cb970a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\05. Memory">
+      <UniqueIdentifier>{2f577c52-8ffd-42a5-8934-e17b6ea26dcb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\06. Logging">
+      <UniqueIdentifier>{46718dfd-d6a0-4772-a0c3-aadaf7a70fa0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="EngineInfo.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreMinimal.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Define.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
+    <ClInclude Include="PlatformTypes.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\FVector2.h">
+      <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="String\FString.h">
+      <Filter>01. Core\03. String</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\RefCountBase.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\TSharedPtr.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\MakeShared.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\TWeakPtr.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\StaticPointerCast.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Cast\ICastable.h">
+      <Filter>01. Core\04. Cast</Filter>
+    </ClInclude>
+    <ClInclude Include="Cast\TypeID.h">
+      <Filter>01. Core\04. Cast</Filter>
+    </ClInclude>
+    <ClInclude Include="Cast\Cast.h">
+      <Filter>01. Core\04. Cast</Filter>
+    </ClInclude>
+    <ClInclude Include="Cast\CastMacros.h">
+      <Filter>01. Core\04. Cast</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\IsValid.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreTypes.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory\Allocator.h">
+      <Filter>01. Core\05. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory\Memory.h">
+      <Filter>01. Core\05. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\FVector3.h">
+      <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\FMatrix.h">
+      <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\MathUtil.h">
+      <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Logging\Logger.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Logging\LogMacros.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Logging\Logger.cpp">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
