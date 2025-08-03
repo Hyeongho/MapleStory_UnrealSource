@@ -1,27 +1,34 @@
 #include "Logger.h"
 
 #include <iostream>
-#include <Windows.h>
 
-void FLogger::Log(ELogLevel Level, const std::string& Message)
+Logger::Logger()
 {
-    switch (Level)
-    {
-    case ELogLevel::Info:
-        Output("[Info] ", Message);
-        break;
-    case ELogLevel::Warning:
-        Output("[Warning] ", Message);
-        break;
-    case ELogLevel::Error:
-        Output("[Error] ", Message);
-        break;
-    }
 }
 
-void FLogger::Output(const std::string& Prefix, const std::string& Message)
+Logger::~Logger()
 {
-    std::string FullMessage = Prefix + Message + "\\n";
-    OutputDebugStringA(FullMessage.c_str());
-    std::cout << FullMessage;
+}
+
+void Logger::SetPrefix(const tstring& InPrefix)
+{
+    Prefix = InPrefix;
+}
+
+void Logger::Log(const tstring& Msg)
+{
+#ifdef UNICODE
+    std::wcout << Prefix << Msg;
+#else
+    std::cout << Prefix << Msg;
+#endif
+}
+
+void Logger::LogLine(const tstring& Msg)
+{
+#ifdef UNICODE
+    std::wcout << Prefix << Msg << std::endl;
+#else
+    std::cout << Prefix << Msg << std::endl;
+#endif
 }

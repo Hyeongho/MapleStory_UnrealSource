@@ -1,11 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36327.8 d17.14
+VisualStudioVersion = 17.14.36327.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Engine\Include\Engine.vcxproj", "{B258275F-EC81-4CFD-BA95-F8D8D6D04FF9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Client", "Client\Include\Client.vcxproj", "{34FE2022-C463-4816-9698-3436C1B3EB44}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B258275F-EC81-4CFD-BA95-F8D8D6D04FF9} = {B258275F-EC81-4CFD-BA95-F8D8D6D04FF9}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

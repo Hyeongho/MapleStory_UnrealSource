@@ -7,22 +7,22 @@ public:
 
     void AddRef() 
     { 
-        ++StrongCount;
+        StrongCount++;
     }
 
     void ReleaseRef() 
     { 
-        --StrongCount; 
+        StrongCount--;
     }
 
     void AddWeak()
     { 
-        ++WeakCount; 
+        WeakCount++;
     }
 
     void ReleaseWeak() 
     { 
-        --WeakCount;
+        WeakCount--;
     }
 
     int GetStrongCount() const 

@@ -61,6 +61,9 @@
     <Filter Include="01. Core\06. Logging">
       <UniqueIdentifier>{46718dfd-d6a0-4772-a0c3-aadaf7a70fa0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\07. Container">
+      <UniqueIdentifier>{093855a4-4f7f-42ad-a92e-1226abaf2f42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineInfo.h">
@@ -135,10 +138,53 @@
     <ClInclude Include="Logging\LogMacros.h">
       <Filter>01. Core\06. Logging</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Container\FName.h">
+      <Filter>01. Core\07. Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Container\FNameHash.h">
+      <Filter>01. Core\07. Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Container\TArray.h">
+      <Filter>01. Core\07. Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Container\TMap.h">
+      <Filter>01. Core\07. Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Container\TSet.h">
+      <Filter>01. Core\07. Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Device.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine.h">
+      <Filter>01. Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Logging\Logger.cpp">
       <Filter>01. Core\06. Logging</Filter>
     </ClCompile>
+    <ClCompile Include="Container\FName.cpp">
+      <Filter>01. Core\07. Container</Filter>
+    </ClCompile>
+    <ClCompile Include="Device.cpp">
+      <Filter>01. Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine.cpp">
+      <Filter>01. Core</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Engine.rc">
+      <Filter>리소스 파일</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Copy.bat">
+      <Filter>소스 파일</Filter>
+    </None>
   </ItemGroup>
 </Project>
