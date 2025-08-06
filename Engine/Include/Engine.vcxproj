@@ -173,10 +173,13 @@
     <ClInclude Include="Memory\Memory.h" />
     <ClInclude Include="PlatformTypes.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Scene\Component.h" />
+    <ClInclude Include="Scene\GameObject.h" />
+    <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="SmartPointer\IsValid.h" />
     <ClInclude Include="SmartPointer\MakeShared.h" />
     <ClInclude Include="SmartPointer\RefCountBase.h" />
-    <ClInclude Include="SmartPointer\StaticPointerCast.h" />
+    <ClInclude Include="SmartPointer\TSharedFromThis.h" />
     <ClInclude Include="SmartPointer\TSharedPtr.h" />
     <ClInclude Include="SmartPointer\TWeakPtr.h" />
     <ClInclude Include="String\FString.h" />
@@ -186,6 +189,9 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="Logging\Logger.cpp" />
+    <ClCompile Include="Scene\Component.cpp" />
+    <ClCompile Include="Scene\GameObject.cpp" />
+    <ClCompile Include="Scene\Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc" />

@@ -1,6 +1,9 @@
 #include "ClientManager.h"
 #include "EngineInfo.h"
 #include "Engine.h"
+#include "Scene/GameObject.h"
+#include "Scene/Component.h"
+#include "SmartPointer/MakeShared.h"
 
 #ifdef UNICODE
 using tchar_t = wchar_t;
@@ -11,6 +14,21 @@ using tchar_t = char;
 #define tstr(x) x
 #define tcout std::cout
 #endif
+
+
+class CTestComponent : public CComponent
+{
+public:
+    void Update(float DeltaTime) override
+    {
+        tcout << L"[CTestComponent] Update: " << DeltaTime << L"s\n";
+    }
+
+    void Render() override
+    {
+        tcout << L"[CTestComponent] Render\n";
+    }
+};
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -48,6 +66,8 @@ int ClientManager::Run(HINSTANCE hInstance, int nCmdShow)
 #endif
         return -1;
     }
+
+    InitScene();
 
     MainLoop();
 }
@@ -108,11 +128,32 @@ void ClientManager::MainLoop()
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+
         else
         {
+            float deltaTime = 0.016f; // 고정 시간 기준
+
+            if (m_Scene.IsValid())
+            {
+                m_Scene->Update(deltaTime);
+            }
+
             CEngine::Get().Tick();
+
+            if (m_Scene.IsValid())
+            {
+                m_Scene->Render();
+            }
+
             CEngine::Get().Clear();
             CEngine::Get().Present();
         }
     }
+}
+
+void ClientManager::InitScene()
+{
+    m_Scene = MakeShared<CScene>();
+    TSharedPtr<CGameObject> obj = m_Scene->CreateObject(L"TestObject");
+    obj->AddComponent<CTestComponent>();
 }

@@ -2,8 +2,7 @@
 
 #include "ICastable.h"
 
-#include "SmartPointer/TSharedPtr.h"
-#include "SmartPointer/StaticPointerCast.h"
+#include "../SmartPointer/TSharedPtr.h"
 
 #include <type_traits>
 #include <cassert>
@@ -36,6 +35,7 @@ To* DynamicCast(From* obj)
 template<typename To, typename From>
 TSharedPtr<To> StaticPointerCast(const TSharedPtr<From>& obj)
 {
+    To* casted = static_cast<To*>(obj.Get());
     return TSharedPtr<To>(obj, static_cast<To*>(obj.Get()));
 }
 

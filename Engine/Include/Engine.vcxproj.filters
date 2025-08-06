@@ -16,33 +16,6 @@
     <Filter Include="01. Core">
       <UniqueIdentifier>{fa7b97df-0baf-4935-b709-d20e5e7b7999}</UniqueIdentifier>
     </Filter>
-    <Filter Include="02. Render">
-      <UniqueIdentifier>{5e7da233-5b75-4d5f-a7b0-70fe48f3988d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="03. UI">
-      <UniqueIdentifier>{bfdf57db-8bd6-4a61-98a6-3520922541a4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="04. Animation">
-      <UniqueIdentifier>{893f716a-c8d1-4f42-a98c-ee8672fd3a8d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="05. TileMap">
-      <UniqueIdentifier>{8c723a93-1da5-4060-8816-bfb034080716}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="06. Collision">
-      <UniqueIdentifier>{d5951406-08ed-4c73-ae76-0809d8a1bf80}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="07. Physics">
-      <UniqueIdentifier>{1820c359-ec1f-4fd2-8d00-a48cecb7c865}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="08. Audio">
-      <UniqueIdentifier>{dace8721-2113-4e04-bd96-9661834ff6fc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="09. System">
-      <UniqueIdentifier>{c31bbba0-3228-4de7-968a-2d8f2d00ad4e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="10. Debug">
-      <UniqueIdentifier>{1620ff62-7279-477a-b094-843a14b0335a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="01. Core\01. SmartPointer">
       <UniqueIdentifier>{5da9768f-cff8-4479-9b4d-4d94ee2cf6d3}</UniqueIdentifier>
     </Filter>
@@ -63,6 +36,36 @@
     </Filter>
     <Filter Include="01. Core\07. Container">
       <UniqueIdentifier>{093855a4-4f7f-42ad-a92e-1226abaf2f42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Scene">
+      <UniqueIdentifier>{5e3855a5-21c4-44a6-9681-f93939bd9e40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03. Render">
+      <UniqueIdentifier>{5e7da233-5b75-4d5f-a7b0-70fe48f3988d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. UI">
+      <UniqueIdentifier>{bfdf57db-8bd6-4a61-98a6-3520922541a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Animation">
+      <UniqueIdentifier>{893f716a-c8d1-4f42-a98c-ee8672fd3a8d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="06. TileMap">
+      <UniqueIdentifier>{8c723a93-1da5-4060-8816-bfb034080716}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Collision">
+      <UniqueIdentifier>{d5951406-08ed-4c73-ae76-0809d8a1bf80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics">
+      <UniqueIdentifier>{1820c359-ec1f-4fd2-8d00-a48cecb7c865}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="09. Audio">
+      <UniqueIdentifier>{dace8721-2113-4e04-bd96-9661834ff6fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. System">
+      <UniqueIdentifier>{c31bbba0-3228-4de7-968a-2d8f2d00ad4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. Debug">
+      <UniqueIdentifier>{1620ff62-7279-477a-b094-843a14b0335a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -94,9 +97,6 @@
       <Filter>01. Core\01. SmartPointer</Filter>
     </ClInclude>
     <ClInclude Include="SmartPointer\TWeakPtr.h">
-      <Filter>01. Core\01. SmartPointer</Filter>
-    </ClInclude>
-    <ClInclude Include="SmartPointer\StaticPointerCast.h">
       <Filter>01. Core\01. SmartPointer</Filter>
     </ClInclude>
     <ClInclude Include="Cast\ICastable.h">
@@ -162,6 +162,18 @@
     <ClInclude Include="Engine.h">
       <Filter>01. Core</Filter>
     </ClInclude>
+    <ClInclude Include="Scene\Component.h">
+      <Filter>02. Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SmartPointer\TSharedFromThis.h">
+      <Filter>01. Core\01. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\GameObject.h">
+      <Filter>02. Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\Scene.h">
+      <Filter>02. Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Logging\Logger.cpp">
@@ -175,6 +187,15 @@
     </ClCompile>
     <ClCompile Include="Engine.cpp">
       <Filter>01. Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Component.cpp">
+      <Filter>02. Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\GameObject.cpp">
+      <Filter>02. Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Scene.cpp">
+      <Filter>02. Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

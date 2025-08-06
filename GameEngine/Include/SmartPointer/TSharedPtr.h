@@ -1,20 +1,46 @@
 #pragma once
 
+#include <type_traits>
+
 #include "RefCountBase.h"
+#include "TSharedFromThis.h"
 
 template<typename T>
-class TWeakPtr;  // 전방 선언
+class TWeakPtr;
 
 template<typename T>
 class TSharedPtr
 {
     friend class TWeakPtr<T>;
 
+    template <typename> friend class TSharedPtr;
+
+    template <typename To, typename From>
+    friend TSharedPtr<To> StaticPointerCast(const TSharedPtr<From>& obj);
+
 public:
     TSharedPtr() = default;
 
     explicit TSharedPtr(T* InPtr) : Ptr(InPtr), Counter(new RefCountBase)
     {
+        if constexpr (std::is_base_of<TSharedFromThis<T>, T>::value)
+        {
+            if (InPtr)
+            {
+                InPtr->_SetWeakThis(*this);
+            }
+        }
+    }
+
+    template <typename To, typename From>
+    TSharedPtr(const TSharedPtr<From>& Other, To* CastedPtr) : Ptr(CastedPtr), Counter(Other.Counter)
+    {
+        static_assert(std::is_convertible<To*, T*>::value, "Casted pointer must be convertible to T*");
+
+        if (Counter)
+        {
+            Counter->AddRef();
+        }
     }
 
     TSharedPtr(const TSharedPtr& Other) : Ptr(Other.Ptr), Counter(Other.Counter)

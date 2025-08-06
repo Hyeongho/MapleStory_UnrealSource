@@ -109,6 +109,14 @@ public:
         Size = 0;
     }
 
+    void Clear()
+    {
+        delete[] Data;
+        Data = nullptr;
+        Size = 0;
+        Capacity = 0;
+    }
+
     void Reverse()
     {
         for (size_t i = 0; i < Size / 2; i++)
