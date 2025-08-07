@@ -20,6 +20,7 @@ public:
     ID3D11DeviceContext* GetContext() const 
     { 
         return Context; 
+    }
 
 private:
     bool CreateDeviceAndSwapChain();
