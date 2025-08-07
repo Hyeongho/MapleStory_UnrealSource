@@ -165,6 +165,7 @@
     <ClInclude Include="EngineInfo.h" />
     <ClInclude Include="Logging\Logger.h" />
     <ClInclude Include="Logging\LogMacros.h" />
+    <ClInclude Include="Math\FColor.h" />
     <ClInclude Include="Math\FMatrix.h" />
     <ClInclude Include="Math\FVector2.h" />
     <ClInclude Include="Math\FVector3.h" />
@@ -172,6 +173,10 @@
     <ClInclude Include="Memory\Allocator.h" />
     <ClInclude Include="Memory\Memory.h" />
     <ClInclude Include="PlatformTypes.h" />
+    <ClInclude Include="Render\DirectXTex.h" />
+    <ClInclude Include="Render\SpriteVertex.h" />
+    <ClInclude Include="Render\Texture.h" />
+    <ClInclude Include="Render\TextureManager.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Scene\Component.h" />
     <ClInclude Include="Scene\GameObject.h" />
@@ -189,6 +194,8 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="Logging\Logger.cpp" />
+    <ClCompile Include="Render\Texture.cpp" />
+    <ClCompile Include="Render\TextureManager.cpp" />
     <ClCompile Include="Scene\Component.cpp" />
     <ClCompile Include="Scene\GameObject.cpp" />
     <ClCompile Include="Scene\Scene.cpp" />
@@ -198,6 +205,29 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Copy.bat" />
+    <None Include="Render\DirectXTex.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Render\Shader\SpritePixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">SPSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">SPSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SPSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SPSmain</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="Render\Shader\SpriteVertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">SVSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">SVSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SVSmain</EntryPointName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SVSmain</EntryPointName>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

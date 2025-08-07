@@ -91,6 +91,11 @@ public:
         return Map.end();
     }
 
+    void Clear()
+    {
+        Map.clear();
+    }
+
 private:
     std::unordered_map<KeyType, ValueType> Map;
 };

@@ -12,8 +12,15 @@ public:
     void Clear(float R, float G, float B, float A);
     void Present();
 
-    ID3D11Device* GetDevice() const { return Device; }
-    ID3D11DeviceContext* GetContext() const { return Context; }
+    ID3D11Device* GetDevice() const 
+    { 
+        return Device; 
+    }
+
+    ID3D11DeviceContext* GetContext() const 
+    { 
+        return Context; 
+    }
 
 private:
     bool CreateDeviceAndSwapChain();

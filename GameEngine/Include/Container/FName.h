@@ -44,6 +44,11 @@ public:
     const tstring& ToString() const;
     const tchar* ToCStr() const;
 
+    size_t GetID() const 
+    { 
+        return NameID; 
+    }
+
 private:
     size_t NameID;
 

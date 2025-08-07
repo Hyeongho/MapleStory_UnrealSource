@@ -67,6 +67,9 @@
     <Filter Include="11. Debug">
       <UniqueIdentifier>{1620ff62-7279-477a-b094-843a14b0335a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03. Render\01. Shader">
+      <UniqueIdentifier>{1b4d53b7-61b7-48ed-9dc5-93493b830617}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineInfo.h">
@@ -174,6 +177,21 @@
     <ClInclude Include="Scene\Scene.h">
       <Filter>02. Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Render\Texture.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\DirectXTex.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\TextureManager.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteVertex.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\FColor.h">
+      <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Logging\Logger.cpp">
@@ -197,6 +215,12 @@
     <ClCompile Include="Scene\Scene.cpp">
       <Filter>02. Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Render\Texture.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\TextureManager.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc">
@@ -207,5 +231,16 @@
     <None Include="..\..\Copy.bat">
       <Filter>소스 파일</Filter>
     </None>
+    <None Include="Render\DirectXTex.inl">
+      <Filter>03. Render</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Render\Shader\SpriteVertexShader.hlsl">
+      <Filter>03. Render\01. Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Render\Shader\SpritePixelShader.hlsl">
+      <Filter>03. Render\01. Shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
