@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cmath>
-#include "CoreTypes.h"
+#include "../CoreTypes.h"
 
 struct FVector3
 {

@@ -71,15 +71,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\Bin</OutDir>
-    <IntDir>..\BinObj</IntDir>
+    <OutDir>..\Bin\</OutDir>
+    <IntDir>..\BinObj\</IntDir>
     <TargetName>MapleStory_Debug</TargetName>
     <IncludePath>../../GameEngine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\Bin</OutDir>
-    <IntDir>..\BinObj</IntDir>
+    <OutDir>..\Bin\</OutDir>
+    <IntDir>..\BinObj\</IntDir>
     <TargetName>MapleStory</TargetName>
     <IncludePath>../../GameEngine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>

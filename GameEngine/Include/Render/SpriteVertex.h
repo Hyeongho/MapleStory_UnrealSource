@@ -1,12 +1,15 @@
 #pragma once
 
-#include "../Math/FVector2.h"
-#include "../Math/FVector3.h"
-#include "../Math/FColor.h"
+#include <DirectXMath.h>
+using namespace DirectX;
 
 struct FSpriteVertex
 {
-    FVector3 Position;  // x, y, z
-    FVector2 UV;        // u, v
-    FColor Color;       // RGBA
+    XMFLOAT3 Position; // float x, y, z
+    XMFLOAT2 UV;       // float u, v
+    XMFLOAT4 Color;    // float r, g, b, a
+};
+struct FSimpleVertex
+{
+    XMFLOAT3 Position;
 };

@@ -177,9 +177,6 @@
     <ClInclude Include="Scene\Scene.h">
       <Filter>02. Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Render\Texture.h">
-      <Filter>03. Render</Filter>
-    </ClInclude>
     <ClInclude Include="Render\DirectXTex.h">
       <Filter>03. Render</Filter>
     </ClInclude>
@@ -191,6 +188,21 @@
     </ClInclude>
     <ClInclude Include="Math\FColor.h">
       <Filter>01. Core\02. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteRenderer.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteInputLayout.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\RenderTargetManager.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\Renderer.h">
+      <Filter>03. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\Shader\ShaderManager.h">
+      <Filter>03. Render\01. Shader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -215,11 +227,23 @@
     <ClCompile Include="Scene\Scene.cpp">
       <Filter>02. Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Render\Texture.cpp">
-      <Filter>03. Render</Filter>
-    </ClCompile>
     <ClCompile Include="Render\TextureManager.cpp">
       <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\SpriteRenderer.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\SpriteInputLayout.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\RenderTargetManager.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\Renderer.cpp">
+      <Filter>03. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\Shader\ShaderManager.cpp">
+      <Filter>03. Render\01. Shader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -4,6 +4,9 @@
 #include "Scene/Scene.h"
 #include "SmartPointer/TSharedPtr.h"
 
+#include "Render/SpriteRenderer.h"
+#include "Render/TextureManager.h"
+
 #include <Windows.h>
 
 class ClientManager
@@ -24,4 +27,7 @@ private:
     FEngineInfo Info;
 
     TSharedPtr<CScene> m_Scene;
+
+    CSpriteRenderer m_SpriteRenderer;
+    CTextureManager m_TextureManager;
 };

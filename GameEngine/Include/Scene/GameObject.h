@@ -2,7 +2,6 @@
 
 #include "../SmartPointer/TSharedPtr.h"
 #include "../SmartPointer/TWeakPtr.h"
-#include "../Cast/Cast.h"
 #include "../SmartPointer/TSharedFromThis.h"
 #include "../Container/TArray.h"
 #include "Component.h"
@@ -45,7 +44,7 @@ public:
     {
         TSharedPtr<T> NewComp = MakeShared<T>(std::forward<Args>(args)...);
         NewComp->SetOwner(SharedFromThis());
-        m_Components.Add(StaticPointerCast<CComponent>(NewComp));
+        m_Components.Add(NewComp);
         return NewComp;
     }
 

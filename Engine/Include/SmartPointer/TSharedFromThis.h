@@ -24,12 +24,12 @@ public:
     /** 내부에서 자신의 SharedPtr을 얻고 싶을 때 사용 */
     TSharedPtr<T> SharedFromThis()
     {
-        return m_WeakThis.Pin();
+        return m_WeakThis.Lock();
     }
 
     TSharedPtr<const T> SharedFromThis() const
     {
-        return m_WeakThis.Pin();
+        return m_WeakThis.Lock();
     }
 
     /** 내부에서 WeakThis를 초기화 (TSharedPtr이 생성 시점에 호출함) */

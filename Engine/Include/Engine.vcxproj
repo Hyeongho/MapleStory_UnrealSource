@@ -71,13 +71,15 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\Bin</OutDir>
-    <IntDir>..\BinObj</IntDir>
+    <OutDir>..\Bin\</OutDir>
+    <IntDir>..\BinObj\</IntDir>
+    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\Bin</OutDir>
-    <IntDir>..\BinObj</IntDir>
+    <OutDir>..\Bin\</OutDir>
+    <IntDir>..\BinObj\</IntDir>
     <TargetName>$(ProjectName)_Debug</TargetName>
+    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -174,8 +176,12 @@
     <ClInclude Include="Memory\Memory.h" />
     <ClInclude Include="PlatformTypes.h" />
     <ClInclude Include="Render\DirectXTex.h" />
+    <ClInclude Include="Render\Renderer.h" />
+    <ClInclude Include="Render\RenderTargetManager.h" />
+    <ClInclude Include="Render\Shader\ShaderManager.h" />
+    <ClInclude Include="Render\SpriteInputLayout.h" />
+    <ClInclude Include="Render\SpriteRenderer.h" />
     <ClInclude Include="Render\SpriteVertex.h" />
-    <ClInclude Include="Render\Texture.h" />
     <ClInclude Include="Render\TextureManager.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Scene\Component.h" />
@@ -194,7 +200,11 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="Logging\Logger.cpp" />
-    <ClCompile Include="Render\Texture.cpp" />
+    <ClCompile Include="Render\Renderer.cpp" />
+    <ClCompile Include="Render\RenderTargetManager.cpp" />
+    <ClCompile Include="Render\Shader\ShaderManager.cpp" />
+    <ClCompile Include="Render\SpriteInputLayout.cpp" />
+    <ClCompile Include="Render\SpriteRenderer.cpp" />
     <ClCompile Include="Render\TextureManager.cpp" />
     <ClCompile Include="Scene\Component.cpp" />
     <ClCompile Include="Scene\GameObject.cpp" />
@@ -217,6 +227,8 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">SPSmain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SPSmain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SPSmain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Render\Shader\SpriteVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
@@ -227,6 +239,8 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">SVSmain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SVSmain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">SVSmain</EntryPointName>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

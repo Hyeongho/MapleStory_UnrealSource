@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <DirectXMath.h>
 
 struct FColor
 {
@@ -74,5 +75,15 @@ struct FColor
     static FColor Blue() 
     { 
         return FColor(0, 0, 255, 255); 
+    }
+
+    DirectX::XMFLOAT4 ToFloat4() const
+    {
+        return DirectX::XMFLOAT4(
+            R / 255.0f,
+            G / 255.0f,
+            B / 255.0f,
+            A / 255.0f
+        );
     }
 };

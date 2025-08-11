@@ -1,9 +1,13 @@
 #include "ClientManager.h"
 #include "EngineInfo.h"
 #include "Engine.h"
+#include "Device.h"
 #include "Scene/GameObject.h"
 #include "Scene/Component.h"
 #include "SmartPointer/MakeShared.h"
+#include "Render/SpriteRenderer.h"
+
+#include <DirectXMath.h>
 
 #ifdef UNICODE
 using tchar_t = wchar_t;
@@ -19,6 +23,16 @@ using tchar_t = char;
 class CTestComponent : public CComponent
 {
 public:
+    CTestComponent()
+    {
+
+    }
+
+    ~CTestComponent()
+    {
+
+    }
+
     void Update(float DeltaTime) override
     {
         tcout << L"[CTestComponent] Update: " << DeltaTime << L"s\n";
@@ -26,7 +40,7 @@ public:
 
     void Render() override
     {
-        tcout << L"[CTestComponent] Render\n";
+        
     }
 };
 
@@ -57,13 +71,8 @@ int ClientManager::Run(HINSTANCE hInstance, int nCmdShow)
     Info.hInstance = hInstance;
     Info.hWnd = hWnd;
 
-    if (!CEngine::Get().Init(Info))
+    if (!CEngine::Get().Init(hWnd, 1366, 768, true, true))
     {
-#ifdef UNICODE
-        MessageBoxW(nullptr, L"Engine initialization failed", L"Error", MB_OK);
-#else
-        MessageBoxA(nullptr, "Engine initialization failed", "Error", MB_OK);
-#endif
         return -1;
     }
 
@@ -138,15 +147,15 @@ void ClientManager::MainLoop()
                 m_Scene->Update(deltaTime);
             }
 
-            CEngine::Get().Tick();
+            CEngine::Get().BeginFrame();
 
             if (m_Scene.IsValid())
             {
                 m_Scene->Render();
             }
 
-            CEngine::Get().Clear();
-            CEngine::Get().Present();
+            CEngine::Get().EndFrame();
+
         }
     }
 }

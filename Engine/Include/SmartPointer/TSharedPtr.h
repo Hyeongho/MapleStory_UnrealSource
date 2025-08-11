@@ -51,6 +51,28 @@ public:
         }
     }
 
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    TSharedPtr(const TSharedPtr<U>& Other) noexcept : Ptr(static_cast<T*>(Other.Ptr)), Counter(Other.Counter)
+    {
+        if (Counter) 
+        { 
+            Counter->AddRef();
+        }
+    }
+
+    TSharedPtr(TSharedPtr&& Other) noexcept : Ptr(Other.Ptr), Counter(Other.Counter)
+    {
+        Other.Ptr = nullptr; 
+        Other.Counter = nullptr;
+    }
+
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    TSharedPtr(TSharedPtr<U>&& Other) noexcept : Ptr(static_cast<T*>(Other.Ptr)), Counter(Other.Counter)
+    {
+        Other.Ptr = nullptr; 
+        Other.Counter = nullptr;
+    }
+
     TSharedPtr(T* InPtr, RefCountBase* InCounter) : Ptr(InPtr), Counter(InCounter)
     {
         if (Counter)
@@ -72,6 +94,63 @@ public:
                 Counter->AddRef();
             }
         }
+
+        return *this;
+    }
+
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    TSharedPtr& operator=(const TSharedPtr<U>& Other) noexcept
+    {
+        if (Counter == Other.Counter) 
+        { 
+            return *this; 
+        }
+        Release();
+
+        Ptr = static_cast<T*>(Other.Ptr);
+        Counter = Other.Counter;
+
+        if (Counter) 
+        { 
+            Counter->AddRef(); 
+        }
+
+        return *this;
+    }
+
+    TSharedPtr& operator=(TSharedPtr&& Other) noexcept
+    {
+        if (this == &Other) 
+            return *this;
+
+        Release();
+
+        Ptr = Other.Ptr; 
+        Counter = Other.Counter;
+
+        Other.Ptr = nullptr; 
+        Other.Counter = nullptr;
+
+        return *this;
+    }
+
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    TSharedPtr& operator=(TSharedPtr<U>&& Other) noexcept
+    {
+        if (Counter == Other.Counter) 
+        { 
+            Other.Ptr = nullptr; 
+            Other.Counter = nullptr; 
+            return *this; 
+        }
+
+        Release();
+
+        Ptr = static_cast<T*>(Other.Ptr);
+        Counter = Other.Counter;
+
+        Other.Ptr = nullptr; 
+        Other.Counter = nullptr;
 
         return *this;
     }
