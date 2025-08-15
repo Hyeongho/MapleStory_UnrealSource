@@ -172,10 +172,10 @@ bool CEngine::Init(HWND hwnd, int width, int height, bool vsync, bool windowed)
 
     // 데모 텍스처 (체커보드 or 단색)
     // 체커: 밝은 회색/투명
-   if (!LoadTestTextures()) 
+   /*if (!LoadTestTextures()) 
    {
        OutputDebugStringW(L"[CEngine] LoadTestTextures failed. Using checker fallback.\n");
-   }
+   }*/
 
     return true;
 }
@@ -187,6 +187,13 @@ void CEngine::Shutdown()
     m_TexMgr.Shutdown();
     m_ShaderMgr.Shutdown();
     m_Device.Shutdown();
+}
+
+void CEngine::Render2D()
+{
+    const auto vp = m_Device.GetViewport();
+    FInt2 screen{ (int)vp.Width, (int)vp.Height };
+    m_Sprite.RenderAll(screen);
 }
 
 void CEngine::BeginFrame()

@@ -1,5 +1,7 @@
 #include "SpriteComponent.h"
 
+#include "../Engine.h"
+
 #include "../Render/SpriteRenderer.h"
 #include "../Render/TextureManager.h"
 
@@ -21,7 +23,8 @@ bool CSpriteComponent::SetTextureFromFile(CTextureManager* TexMgr, const wchar_t
 
     // 너의 TextureManager 시그니처에 맞춰 수정하세요.
     // (예시) bool LoadTextureFromFile(const wchar_t*, bool sRGB, ID3D11ShaderResourceView** outSRV);
-    if (TexMgr->LoadTextureFromFile(Path, sRGB, &SRV) == false)
+
+    if (TexMgr->LoadTextureFromFile(Path, &SRV, nullptr, nullptr, false, true) == false)
     {
         SRV = nullptr;
         return false;
@@ -32,10 +35,25 @@ bool CSpriteComponent::SetTextureFromFile(CTextureManager* TexMgr, const wchar_t
 
 void CSpriteComponent::OnActivate()
 {
-    CSpriteRenderer::Get().Register(Id, Self);
+    if (Self.IsValid())
+    {
+        int a = 0;
+    }
+
+    CEngine::Get().GetSpriteRenderer().Register(Id, Self);
 }
 
 void CSpriteComponent::OnDeactivate()
 {
-    CSpriteRenderer::Get().Unregister(Id);
+    CEngine::Get().GetSpriteRenderer().Unregister(Id);
+}
+
+void CSpriteComponent::Update(float DeltaTime)
+{
+    
+}
+
+void CSpriteComponent::Render()
+{
+    
 }

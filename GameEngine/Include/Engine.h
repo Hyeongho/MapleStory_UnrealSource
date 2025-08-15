@@ -24,6 +24,7 @@ public:
 
     bool Init(HWND hwnd, int width, int height, bool vsync = true, bool windowed = true);
     void Shutdown();
+    void Render2D();
 
     void BeginFrame();
     void EndFrame();
@@ -63,5 +64,21 @@ private:
 
     // 데모용 텍스처
     std::vector<DemoTex>  m_DemoTextures;
+
+public:
+    CSpriteRenderer& GetSpriteRenderer() 
+    { 
+        return m_Sprite; 
+    }
+
+    const CSpriteRenderer& GetSpriteRenderer() const 
+    { 
+        return m_Sprite; 
+    }
+
+    CTextureManager& GetTextureManager()
+    {
+        return m_TexMgr;
+    }
 };
 

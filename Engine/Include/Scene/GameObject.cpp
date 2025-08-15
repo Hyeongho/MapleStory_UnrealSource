@@ -1,6 +1,6 @@
 #include "GameObject.h"
 
-CGameObject::CGameObject() : m_Name("GameObject")
+CGameObject::CGameObject() : m_Name("GameObject"), m_bActive(true)
 {
 }
 

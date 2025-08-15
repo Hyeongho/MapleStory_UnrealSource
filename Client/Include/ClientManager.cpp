@@ -149,10 +149,12 @@ void ClientManager::MainLoop()
 
             CEngine::Get().BeginFrame();
 
-            if (m_Scene.IsValid())
+            /*if (m_Scene.IsValid())
             {
                 m_Scene->Render();
-            }
+            }*/
+
+            CEngine::Get().Render2D();
 
             CEngine::Get().EndFrame();
 
@@ -165,4 +167,22 @@ void ClientManager::InitScene()
     m_Scene = MakeShared<CScene>();
     TSharedPtr<CGameObject> obj = m_Scene->CreateObject(L"TestObject");
     obj->AddComponent<CTestComponent>();
+
+    m_TestObject = MakeShared<CGameObject>();
+
+    TSharedPtr<CSpriteComponent> spr = m_TestObject->AddComponent<CSpriteComponent>();
+
+    if (!spr->SetTextureFromFile(&CEngine::Get().GetTextureManager(), L"D:\\MapleStory_UnrealSource\\Client\\Bin\\Sprites\\boss.1.0.png",true))
+    {
+        OutputDebugStringW(L"[Client] Failed to load sprite texture.\n");
+    }
+
+    const auto vp = CEngine::Get().GetDevice().GetViewport();
+    const int cx = static_cast<int>(vp.Width);
+    const int cy = static_cast<int>(vp.Height);
+
+    spr->SetSize(128, 128);
+    spr->SetPos(cx / 2 - 64, cy / 2 - 64);
+    spr->SetColor(1, 1, 1, 1);
+    spr->SetUV(0, 0, 1, 1);
 }

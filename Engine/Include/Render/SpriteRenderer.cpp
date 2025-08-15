@@ -1,6 +1,8 @@
 // SpriteRenderer.cpp
 #include "SpriteRenderer.h"
 
+#include "../Scene/SpriteComponent.h"
+
 struct Vtx 
 { 
     float x, y; 
@@ -14,6 +16,13 @@ CSpriteRenderer::CSpriteRenderer()
 CSpriteRenderer::~CSpriteRenderer()
 {
     Shutdown();
+}
+
+CSpriteRenderer& CSpriteRenderer::Get()
+{
+    static CSpriteRenderer S; // C++11 이후 정적 지역 객체 초기화는 thread-safe
+
+    return S;
 }
 
 bool CSpriteRenderer::Init(CDevice* dev, CShaderManager* sm)
@@ -253,6 +262,11 @@ void CSpriteRenderer::Register(uint32_t id, const TWeakPtr<CSpriteComponent>& co
         return;
     }
 
+    if (comp.IsValid())
+    {
+        int a = 0;
+    }
+
     if (m_IndexOf.find(id) != m_IndexOf.end()) 
     {
         return; // 중복 등록 방지
@@ -289,7 +303,7 @@ void CSpriteRenderer::RenderAll(const FInt2& screenSize)
     for (size_t i = 0; i < m_Entries.size(); )
     {
         TSharedPtr<CSpriteComponent> comp = m_Entries[i].Comp.Lock();
-        if (!comp || comp.Get() == nullptr)
+        if (!comp.IsValid())
         {
             const uint32_t deadId = m_Entries[i].Id;
             const size_t   last = m_Entries.size() - 1;
@@ -311,7 +325,7 @@ void CSpriteRenderer::RenderAll(const FInt2& screenSize)
     for (const auto& e : m_Entries)
     {
         TSharedPtr<CSpriteComponent> comp = e.Comp.Lock();
-        if (!comp || comp.Get() == nullptr) 
+        if (!comp.IsValid())
         {
             continue;
         }
@@ -324,6 +338,6 @@ void CSpriteRenderer::RenderAll(const FInt2& screenSize)
 
         FInt2 pos = { C->PosX, C->PosY };
         FInt2 size = { C->Width, C->Height };
-        Draw(screenSize, pos, size, C->SRV, C->Color, C->UV);
+        Draw(screenSize, pos, size, C->SRV.Get(), C->Color, C->UV);
     }
 }

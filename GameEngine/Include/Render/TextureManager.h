@@ -19,6 +19,9 @@ public:
 
     // 신규: 파일 로드 (PNG/JPG/BMP/TIFF/GIF 등 WIC + DDS 자동 판별)
     bool LoadTextureFromFile(const wchar_t* path, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outSRV, UINT* outW = nullptr, UINT* outH = nullptr, bool srgb = true, bool genMips = true);
+    bool LoadTextureFromFile(const wchar_t* path, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outSRV, bool srgb = true, bool genMips = true);
+    bool LoadTextureFromFile(const std::wstring& path, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outSRV, UINT* outW = nullptr, UINT* outH = nullptr, bool srgb = true, bool genMips = true);
+    bool LoadTextureFromFile(const wchar_t* path, ID3D11ShaderResourceView** outSRV, UINT* outW = nullptr, UINT* outH = nullptr, bool srgb = true, bool genMips = true);
 
 private:
     ID3D11Device* m_Device = nullptr;

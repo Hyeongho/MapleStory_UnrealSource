@@ -1,8 +1,11 @@
 #pragma once
 
 #include "ClientInfo.h"
+#include "CoreMinimal.h"
 #include "Scene/Scene.h"
 #include "SmartPointer/TSharedPtr.h"
+#include "Scene/GameObject.h"
+#include "Scene/SpriteComponent.h"
 
 #include "Render/SpriteRenderer.h"
 #include "Render/TextureManager.h"
@@ -16,6 +19,7 @@ public:
 
 private:
     bool InitWindow(HINSTANCE hInstance, int nCmdShow);
+    void InitTestScene();
     void MainLoop();
 
     void InitScene();
@@ -28,6 +32,7 @@ private:
 
     TSharedPtr<CScene> m_Scene;
 
+    TSharedPtr<CGameObject> m_TestObject;
     CSpriteRenderer m_SpriteRenderer;
     CTextureManager m_TextureManager;
 };

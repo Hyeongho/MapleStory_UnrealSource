@@ -241,14 +241,52 @@ bool CTextureManager::LoadTextureFromFile(const wchar_t* path, Microsoft::WRL::C
     }
 
     outSRV = srv;
-    if (outW) *outW = static_cast<UINT>(meta.width);
-    if (outH) *outH = static_cast<UINT>(meta.height);
+    if (outW) 
+    {
+        *outW = static_cast<UINT>(meta.width);
+    }
+
+    if (outH) 
+    {
+        *outH = static_cast<UINT>(meta.height);
+    }
 
     // 성공 로그
     {
         wchar_t buf[512];
         swprintf_s(buf, L"[Texture] OK: %s (%ux%u)\n", p.c_str(), (unsigned)meta.width, (unsigned)meta.height);
         OutputDebugStringW(buf);
+    }
+
+    return true;
+}
+
+bool CTextureManager::LoadTextureFromFile(const wchar_t* path, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outSRV, bool srgb, bool genMips)
+{
+    return LoadTextureFromFile(path, outSRV, nullptr, nullptr, srgb, genMips);
+}
+
+bool CTextureManager::LoadTextureFromFile(const std::wstring& path, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& outSRV, UINT* outW, UINT* outH, bool srgb, bool genMips)
+{
+    return LoadTextureFromFile(path.c_str(), outSRV, outW, outH, srgb, genMips);
+}
+
+bool CTextureManager::LoadTextureFromFile(const wchar_t* path, ID3D11ShaderResourceView** outSRV, UINT* outW, UINT* outH, bool srgb, bool genMips)
+{
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> tmp;
+    if (!LoadTextureFromFile(path, tmp, outW, outH, srgb, genMips)) 
+    {
+        if (outSRV) 
+        {
+            *outSRV = nullptr;
+        }
+
+        return false;
+    }
+
+    if (outSRV) 
+    {
+        *outSRV = tmp.Detach();  // 소유권 전달 (※ 해제 책임은 호출자에게!)
     }
     return true;
 }

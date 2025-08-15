@@ -1,5 +1,6 @@
 #pragma once
 #include "Component.h"
+#include "../EngineInfo.h"
 
 #include "../CoreMinimal.h"
 #include <cstdint>
@@ -59,18 +60,19 @@ public:
     }
 
     // 라이프사이클
-    virtual void OnActivate() override;
-    virtual void OnDeactivate() override;
-    virtual void Update(float /*dt*/) override {}
-    virtual void Render() override {} // 일괄 렌더러에서 그림
+    virtual void OnActivate();
+    virtual void OnDeactivate();
+    virtual void Update(float DeltaTime);
+    virtual void Render();
 
     // 렌더러가 읽는 데이터(간단히 public)
-    ID3D11ShaderResourceView* SRV = nullptr;
-    int   PosX = 0, PosY = 0;
-    int   Width = 64, Height = 64;
+    ComPtr<ID3D11ShaderResourceView> SRV;
+    int PosX = 0, PosY = 0;
+    int Width = 64, Height = 64;
     float Color[4] = { 1,1,1,1 };
     float UV[4] = { 0,0,1,1 };
-    bool  bFlipX = false, bFlipY = false;
+    bool bFlipX = false;
+    bool bFlipY = false;
 
 private:
     uint32_t Id;

@@ -27,6 +27,8 @@ public:
     ~CSpriteRenderer();
 
 public:
+    static CSpriteRenderer& Get();
+
     bool Init(CDevice* dev, CShaderManager* sm);
     void Shutdown();
 
