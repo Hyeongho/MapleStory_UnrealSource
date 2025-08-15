@@ -1,30 +1,30 @@
 #pragma once
 
-#include "../SmartPointer/TSharedFromThis.h"
-#include "../SmartPointer/TSharedPtr.h"
-#include "../SmartPointer/TWeakPtr.h"
+#include "../CoreMinimal.h"
 
 class CGameObject;
 
-class CComponent : public TSharedFromThis<CComponent>
+class CComponent : public ICastable
 {
-protected:
-    TWeakPtr<CGameObject> m_Owner;
-
 public:
-    virtual ~CComponent() {}
+    DECLARE_CASTABLE(CComponent)
 
-    void SetOwner(const TSharedPtr<CGameObject>& InOwner)
-    {
-        m_Owner = InOwner;
-    }
+    CComponent() = default;
+    virtual ~CComponent() = default;
 
-    TSharedPtr<CGameObject> GetOwner() const
-    {
-        return m_Owner.Lock();
-    }
+    // GameObject가 붙을 때 주입 (순환참조 방지 위해 raw 포인터)
+    void BindOwner(CGameObject* InOwner) { m_Owner = InOwner; }
+    CGameObject* GetOwner() const { return m_Owner; }
 
+    // ---- 라이프사이클(기본 빈 동작) ----
+    virtual void OnActivate() {}
+    virtual void OnDeactivate() {}
+
+    // ---- 프레임 콜백 ----
     virtual void Update(float DeltaTime) {}
     virtual void Render() {}
+
+private:
+    CGameObject* m_Owner = nullptr;
 };
 

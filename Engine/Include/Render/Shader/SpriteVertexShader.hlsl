@@ -25,8 +25,7 @@ VS_OUT SVSmain(VS_IN i)
 {
     VS_OUT o;
     float2 pixel = Position + i.pos * Size;       // 화면 픽셀 좌표
-    float2 ndc = float2( (pixel.x / ScreenSize.x) * 2.0f - 1.0f,
-                         1.0f - (pixel.y / ScreenSize.y) * 2.0f ); // y 뒤집기
+    float2 ndc = float2( (pixel.x / ScreenSize.x) * 2.0f - 1.0f, 1.0f - (pixel.y / ScreenSize.y) * 2.0f ); // y 뒤집기
 
     o.pos = float4(ndc, 0.0f, 1.0f);
     o.uv = lerp(UVRect.xy, UVRect.zw, i.uv);

@@ -13,6 +13,7 @@ CSpriteRenderer::CSpriteRenderer()
 
 CSpriteRenderer::~CSpriteRenderer()
 {
+    Shutdown();
 }
 
 bool CSpriteRenderer::Init(CDevice* dev, CShaderManager* sm)
@@ -88,6 +89,9 @@ void CSpriteRenderer::Shutdown()
     m_IL.Reset();
     m_PS.Reset();
     m_VS.Reset();
+
+    m_Entries.clear();
+    m_IndexOf.clear();
 }
 
 bool CSpriteRenderer::CreateGeometry()
@@ -240,4 +244,86 @@ void CSpriteRenderer::Draw(const FInt2& screenSize, const FInt2& pos, const FInt
     // 언바인딩(선택)
     ID3D11ShaderResourceView* nullSRV = nullptr;
     ctx->PSSetShaderResources(0, 1, &nullSRV);
+}
+
+void CSpriteRenderer::Register(uint32_t id, const TWeakPtr<CSpriteComponent>& comp)
+{
+    if (id == 0) 
+    {
+        return;
+    }
+
+    if (m_IndexOf.find(id) != m_IndexOf.end()) 
+    {
+        return; // 중복 등록 방지
+    }
+
+    const size_t idx = m_Entries.size();
+    m_Entries.push_back({ id, comp });
+    m_IndexOf[id] = idx;
+}
+
+void CSpriteRenderer::Unregister(uint32_t id)
+{
+    auto it = m_IndexOf.find(id);
+    if (it == m_IndexOf.end())
+    {
+        return;
+    }
+
+    const size_t idx = it->second;
+    const size_t last = m_Entries.size() - 1;
+
+    if (idx != last)
+    {
+        std::swap(m_Entries[idx], m_Entries[last]);
+        m_IndexOf[m_Entries[idx].Id] = idx;
+    }
+
+    m_Entries.pop_back();
+    m_IndexOf.erase(it);
+}
+
+void CSpriteRenderer::RenderAll(const FInt2& screenSize)
+{
+    for (size_t i = 0; i < m_Entries.size(); )
+    {
+        TSharedPtr<CSpriteComponent> comp = m_Entries[i].Comp.Lock();
+        if (!comp || comp.Get() == nullptr)
+        {
+            const uint32_t deadId = m_Entries[i].Id;
+            const size_t   last = m_Entries.size() - 1;
+            if (i != last)
+            {
+                std::swap(m_Entries[i], m_Entries[last]);
+                m_IndexOf[m_Entries[i].Id] = i;
+            }
+
+            m_Entries.pop_back();
+            m_IndexOf.erase(deadId);
+
+            continue; // i 증가하지 않음 (swap되어 온 항목 검사)
+        }
+
+        i++;
+    }
+
+    for (const auto& e : m_Entries)
+    {
+        TSharedPtr<CSpriteComponent> comp = e.Comp.Lock();
+        if (!comp || comp.Get() == nullptr) 
+        {
+            continue;
+        }
+
+        const CSpriteComponent* C = comp.Get();
+        if (C->SRV == nullptr) 
+        {
+            continue;
+        }
+
+        FInt2 pos = { C->PosX, C->PosY };
+        FInt2 size = { C->Width, C->Height };
+        Draw(screenSize, pos, size, C->SRV, C->Color, C->UV);
+    }
 }

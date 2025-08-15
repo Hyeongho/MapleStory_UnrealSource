@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Engine.h"
+#include "EngineInfo.h"
 #include "resource.h"
 
 #ifdef _DEBUG

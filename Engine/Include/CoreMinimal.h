@@ -6,6 +6,8 @@
 #include "SmartPointer/TSharedPtr.h"
 #include "SmartPointer/MakeShared.h"
 #include "SmartPointer/IsValid.h"
+#include "SmartPointer/TWeakPtr.h"
+#include "SmartPointer/TSharedFromThis.h"
 
 #include "Math/FVector2.h"
 #include "Math/FVector3.h"
@@ -15,6 +17,7 @@
 #include "String/FString.h"
 
 #include "Cast/Cast.h"
+#include "Cast/ICastable.h"
 #include "Cast/CastMacros.h"
 
 #include "Logging/Logger.h"

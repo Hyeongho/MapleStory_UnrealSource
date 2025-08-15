@@ -187,6 +187,7 @@
     <ClInclude Include="Scene\Component.h" />
     <ClInclude Include="Scene\GameObject.h" />
     <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Scene\SpriteComponent.h" />
     <ClInclude Include="SmartPointer\IsValid.h" />
     <ClInclude Include="SmartPointer\MakeShared.h" />
     <ClInclude Include="SmartPointer\RefCountBase.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="Scene\Component.cpp" />
     <ClCompile Include="Scene\GameObject.cpp" />
     <ClCompile Include="Scene\Scene.cpp" />
+    <ClCompile Include="Scene\SpriteComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Engine.rc" />

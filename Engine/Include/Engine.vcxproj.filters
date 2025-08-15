@@ -70,6 +70,9 @@
     <Filter Include="03. Render\01. Shader">
       <UniqueIdentifier>{1b4d53b7-61b7-48ed-9dc5-93493b830617}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02. Scene\01. SpriteComponent">
+      <UniqueIdentifier>{6dcf601a-4b46-4920-a8d0-019b7db63058}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EngineInfo.h">
@@ -204,6 +207,9 @@
     <ClInclude Include="Render\Shader\ShaderManager.h">
       <Filter>03. Render\01. Shader</Filter>
     </ClInclude>
+    <ClInclude Include="Scene\SpriteComponent.h">
+      <Filter>02. Scene\01. SpriteComponent</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Logging\Logger.cpp">
@@ -244,6 +250,9 @@
     </ClCompile>
     <ClCompile Include="Render\Shader\ShaderManager.cpp">
       <Filter>03. Render\01. Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\SpriteComponent.cpp">
+      <Filter>02. Scene\01. SpriteComponent</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
