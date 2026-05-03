@@ -13,8 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="01. Engine">
+    <Filter Include="01. Core">
       <UniqueIdentifier>{709d8ba3-ca52-4514-9afb-9bff6badb7bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01. Core\01. Memory">
+      <UniqueIdentifier>{14713617-e080-469d-9e73-25cd69b8ab1a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -24,6 +27,15 @@
     <ClInclude Include="EnginePCH.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Memory\FMemory.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMallocAnsi.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\IAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -31,6 +43,15 @@
     </ClCompile>
     <ClCompile Include="EnginePCH.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMemory.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMallocAnsi.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\MemoryOverride.cpp">
+      <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
