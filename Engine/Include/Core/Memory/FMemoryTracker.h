@@ -1,6 +1,8 @@
 #pragma once
 #include "EnginePCH.h"
 
+#ifdef _DEBUG
+
 class FMemoryTracker
 {
 public:
@@ -14,3 +16,4 @@ private:
 	static int64  m_TotalAllocBytes;
 };
 
+#endif

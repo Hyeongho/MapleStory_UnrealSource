@@ -1,6 +1,8 @@
 #include "EnginePCH.h"
 #include "FMemoryTracker.h"
 
+#ifdef _DEBUG
+
 int64 FMemoryTracker::m_AllocCount = 0;
 int64 FMemoryTracker::m_FreeCount = 0;
 int64 FMemoryTracker::m_TotalAllocBytes = 0;
@@ -32,3 +34,5 @@ void FMemoryTracker::ReportLeaks()
 		wprintf(L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
 	}
 }
+
+#endif

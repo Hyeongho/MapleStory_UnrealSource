@@ -19,6 +19,9 @@
     <Filter Include="01. Core\01. Memory">
       <UniqueIdentifier>{14713617-e080-469d-9e73-25cd69b8ab1a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\02. Templates">
+      <UniqueIdentifier>{7c52db75-a70e-4ac3-b8b5-d94612204d59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -44,6 +47,15 @@
     </ClInclude>
     <ClInclude Include="Core\Memory\FStackAllocator.h">
       <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\TypeTraits.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\AndOrNot.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\Utility.h">
+      <Filter>01. Core\02. Templates</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,8 +1,11 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "Core/Memory/FMemory.h"
 #include "Core/Memory/FPoolAllocator.h"
 #include "Core/Memory/FStackAllocator.h"
 #include "Core/Memory/FMemoryTracker.h"
+#include "Core/Templates/TypeTraits.h"
+#include "Core/Templates/AndOrNot.h"
+#include "Core/Templates/Utility.h"
 
 int main()
 {
@@ -41,7 +44,7 @@ int main()
 	pool.Release(p2);
 	pool.Release(p1);
 
-	// ¹İÈ¯ ÈÄ ÀçÈ¹µæ °¡´ÉÇÑÁö È®ÀÎ
+	// ë°˜í™˜ í›„ ì¬íšë“ ê°€ëŠ¥í•œì§€ í™•ì¸
 	FTestObj* p3 = static_cast<FTestObj*>(pool.Acquire());
 	check(p3 != nullptr);
 	pool.Release(p3);
@@ -59,9 +62,9 @@ int main()
 
 	stack.Reset();
 
-	// Reset ÈÄ Àç»ç¿ë °¡´ÉÇÑÁö È®ÀÎ
+	// Reset í›„ ì¬ì‚¬ìš© ê°€ëŠ¥í•œì§€ í™•ì¸
 	void* tmp3 = stack.Alloc(64);
-	check(tmp3 == tmp1);  // offsetÀÌ 0À¸·Î ÃÊ±âÈ­µÆÀ¸¹Ç·Î °°Àº ÁÖ¼Ò
+	check(tmp3 == tmp1);  // offsetì´ 0ìœ¼ë¡œ ì´ˆê¸°í™”ëìœ¼ë¯€ë¡œ ê°™ì€ ì£¼ì†Œ
 	stack.Destroy();
 
 	// --- Memory Tracker ---
@@ -70,5 +73,58 @@ int main()
 #endif
 
 	wprintf(L"[Tests] Phase 1 Memory (Full) - PASSED\n");
+
+	// ==========================================================
+// Phase 2 â€” TypeTraits
+// ==========================================================
+
+// TIsPOD
+	struct FPODStruct { int32 x; int32 y; };  // ìˆœìˆ˜ POD
+	static_assert(TIsPOD<int32>::Value == true, "int32 must be POD");
+	static_assert(TIsPOD<float>::Value == true, "float must be POD");
+	static_assert(TIsPOD<FPODStruct>::Value == true, "FPODStruct must be POD");
+	static_assert(TIsPOD<FTestObj>::Value == false, "FTestObj (default init) must NOT be POD");
+
+	// TIsPointer
+	static_assert(TIsPointer<int32*>::Value == true, "int32* is pointer");
+	static_assert(TIsPointer<const int32*>::Value == true, "const int32* is pointer");
+	static_assert(TIsPointer<int32>::Value == false, "int32 is not pointer");
+
+	// TIsEnum
+	enum class ETestEnum { A, B };
+	static_assert(TIsEnum<ETestEnum>::Value == true, "ETestEnum is enum");
+	static_assert(TIsEnum<int32>::Value == false, "int32 is not enum");
+
+	// TIsSame
+	static_assert(TIsSame<int32, int32>::Value == true, "same type");
+	static_assert(TIsSame<int32, float>::Value == false, "different type");
+
+	// TIsTriviallyCopyable
+	static_assert(TIsTriviallyCopyable<int32>::Value == true, "int32 is trivially copyable");
+	static_assert(TIsTriviallyCopyable<FPODStruct>::Value == true, "FPODStruct is trivially copyable");
+
+	// TRemoveReference
+	static_assert(TIsSame<TRemoveReference<int32&>::Type, int32>::Value, "remove lvalue ref");
+	static_assert(TIsSame<TRemoveReference<int32&&>::Type, int32>::Value, "remove rvalue ref");
+
+	// TConditional
+	static_assert(TIsSame<TConditional<true, int32, float>::Type, int32>::Value, "conditional true");
+	static_assert(TIsSame<TConditional<false, int32, float>::Type, float>::Value, "conditional false");
+
+	// TAnd / TOr / TNot
+	static_assert(TAnd<FTrueType, FTrueType>::Value == true, "TAnd true");
+	static_assert(TAnd<FTrueType, FFalseType>::Value == false, "TAnd false");
+	static_assert(TOr<FFalseType, FTrueType>::Value == true, "TOr true");
+	static_assert(TOr<FFalseType, FFalseType>::Value == false, "TOr false");
+	static_assert(TNot<FTrueType>::Value == false, "TNot false");
+	static_assert(TNot<FFalseType>::Value == true, "TNot true");
+
+	// Swap ëŸ°íƒ€ì„ í…ŒìŠ¤íŠ¸
+	int32 a = 10, b = 20;
+	Swap(a, b);
+	check(a == 20 && b == 10);
+
+	wprintf(L"[Tests] Phase 2 TypeTraits - PASSED\n");
+
 	return 0;
 }

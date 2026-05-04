@@ -165,6 +165,9 @@
     <ClInclude Include="Core\Memory\FPoolAllocator.h" />
     <ClInclude Include="Core\Memory\FStackAllocator.h" />
     <ClInclude Include="Core\Memory\IAllocator.h" />
+    <ClInclude Include="Core\Templates\AndOrNot.h" />
+    <ClInclude Include="Core\Templates\TypeTraits.h" />
+    <ClInclude Include="Core\Templates\Utility.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
   </ItemGroup>
