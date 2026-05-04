@@ -36,6 +36,15 @@
     <ClInclude Include="Core\Memory\IAllocator.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Memory\FMemoryTracker.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FPoolAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FStackAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -51,6 +60,15 @@
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\MemoryOverride.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMemoryTracker.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FPoolAllocator.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FStackAllocator.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
   </ItemGroup>

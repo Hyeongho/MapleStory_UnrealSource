@@ -161,6 +161,9 @@
   <ItemGroup>
     <ClInclude Include="Core\Memory\FMallocAnsi.h" />
     <ClInclude Include="Core\Memory\FMemory.h" />
+    <ClInclude Include="Core\Memory\FMemoryTracker.h" />
+    <ClInclude Include="Core\Memory\FPoolAllocator.h" />
+    <ClInclude Include="Core\Memory\FStackAllocator.h" />
     <ClInclude Include="Core\Memory\IAllocator.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
@@ -168,6 +171,9 @@
   <ItemGroup>
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp" />
     <ClCompile Include="Core\Memory\FMemory.cpp" />
+    <ClCompile Include="Core\Memory\FMemoryTracker.cpp" />
+    <ClCompile Include="Core\Memory\FPoolAllocator.cpp" />
+    <ClCompile Include="Core\Memory\FStackAllocator.cpp" />
     <ClCompile Include="Core\Memory\MemoryOverride.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
