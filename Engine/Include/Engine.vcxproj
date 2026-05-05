@@ -159,6 +159,8 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Core\Containers\TArray.h" />
+    <ClInclude Include="Core\Containers\TArrayView.h" />
     <ClInclude Include="Core\Memory\FMallocAnsi.h" />
     <ClInclude Include="Core\Memory\FMemory.h" />
     <ClInclude Include="Core\Memory\FMemoryTracker.h" />

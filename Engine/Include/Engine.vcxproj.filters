@@ -22,6 +22,9 @@
     <Filter Include="01. Core\02. Templates">
       <UniqueIdentifier>{7c52db75-a70e-4ac3-b8b5-d94612204d59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\03. Containers">
+      <UniqueIdentifier>{ffc4b1bd-f783-44c1-b3ae-baa392c3fe23}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -56,6 +59,12 @@
     </ClInclude>
     <ClInclude Include="Core\Templates\Utility.h">
       <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TArray.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TArrayView.h">
+      <Filter>01. Core\03. Containers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
