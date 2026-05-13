@@ -293,6 +293,62 @@ public:
 	}
 
 	// -------------------------------------------------------------------------
+	// 정렬
+	// -------------------------------------------------------------------------
+
+	// 비안정 정렬 (Introsort: Quicksort + 삽입 정렬 fallback)
+	void Sort()
+	{
+		if (m_Size <= 1) 
+		{
+			return;
+		}
+
+		SortImpl(0, m_Size - 1, [](const T& A, const T& B) 
+			{ 
+				return A < B; 
+			}
+		);
+	}
+
+	template<typename Pred>
+	void Sort(Pred InPred)
+	{
+		if (m_Size <= 1) 
+		{
+			return;
+		}
+
+		SortImpl(0, m_Size - 1, InPred);
+	}
+
+	// 안정 정렬 (Merge Sort)
+	void StableSort()
+	{
+		if (m_Size <= 1) 
+		{
+			return;
+		}
+
+		StableSortImpl(0, m_Size - 1, [](const T& A, const T& B) 
+			{ 
+				return A < B; 
+			}
+		);
+	}
+
+	template<typename Pred>
+	void StableSort(Pred InPred)
+	{
+		if (m_Size <= 1) 
+		{
+			return;
+		}
+
+		StableSortImpl(0, m_Size - 1, InPred);
+	}
+
+	// -------------------------------------------------------------------------
 	// 메모리 관리
 	// -------------------------------------------------------------------------
 

@@ -161,6 +161,17 @@
   <ItemGroup>
     <ClInclude Include="Core\Containers\TArray.h" />
     <ClInclude Include="Core\Containers\TArrayView.h" />
+    <ClInclude Include="Core\Math\FColor.h" />
+    <ClInclude Include="Core\Math\FIntPoint.h" />
+    <ClInclude Include="Core\Math\FIntRect.h" />
+    <ClInclude Include="Core\Math\FLinearColor.h" />
+    <ClInclude Include="Core\Math\FMath.h" />
+    <ClInclude Include="Core\Math\FMatrix3x3.h" />
+    <ClInclude Include="Core\Math\FMatrix4x4.h" />
+    <ClInclude Include="Core\Math\FRandomStream.h" />
+    <ClInclude Include="Core\Math\FRect.h" />
+    <ClInclude Include="Core\Math\FTransform2D.h" />
+    <ClInclude Include="Core\Math\FVector2D.h" />
     <ClInclude Include="Core\Memory\FMallocAnsi.h" />
     <ClInclude Include="Core\Memory\FMemory.h" />
     <ClInclude Include="Core\Memory\FMemoryTracker.h" />
@@ -174,6 +185,17 @@
     <ClInclude Include="EnginePCH.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Core\Math\FColor.cpp" />
+    <ClCompile Include="Core\Math\FIntPoint.cpp" />
+    <ClCompile Include="Core\Math\FIntRect.cpp" />
+    <ClCompile Include="Core\Math\FLinearColor.cpp" />
+    <ClCompile Include="Core\Math\FMath.cpp" />
+    <ClCompile Include="Core\Math\FMatrix3x3.cpp" />
+    <ClCompile Include="Core\Math\FMatrix4x4.cpp" />
+    <ClCompile Include="Core\Math\FRandomStream.cpp" />
+    <ClCompile Include="Core\Math\FRect.cpp" />
+    <ClCompile Include="Core\Math\FTransform2D.cpp" />
+    <ClCompile Include="Core\Math\FVector2D.cpp" />
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp" />
     <ClCompile Include="Core\Memory\FMemory.cpp" />
     <ClCompile Include="Core\Memory\FMemoryTracker.cpp" />

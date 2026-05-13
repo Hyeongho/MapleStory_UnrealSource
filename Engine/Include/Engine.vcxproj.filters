@@ -25,6 +25,9 @@
     <Filter Include="01. Core\03. Containers">
       <UniqueIdentifier>{ffc4b1bd-f783-44c1-b3ae-baa392c3fe23}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\04. Math">
+      <UniqueIdentifier>{4c326cca-1ace-42c3-8c5f-333f567061ba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -66,6 +69,39 @@
     <ClInclude Include="Core\Containers\TArrayView.h">
       <Filter>01. Core\03. Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Math\FColor.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FIntPoint.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FIntRect.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FLinearColor.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMath.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMatrix4x4.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FRandomStream.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FRect.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FTransform2D.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FVector2D.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMatrix3x3.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -91,6 +127,39 @@
     </ClCompile>
     <ClCompile Include="Core\Memory\FStackAllocator.cpp">
       <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FColor.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FIntPoint.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FIntRect.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FLinearColor.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FMath.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FMatrix4x4.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FRandomStream.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FRect.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FTransform2D.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FVector2D.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Math\FMatrix3x3.cpp">
+      <Filter>01. Core\04. Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

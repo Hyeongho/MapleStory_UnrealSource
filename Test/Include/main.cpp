@@ -8,6 +8,17 @@
 #include "Core/Templates/Utility.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Containers/TArrayView.h"
+#include "Core/Math/FMath.h"
+#include "Core/Math/FColor.h"
+#include "Core/Math/FVector2D.h"
+#include "Core/Math/FLinearColor.h"
+#include "Core/Math/FIntPoint.h"
+#include "Core/Math/FIntRect.h"
+#include "Core/Math/FRect.h"
+#include "Core/Math/FTransform2D.h"
+#include "Core/Math/FMatrix3x3.h"
+#include "Core/Math/FMatrix4x4.h"
+#include "Core/Math/FRandomStream.h"
 
 namespace
 {
@@ -365,6 +376,154 @@ int main()
 	}
 
 	wprintf(L"[Tests] Phase 3 TArray/TArrayView - ALL PASSED\n");
+
+	// ----------------------------------------------------------
+	// 3-8. Sort / StableSort
+	// ----------------------------------------------------------
+	{
+		// Sort (비안정)
+		TArray<int32> Arr;
+		Arr.Add(5); Arr.Add(2); Arr.Add(8); Arr.Add(1); Arr.Add(9); Arr.Add(3);
+		Arr.Sort();
+		check(Arr[0] == 1 && Arr[1] == 2 && Arr[2] == 3 && Arr[3] == 5 && Arr[4] == 8 && Arr[5] == 9);
+
+		// Sort 내림차순 (커스텀 비교자)
+		Arr.Sort([](const int32& A, const int32& B) { return A > B; });
+		check(Arr[0] == 9 && Arr[1] == 8 && Arr[2] == 5 && Arr[3] == 3 && Arr[4] == 2 && Arr[5] == 1);
+
+		// StableSort (안정)
+		TArray<int32> Arr2;
+		Arr2.Add(4); Arr2.Add(1); Arr2.Add(7); Arr2.Add(2); Arr2.Add(6);
+		Arr2.StableSort();
+		check(Arr2[0] == 1 && Arr2[1] == 2 && Arr2[2] == 4 && Arr2[3] == 6 && Arr2[4] == 7);
+
+		wprintf(L"[Tests] Phase 3-8 TArray Sort/StableSort - PASSED\n");
+	}
+
+	wprintf(L"[Tests] Phase 3 TArray/TArrayView - ALL PASSED (with Sort)\n");
+
+	// ==========================================================
+	// Phase 3.5 — 수학 라이브러리
+	// ==========================================================
+
+	// ----------------------------------------------------------
+	// 3.5-1. FVector2D
+	// ----------------------------------------------------------
+	{
+		FVector2D A(3.f, 4.f);
+		FVector2D B(1.f, 2.f);
+
+		FVector2D Sum = A + B;
+		check(Sum.m_X == 4.f && Sum.m_Y == 6.f);
+
+		FVector2D Diff = A - B;
+		check(Diff.m_X == 2.f && Diff.m_Y == 2.f);
+
+		FVector2D Scaled = A * 2.f;
+		check(Scaled.m_X == 6.f && Scaled.m_Y == 8.f);
+
+		float Dot = A.Dot(B);
+		check(Dot == 11.f);  // 3*1 + 4*2 = 11
+
+		float Sz = A.Size();
+		check(FMath::IsNearlyEqual(Sz, 5.f));  // sqrt(9+16) = 5
+
+		FVector2D N = A.GetNormalized();
+		check(N.IsNormalized());
+
+		float Dist = FVector2D::Distance(A, B);
+		check(FMath::IsNearlyEqual(Dist, FMath::Sqrt(8.f)));  // sqrt(4+4)
+
+		wprintf(L"[Tests] Phase 3.5-1 FVector2D - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// 3.5-2. FMath
+	// ----------------------------------------------------------
+	{
+		check(FMath::IsNearlyEqual(FMath::Lerp(0.f, 10.f, 0.5f), 5.f));
+		check(FMath::Clamp(15, 0, 10) == 10);
+		check(FMath::Clamp(-5, 0, 10) == 0);
+		check(FMath::Abs(-3.f) == 3.f);
+		check(FMath::Min(3, 7) == 3);
+		check(FMath::Max(3, 7) == 7);
+		check(FMath::IsNearlyEqual(FMath::Sqrt(4.f), 2.f));
+		check(FMath::IsNearlyZero(0.00001f) == true);
+
+		wprintf(L"[Tests] Phase 3.5-2 FMath - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// 3.5-3. FRect AABB
+	// ----------------------------------------------------------
+	{
+		FRect A(0.f, 0.f, 10.f, 10.f);
+		check(A.Contains(FVector2D(5.f, 5.f)) == true);
+		check(A.Contains(FVector2D(11.f, 5.f)) == false);
+
+		FRect B(5.f, 5.f, 15.f, 15.f);
+		check(A.Overlaps(B) == true);
+
+		FRect C(20.f, 20.f, 30.f, 30.f);
+		check(A.Overlaps(C) == false);
+
+		wprintf(L"[Tests] Phase 3.5-3 FRect AABB - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// 3.5-4. FColor / FLinearColor
+	// ----------------------------------------------------------
+	{
+		FLinearColor LC = FColor(255, 0, 0, 255).ToLinear();
+		check(FMath::IsNearlyEqual(LC.m_R, 1.f));
+		check(FMath::IsNearlyZero(LC.m_G));
+
+		FColor C2 = FLinearColor(1.f, 0.f, 0.f, 1.f).ToFColor();
+		check(C2.m_R == 255);
+		check(C2.m_G == 0);
+
+		wprintf(L"[Tests] Phase 3.5-4 FColor/FLinearColor - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// 3.5-5. FRandomStream
+	// ----------------------------------------------------------
+	{
+		FRandomStream RNG(42);
+		int32 Val = RNG.RandRange(0, 100);
+		check(Val >= 0 && Val <= 100);
+
+		// 같은 시드 → 같은 첫 번째 값
+		FRandomStream RNG1(42);
+		FRandomStream RNG2(42);
+		check(RNG1.RandRange(0, 1000) == RNG2.RandRange(0, 1000));
+
+		wprintf(L"[Tests] Phase 3.5-5 FRandomStream - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// 3.5-6. FMatrix3x3
+	// ----------------------------------------------------------
+	{
+		FMatrix3x3 I = FMatrix3x3::Identity();
+		FVector2D  V(3.f, 4.f);
+
+		FVector2D TV = I.TransformPoint(V);
+		check(FMath::IsNearlyEqual(TV.m_X, 3.f) && FMath::IsNearlyEqual(TV.m_Y, 4.f));
+
+		FMatrix3x3 T = FMatrix3x3::Translation(10.f, 20.f);
+		FVector2D TTV = T.TransformPoint(V);
+		check(FMath::IsNearlyEqual(TTV.m_X, 13.f) && FMath::IsNearlyEqual(TTV.m_Y, 24.f));
+
+		// 회전 0도 → 원점 불변
+		FMatrix3x3 R = FMatrix3x3::Rotation(0.f);
+		FVector2D  RV = R.TransformPoint(V);
+		check(FMath::IsNearlyEqual(RV.m_X, V.m_X) && FMath::IsNearlyEqual(RV.m_Y, V.m_Y));
+
+		wprintf(L"[Tests] Phase 3.5-6 FMatrix3x3 - PASSED\n");
+	}
+
+	wprintf(L"[Tests] Phase 3.5 Math Library - ALL PASSED\n");
 
 	return 0;
 }
