@@ -19,6 +19,10 @@
 #include "Core/Math/FMatrix3x3.h"
 #include "Core/Math/FMatrix4x4.h"
 #include "Core/Math/FRandomStream.h"
+#include "Core/Containers/HashFunctions.h"
+#include "Core/Containers/TMap.h"
+#include "Core/Containers/TSet.h"
+#include "Core/Containers/TMultiMap.h"
 
 namespace
 {
@@ -524,6 +528,197 @@ int main()
 	}
 
 	wprintf(L"[Tests] Phase 3.5 Math Library - ALL PASSED\n");
+
+	// ----------------------------------------------------------
+	// Phase 4-1. TMap Basic
+	// ----------------------------------------------------------
+	{
+		TMap<int32, int32> Map;
+		Map.Add(1, 100);
+		Map.Add(2, 200);
+		Map.Add(3, 300);
+
+		check(Map.Num() == 3);
+		check(Map.Contains(1));
+		check(Map.Contains(2));
+		check(Map.Contains(3));
+		check(!Map.Contains(99));
+
+		check(*Map.Find(1) == 100);
+		check(*Map.Find(2) == 200);
+		check(*Map.Find(3) == 300);
+		check(Map.Find(99) == nullptr);
+
+		// Overwrite existing key
+		Map.Add(2, 999);
+		check(Map.Num() == 3);
+		check(*Map.Find(2) == 999);
+
+		// Remove
+		bool bRemoved = Map.Remove(1);
+		check(bRemoved);
+		check(Map.Num() == 2);
+		check(!Map.Contains(1));
+		check(Map.Find(1) == nullptr);
+
+		// Remove non-existent
+		bool bRemoved2 = Map.Remove(99);
+		check(!bRemoved2);
+
+		wprintf(L"[Tests] Phase 4-1 TMap Basic - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 4-2. TMap Rehash (1000 entries)
+	// ----------------------------------------------------------
+	{
+		TMap<int32, int32> Map;
+		for (int32 i = 0; i < 1000; i++)
+		{
+			Map.Add(i, i * 2);
+		}
+		check(Map.Num() == 1000);
+		for (int32 i = 0; i < 1000; i++)
+		{
+			int32* pVal = Map.Find(i);
+			check(pVal != nullptr);
+			check(*pVal == i * 2);
+		}
+		wprintf(L"[Tests] Phase 4-2 TMap Rehash(1000) - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 4-3. TMap FindOrAdd / operator[]
+	// ----------------------------------------------------------
+	{
+		TMap<int32, int32> Map;
+
+		// FindOrAdd: creates default (0) if missing
+		int32& Ref1 = Map.FindOrAdd(42);
+		check(Ref1 == 0);
+		check(Map.Num() == 1);
+
+		Ref1 = 7;
+		check(*Map.Find(42) == 7);
+
+		// operator[] same as FindOrAdd
+		Map[100] = 55;
+		check(Map.Num() == 2);
+		check(*Map.Find(100) == 55);
+
+		// operator[] on existing key does not reset
+		Map[42] = 99;
+		check(*Map.Find(42) == 99);
+		check(Map.Num() == 2);
+
+		wprintf(L"[Tests] Phase 4-3 TMap FindOrAdd - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 4-4. TMap Iterator
+	// ----------------------------------------------------------
+	{
+		TMap<int32, int32> Map;
+		for (int32 i = 0; i < 10; i++)
+		{
+			Map.Add(i, i * i);
+		}
+
+		int32 IterCount = 0;
+		int32 ValueSum = 0;
+		for (auto& Bucket : Map)
+		{
+			IterCount++;
+			ValueSum += Bucket.Value;
+		}
+		check(IterCount == 10);
+		// Sum of 0^2..9^2 = 285
+		check(ValueSum == 285);
+
+		wprintf(L"[Tests] Phase 4-4 TMap Iterator - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 4-5. TSet Basic
+	// ----------------------------------------------------------
+	{
+		TSet<int32> Set;
+		Set.Add(10);
+		Set.Add(20);
+		Set.Add(30);
+		check(Set.Num() == 3);
+		check(Set.Contains(10));
+		check(Set.Contains(20));
+		check(!Set.Contains(99));
+
+		// Duplicate add returns false, count unchanged
+		bool bAdded = Set.Add(10);
+		check(!bAdded);
+		check(Set.Num() == 3);
+
+		// Remove
+		bool bRemoved = Set.Remove(20);
+		check(bRemoved);
+		check(Set.Num() == 2);
+		check(!Set.Contains(20));
+
+		// Iterator
+		int32 Count = 0;
+		for (const int32& Key : Set)
+		{
+			check(Key == 10 || Key == 30);
+			Count++;
+		}
+		check(Count == 2);
+
+		wprintf(L"[Tests] Phase 4-5 TSet Basic - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 4-6. TMultiMap
+	// ----------------------------------------------------------
+	{
+		TMultiMap<int32, int32> MMap;
+		MMap.Add(1, 10);
+		MMap.Add(1, 20);
+		MMap.Add(1, 30);
+		MMap.Add(2, 40);
+
+		check(MMap.NumKeys() == 2);
+		check(MMap.Num() == 4);
+
+		const TArray<int32>* pVals = MMap.MultiFind(1);
+		check(pVals != nullptr);
+		check(pVals->Num() == 3);
+		check(pVals->Contains(10));
+		check(pVals->Contains(20));
+		check(pVals->Contains(30));
+
+		// AddUnique
+		bool bAdded = MMap.AddUnique(1, 10);
+		check(!bAdded);
+		check(MMap.Num() == 4);
+
+		bAdded = MMap.AddUnique(1, 99);
+		check(bAdded);
+		check(MMap.Num() == 5);
+
+		// RemoveSingle
+		bool bRemoved = MMap.RemoveSingle(1, 20);
+		check(bRemoved);
+		check(MMap.Num() == 4);
+		pVals = MMap.MultiFind(1);
+		check(pVals != nullptr && !pVals->Contains(20));
+
+		// RemoveAll
+		MMap.RemoveAll(1);
+		check(MMap.NumKeys() == 1);
+		check(MMap.MultiFind(1) == nullptr);
+
+		wprintf(L"[Tests] Phase 4-6 TMultiMap - PASSED\n");
+	}
+
+	wprintf(L"[Tests] Phase 4 TMap/TSet - ALL PASSED\n");
 
 	return 0;
 }

@@ -159,8 +159,12 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Core\Containers\HashFunctions.h" />
     <ClInclude Include="Core\Containers\TArray.h" />
     <ClInclude Include="Core\Containers\TArrayView.h" />
+    <ClInclude Include="Core\Containers\TMap.h" />
+    <ClInclude Include="Core\Containers\TMultiMap.h" />
+    <ClInclude Include="Core\Containers\TSet.h" />
     <ClInclude Include="Core\Math\FColor.h" />
     <ClInclude Include="Core\Math\FIntPoint.h" />
     <ClInclude Include="Core\Math\FIntRect.h" />

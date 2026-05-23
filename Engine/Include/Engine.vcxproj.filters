@@ -102,6 +102,18 @@
     <ClInclude Include="Core\Math\FMatrix3x3.h">
       <Filter>01. Core\04. Math</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Containers\HashFunctions.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TMap.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TMultiMap.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TSet.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
