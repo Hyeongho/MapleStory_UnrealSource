@@ -574,6 +574,226 @@ private:
 	}
 
 	// -------------------------------------------------------------------------
+	// 정렬 내부 헬퍼
+	// -------------------------------------------------------------------------
+
+	void SwapElements(int32 A, int32 B)
+	{
+		if (A == B) 
+		{
+			return;
+		}
+
+		T Tmp = MoveTemp(m_pData[A]);
+
+		m_pData[A] = MoveTemp(m_pData[B]);
+		m_pData[B] = MoveTemp(Tmp);
+	}
+
+	// Introsort: 소규모 → 삽입 정렬, 대규모 → Quicksort (중앙값 피벗)
+	template<typename Pred>
+	void SortImpl(int32 Low, int32 High, Pred InPred)
+	{
+		if (Low >= High) return;
+
+		// 소규모 구간: 삽입 정렬
+		if (High - Low + 1 <= 16)
+		{
+			for (int32 i = Low + 1; i <= High; i++)
+			{
+				T Key = MoveTemp(m_pData[i]);
+				int32 j = i - 1;
+
+				while (j >= Low && InPred(Key, m_pData[j]))
+				{
+					m_pData[j + 1] = MoveTemp(m_pData[j]);
+					j--;
+				}
+
+				m_pData[j + 1] = MoveTemp(Key);
+			}
+
+			return;
+		}
+
+		// 중앙값-3으로 피벗 선택 → High 위치로 이동
+		int32 Mid = Low + (High - Low) / 2;
+
+		if (InPred(m_pData[Mid], m_pData[Low]))  
+		{
+			SwapElements(Low, Mid);
+		}
+
+		if (InPred(m_pData[High], m_pData[Low]))  
+		{
+			SwapElements(Low, High);
+		}
+
+		if (InPred(m_pData[Mid], m_pData[High]))
+		{
+			SwapElements(Mid, High);
+		}
+
+		// Lomuto 파티션 (피벗 = m_pData[High])
+		int32 StoreIdx = Low - 1;
+
+		for (int32 j = Low; j < High; j++)
+		{
+			if (!InPred(m_pData[High], m_pData[j]))
+			{
+				StoreIdx++;
+				SwapElements(StoreIdx, j);
+			}
+		}
+
+		SwapElements(StoreIdx + 1, High);
+		int32 PivotFinal = StoreIdx + 1;
+
+		SortImpl(Low, PivotFinal - 1, InPred);
+		SortImpl(PivotFinal + 1, High, InPred);
+	}
+
+	// Merge Sort (안정)
+	template<typename Pred>
+	void StableSortImpl(int32 Low, int32 High, Pred InPred)
+	{
+		if (Low >= High) 
+		{
+			return;
+		}
+
+		int32 Mid = Low + (High - Low) / 2;
+
+		StableSortImpl(Low, Mid, InPred);
+		StableSortImpl(Mid + 1, High, InPred);
+
+		MergeImpl(Low, Mid, High, InPred);
+	}
+
+	template<typename Pred>
+	void MergeImpl(int32 Low, int32 Mid, int32 High, Pred InPred)
+	{
+		int32 LS = Mid - Low + 1;
+		int32 RS = High - Mid;
+
+		T* Left = static_cast<T*>(FMemory::Malloc(static_cast<size_t>(LS) * sizeof(T), static_cast<uint32>(alignof(T))));
+		T* Right = static_cast<T*>(FMemory::Malloc(static_cast<size_t>(RS) * sizeof(T), static_cast<uint32>(alignof(T))));
+
+		// 임시 버퍼로 복사
+		for (int32 n = 0; n < LS; n++)
+		{
+			if constexpr (TIsTriviallyCopyable<T>::Value)
+			{
+				FMemory::Memcpy(Left + n, m_pData + Low + n, sizeof(T));
+			}
+
+			else
+			{
+				new (Left + n) T(m_pData[Low + n]);
+			}
+		}
+
+		for (int32 n = 0; n < RS; ++n)
+		{
+			if constexpr (TIsTriviallyCopyable<T>::Value)
+			{
+				FMemory::Memcpy(Right + n, m_pData + Mid + 1 + n, sizeof(T));
+			}
+
+			else
+			{
+				new (Right + n) T(m_pData[Mid + 1 + n]);
+			}
+		}
+
+		// 병합
+		int32 i = 0, j = 0, k = Low;
+
+		while (i < LS && j < RS)
+		{
+			if (!InPred(Right[j], Left[i]))
+			{
+				if constexpr (TIsTriviallyCopyable<T>::Value)
+				{
+					FMemory::Memcpy(m_pData + k, Left + i, sizeof(T));
+				}
+
+				else
+				{
+					m_pData[k] = MoveTemp(Left[i]);
+				}
+
+				i++;
+			}
+
+			else
+			{
+				if constexpr (TIsTriviallyCopyable<T>::Value)
+				{
+					FMemory::Memcpy(m_pData + k, Right + j, sizeof(T));
+				}
+
+				else
+				{
+					m_pData[k] = MoveTemp(Right[j]);
+				}
+
+				j++;
+			}
+
+			k++;
+		}
+
+		while (i < LS)
+		{
+			if constexpr (TIsTriviallyCopyable<T>::Value)
+			{
+				FMemory::Memcpy(m_pData + k, Left + i, sizeof(T));
+			}
+
+			else
+			{
+				m_pData[k] = MoveTemp(Left[i]);
+			}
+
+			i++;
+			k++;
+		}
+
+		while (j < RS)
+		{
+			if constexpr (TIsTriviallyCopyable<T>::Value)
+			{
+				FMemory::Memcpy(m_pData + k, Right + j, sizeof(T));
+			}
+
+			else
+			{
+				m_pData[k] = MoveTemp(Right[j]);
+			}
+
+			j++;
+			k++;
+		}
+
+		// 임시 버퍼 소멸
+		if constexpr (!TIsTriviallyCopyable<T>::Value)
+		{
+			for (int32 n = 0; n < LS; n++) 
+			{
+				Left[n].~T();
+			}
+
+			for (int32 n = 0; n < RS; n++) 
+			{
+				Right[n].~T();
+			}
+		}
+		FMemory::Free(Left);
+		FMemory::Free(Right);
+	}
+
+	// -------------------------------------------------------------------------
 	// 멤버 변수
 	// -------------------------------------------------------------------------
 

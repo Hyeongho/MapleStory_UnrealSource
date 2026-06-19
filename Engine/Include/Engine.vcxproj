@@ -182,6 +182,9 @@
     <ClInclude Include="Core\Memory\FPoolAllocator.h" />
     <ClInclude Include="Core\Memory\FStackAllocator.h" />
     <ClInclude Include="Core\Memory\IAllocator.h" />
+    <ClInclude Include="Core\String\FName.h" />
+    <ClInclude Include="Core\String\FString.h" />
+    <ClInclude Include="Core\String\FText.h" />
     <ClInclude Include="Core\Templates\AndOrNot.h" />
     <ClInclude Include="Core\Templates\TypeTraits.h" />
     <ClInclude Include="Core\Templates\Utility.h" />
@@ -206,6 +209,9 @@
     <ClCompile Include="Core\Memory\FPoolAllocator.cpp" />
     <ClCompile Include="Core\Memory\FStackAllocator.cpp" />
     <ClCompile Include="Core\Memory\MemoryOverride.cpp" />
+    <ClCompile Include="Core\String\FName.cpp" />
+    <ClCompile Include="Core\String\FString.cpp" />
+    <ClCompile Include="Core\String\FText.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

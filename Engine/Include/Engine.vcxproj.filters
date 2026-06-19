@@ -28,6 +28,9 @@
     <Filter Include="01. Core\04. Math">
       <UniqueIdentifier>{4c326cca-1ace-42c3-8c5f-333f567061ba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\05. String">
+      <UniqueIdentifier>{5bdd35ac-856b-4b78-ae8f-f9695c48bacf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -114,6 +117,15 @@
     <ClInclude Include="Core\Containers\TSet.h">
       <Filter>01. Core\03. Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Core\String\FText.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FString.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FName.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -172,6 +184,15 @@
     </ClCompile>
     <ClCompile Include="Core\Math\FMatrix3x3.cpp">
       <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\String\FText.cpp">
+      <Filter>01. Core\05. String</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\String\FString.cpp">
+      <Filter>01. Core\05. String</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\String\FName.cpp">
+      <Filter>01. Core\05. String</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

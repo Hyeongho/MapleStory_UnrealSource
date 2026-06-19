@@ -23,6 +23,9 @@
 #include "Core/Containers/TMap.h"
 #include "Core/Containers/TSet.h"
 #include "Core/Containers/TMultiMap.h"
+#include "Core/String/FString.h"
+#include "Core/String/FName.h"
+#include "Core/String/FText.h"
 
 namespace
 {
@@ -719,6 +722,120 @@ int main()
 	}
 
 	wprintf(L"[Tests] Phase 4 TMap/TSet - ALL PASSED\n");
+
+	// ----------------------------------------------------------
+	// Phase 5-1. FString Basic
+	// ----------------------------------------------------------
+	{
+		FString A(L"Hello");
+		FString B(L"World");
+
+		check(A.Len() == 5);
+		check(!A.IsEmpty());
+		check(FString().IsEmpty());
+
+		FString C = A + FString(L" ") + B;
+		check(C == FString(L"Hello World"));
+		check(C.Len() == 11);
+
+		FString D(L"Hello");
+		check(A == D);
+		check(A != B);
+
+		check(C.Contains(FString(L"llo")));
+		check(C.StartsWith(FString(L"Hello")));
+		check(C.EndsWith(FString(L"World")));
+		check(!C.Contains(FString(L"xyz")));
+
+		FString E(L"hello");
+		check(A.ToLower() == E);
+		check(E.ToUpper() == FString(L"HELLO"));
+
+		wprintf(L"[Tests] Phase 5-1 FString Basic - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 5-2. FString Format/Parse
+	// ----------------------------------------------------------
+	{
+		FString Fmt = FString::Printf(L"%d + %d = %d", 1, 2, 3);
+		check(Fmt == FString(L"1 + 2 = 3"));
+
+		FString Sub = FString(L"Hello World").Substring(6, 5);
+		check(Sub == FString(L"World"));
+
+		TArray<FString> Parts;
+		int32 Count = FString(L"a,b,c,d").Split(L',', Parts);
+		check(Count == 4);
+		check(Parts[0] == FString(L"a"));
+		check(Parts[3] == FString(L"d"));
+
+		check(FString(L"42").ToInt() == 42);
+		check(FString(L"-7").ToInt() == -7);
+
+		float F = FString(L"3.14").ToFloat();
+		check(F > 3.13f && F < 3.15f);
+
+		wprintf(L"[Tests] Phase 5-2 FString Format/Parse - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 5-3. FName Basic
+	// ----------------------------------------------------------
+	{
+		FName NameA(L"Player");
+		FName NameB(L"Player");
+		FName NameC(L"Enemy");
+
+		check(NameA == NameB);
+		check(NameA != NameC);
+		check(NameA.GetIndex() == NameB.GetIndex());
+		check(NameA.GetIndex() != NameC.GetIndex());
+
+		check(FName().IsNone());
+		check(!NameA.IsNone());
+
+		check(NameA.ToString() == FString(L"Player"));
+		check(NameC.ToString() == FString(L"Enemy"));
+
+		wprintf(L"[Tests] Phase 5-3 FName Basic - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 5-4. FName as TMap key
+	// ----------------------------------------------------------
+	{
+		TMap<FName, int32> Map;
+		Map.Add(FName(L"HP"), 100);
+		Map.Add(FName(L"MP"), 50);
+		Map.Add(FName(L"ATK"), 30);
+
+		check(Map.Num() == 3);
+		check(Map.Contains(FName(L"HP")));
+		check(*Map.Find(FName(L"HP")) == 100);
+		check(*Map.Find(FName(L"MP")) == 50);
+		check(Map.Find(FName(L"DEF")) == nullptr);
+
+		wprintf(L"[Tests] Phase 5-4 FName TMap Key - PASSED\n");
+	}
+
+	// ----------------------------------------------------------
+	// Phase 5-5. FText Basic
+	// ----------------------------------------------------------
+	{
+		FText T1(L"Hello");
+		FText T2(FString(L"Hello"));
+		FText T3;
+
+		check(T1 == T2);
+		check(T3.IsEmpty());
+		check(!T1.IsEmpty());
+		check(T1.ToString() == FString(L"Hello"));
+
+		wprintf(L"[Tests] Phase 5-5 FText Basic - PASSED\n");
+	}
+
+	wprintf(L"[Tests] Phase 5 FString/FName/FText - ALL PASSED\n");
 
 	return 0;
 }

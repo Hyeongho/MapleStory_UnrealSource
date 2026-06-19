@@ -18,17 +18,17 @@ private:
 
     struct FBucket
     {
-        KeyType      Key;
-        ValueType    Value;
+        KeyType Key;
+        ValueType Value;
         EBucketState State;
 
         FBucket() : Key(), Value(), State(EBucketState::Empty) {}
     };
 
     FBucket* m_pBuckets;
-    int32    m_Count;
-    int32    m_Capacity;
-    int32    m_DeletedCount;
+    int32 m_Count;
+    int32 m_Capacity;
+    int32 m_DeletedCount;
 
     static const int32 INITIAL_CAPACITY = 16;
 
