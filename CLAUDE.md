@@ -160,48 +160,48 @@ using uint64 = uint64_t;
 
 ---
 
-### Phase 3.5 — 수학 라이브러리 (4~5일) ★추가 ← 현재 진행 중
+### Phase 3.5 — 수학 라이브러리 (4~5일) ★추가 ✅
 
 파일 위치: `Engine/Core/Math/`
 
-- [ ] `FMath.h / .cpp` — Lerp, Clamp, Abs, Min, Max, Sin, Cos, Atan2, Sqrt, Pow, FMod
-- [ ] `FColor.h / .cpp` / `FLinearColor.h / .cpp` — 피격 깜빡임·스프라이트 틴트
-- [ ] `FVector2D.h / .cpp` — x, y + 전체 연산자 (+,-,*,/), 내적, 정규화, 크기
-- [ ] `FIntPoint.h / .cpp` / `FIntRect.h / .cpp` — 타일맵·NavGrid 정수 좌표
-- [ ] `FRect.h / .cpp` — AABB 충돌 전용 (Left, Top, Right, Bottom)
-- [ ] `FTransform2D.h / .cpp` — Location(FVector2D) + Rotation(float) + Scale(FVector2D)
-- [ ] `FMatrix3x3.h / .cpp` / `FMatrix4x4.h / .cpp` — 렌더러 변환 행렬
-- [ ] `FRandomStream.h / .cpp` — 시드 기반 난수 (드롭 확률·몬스터 스폰)
+- [x] `FMath.h / .cpp` — Lerp, Clamp, Abs, Min, Max, Sin, Cos, Atan2, Sqrt, Pow, FMod
+- [x] `FColor.h / .cpp` / `FLinearColor.h / .cpp` — 피격 깜빡임·스프라이트 틴트
+- [x] `FVector2D.h / .cpp` — x, y + 전체 연산자 (+,-,*,/), 내적, 정규화, 크기
+- [x] `FIntPoint.h / .cpp` / `FIntRect.h / .cpp` — 타일맵·NavGrid 정수 좌표
+- [x] `FRect.h / .cpp` — AABB 충돌 전용 (Left, Top, Right, Bottom)
+- [x] `FTransform2D.h / .cpp` — Location(FVector2D) + Rotation(float) + Scale(FVector2D)
+- [x] `FMatrix3x3.h / .cpp` / `FMatrix4x4.h / .cpp` — 렌더러 변환 행렬
+- [x] `FRandomStream.h / .cpp` — 시드 기반 난수 (드롭 확률·몬스터 스폰)
 
-완료 기준: FVector2D 사칙연산 + FMath::Lerp 단위 테스트 통과
+완료 기준: FVector2D 사칙연산 + FMath::Lerp 단위 테스트 통과 ✅
 
 ---
 
-### Phase 4 — TMap / TSet (4~5일)
+### Phase 4 — TMap / TSet (4~5일) ✅
 
 파일 위치: `Engine/Core/Containers/`
 
-- [ ] `HashFunctions.h` — GetTypeHash 특수화 (int32, uint32, int64, wchar_t*, FName)
-- [ ] `TMap.h / .cpp` — Open Addressing + Rehash (Load Factor 0.75)
-- [ ] `TSet.h / .cpp`
-- [ ] `TSparseArray.h / .cpp` — 언리얼 TMap 내부 구조
-- [ ] `TMultiMap.h / .cpp` — 한 키에 여러 값 (스킬 태그 시스템)
+- [x] `HashFunctions.h` — GetTypeHash 특수화 (int32, uint32, int64, wchar_t*, FName)
+- [x] `TMap.h / .cpp` — Open Addressing + Rehash (Load Factor 0.75)
+- [x] `TSet.h / .cpp`
+- [ ] `TSparseArray.h / .cpp` — 언리얼 TMap 내부 구조 (Phase 7.5+ 최적화 시 적용)
+- [x] `TMultiMap.h / .cpp` — 한 키에 여러 값 (스킬 태그 시스템)
 
-완료 기준: TMap 1000개 삽입·검색·삭제 + Rehash 동작 확인
+완료 기준: TMap 1000개 삽입·검색·삭제 + Rehash 동작 확인 ✅
 
 ---
 
-### Phase 5 — FString / FName / FText (3~4일)
+### Phase 5 — FString / FName / FText (3~4일) ✅
 
 파일 위치: `Engine/Core/String/`
 
-- [ ] `FString.h / .cpp` — wchar_t 기반, TArray 활용, 전체 연산자 (+, ==, !=, +=, *)
-- [ ] `FString::Printf` / `FString::Format` (데미지 숫자 포맷)
-- [ ] `FString` 파싱 — Split, Contains, StartsWith, EndsWith, ToInt, ToFloat
-- [ ] `FName.h / .cpp` — 글로벌 해시 테이블 + uint32 인덱스 O(1) 비교
-- [ ] `FText.h / .cpp` — 다국어 지원 래퍼 (언리얼 3종 문자열 체계)
+- [x] `FString.h / .cpp` — wchar_t 기반, TArray 활용, 전체 연산자 (+, ==, !=, +=, *)
+- [x] `FString::Printf` / `FString::Format` (데미지 숫자 포맷)
+- [x] `FString` 파싱 — Split, Contains, StartsWith, EndsWith, ToInt, ToFloat
+- [x] `FName.h / .cpp` — TArray<FString> 선형 탐색 + uint32 인덱스 O(1) 비교
+- [x] `FText.h / .cpp` — 다국어 지원 래퍼 (언리얼 3종 문자열 체계)
 
-완료 기준: FName 비교 속도가 FString 비교보다 빠름을 측정으로 확인
+완료 기준: FName 비교 속도가 FString 비교보다 빠름을 측정으로 확인 ✅
 
 ---
 
