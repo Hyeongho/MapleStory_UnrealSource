@@ -31,6 +31,9 @@
     <Filter Include="01. Core\05. String">
       <UniqueIdentifier>{5bdd35ac-856b-4b78-ae8f-f9695c48bacf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\06. Logging">
+      <UniqueIdentifier>{a2c1f3e7-9b4d-4e2a-8f6c-1d0e5b3a7c9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -126,6 +129,15 @@
     <ClInclude Include="Core\String\FName.h">
       <Filter>01. Core\05. String</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Logging\FLogger.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Logging\LogMacros.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\TResult.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -193,6 +205,9 @@
     </ClCompile>
     <ClCompile Include="Core\String\FName.cpp">
       <Filter>01. Core\05. String</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Logging\FLogger.cpp">
+      <Filter>01. Core\06. Logging</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

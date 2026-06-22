@@ -185,6 +185,9 @@
     <ClInclude Include="Core\String\FName.h" />
     <ClInclude Include="Core\String\FString.h" />
     <ClInclude Include="Core\String\FText.h" />
+    <ClInclude Include="Core\Logging\FLogger.h" />
+    <ClInclude Include="Core\Logging\LogMacros.h" />
+    <ClInclude Include="Core\Templates\TResult.h" />
     <ClInclude Include="Core\Templates\AndOrNot.h" />
     <ClInclude Include="Core\Templates\TypeTraits.h" />
     <ClInclude Include="Core\Templates\Utility.h" />
@@ -212,6 +215,7 @@
     <ClCompile Include="Core\String\FName.cpp" />
     <ClCompile Include="Core\String\FString.cpp" />
     <ClCompile Include="Core\String\FText.cpp" />
+    <ClCompile Include="Core\Logging\FLogger.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

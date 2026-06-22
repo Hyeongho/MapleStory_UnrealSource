@@ -41,6 +41,8 @@ using uint64 = uint64_t;
 #define check(expr)  assert(expr)
 #define verify(expr) assert(expr)
 
+// ensure(expr) — 1회만 발동하는 soft assert (LogMacros.h 에서 정의)
+
 // -----------------------------------------------------------------------
 // 플랫폼 식별
 // -----------------------------------------------------------------------
@@ -51,3 +53,8 @@ using uint64 = uint64_t;
 #else
 #pragma comment(lib, "Engine.lib")
 #endif
+
+// -----------------------------------------------------------------------
+// 로깅 시스템 (UE_LOG, ensure, FLogger)
+// -----------------------------------------------------------------------
+#include "Core/Logging/FLogger.h"
