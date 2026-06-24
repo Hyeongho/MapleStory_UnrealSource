@@ -26,6 +26,8 @@
 #include "Core/String/FString.h"
 #include "Core/String/FName.h"
 #include "Core/String/FText.h"
+#include "Core/Logging/FLogger.h"
+#include "Core/Templates/TResult.h"
 
 namespace
 {
@@ -836,6 +838,36 @@ int main()
 	}
 
 	wprintf(L"[Tests] Phase 5 FString/FName/FText - ALL PASSED\n");
+
+	// Phase 5.5 - Logging / Error Handling
+	{
+		FLogger::Init(L"logs/engine.log");
+
+		UE_LOG(LogCore, Verbose, L"[5.5-1] Verbose message");
+		UE_LOG(LogCore, Log, L"[5.5-1] Log message %d", 42);
+		UE_LOG(LogCore, Warning, L"[5.5-1] Warning message");
+		UE_LOG(LogAI, Error, L"[5.5-1] Error message");
+		UE_LOG(LogRenderer, Log, L"[5.5-2] Renderer log");
+
+		// ensure — expr true: no breakpoint
+		int32 x = 5;
+		bool bResult = ensure(x == 5);
+		check(bResult == true);
+
+		// TResult
+		TResult<int32> OkResult = TResult<int32>::Ok(42);
+		TResult<int32> FailResult = TResult<int32>::Fail(EEngineError::InvalidArgument);
+
+		check(OkResult.IsOk());
+		check(OkResult.GetValue() == 42);
+		check(FailResult.IsErr());
+		check(FailResult.GetError() == EEngineError::InvalidArgument);
+
+		FLogger::Shutdown();
+		wprintf(L"[Tests] Phase 5.5 Logging/ErrorHandling - PASSED\n");
+	}
+
+	wprintf(L"[Tests] Phase 5.5 Logging/ErrorHandling - ALL PASSED\n");
 
 	return 0;
 }

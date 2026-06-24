@@ -165,6 +165,8 @@
     <ClInclude Include="Core\Containers\TMap.h" />
     <ClInclude Include="Core\Containers\TMultiMap.h" />
     <ClInclude Include="Core\Containers\TSet.h" />
+    <ClInclude Include="Core\Logging\FLogger.h" />
+    <ClInclude Include="Core\Logging\LogMacros.h" />
     <ClInclude Include="Core\Math\FColor.h" />
     <ClInclude Include="Core\Math\FIntPoint.h" />
     <ClInclude Include="Core\Math\FIntRect.h" />
@@ -186,12 +188,14 @@
     <ClInclude Include="Core\String\FString.h" />
     <ClInclude Include="Core\String\FText.h" />
     <ClInclude Include="Core\Templates\AndOrNot.h" />
+    <ClInclude Include="Core\Templates\TResult.h" />
     <ClInclude Include="Core\Templates\TypeTraits.h" />
     <ClInclude Include="Core\Templates\Utility.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Core\Logging\FLogger.cpp" />
     <ClCompile Include="Core\Math\FColor.cpp" />
     <ClCompile Include="Core\Math\FIntPoint.cpp" />
     <ClCompile Include="Core\Math\FIntRect.cpp" />

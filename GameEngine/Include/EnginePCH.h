@@ -51,3 +51,8 @@ using uint64 = uint64_t;
 #else
 #pragma comment(lib, "Engine.lib")
 #endif
+
+// -----------------------------------------------------------------------
+// 로깅 시스템 (UE_LOG, ensure, FLogger)
+// -----------------------------------------------------------------------
+#include "Core/Logging/FLogger.h"
