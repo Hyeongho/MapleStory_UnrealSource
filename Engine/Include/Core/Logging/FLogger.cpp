@@ -12,7 +12,7 @@ DEFINE_LOG_CATEGORY(LogPhysics);
 DEFINE_LOG_CATEGORY(LogAI);
 DEFINE_LOG_CATEGORY(LogUI);
 
-void FLogger::Init(const wchar_t* LogFilePath)
+void FLogger::Init()
 {
     if (s_bInitialized)
     {
@@ -20,8 +20,31 @@ void FLogger::Init(const wchar_t* LogFilePath)
     }
     s_bInitialized = true;
 
-    CreateDirectoryW(L"logs", nullptr);
-    _wfopen_s(&s_pFile, LogFilePath, L"a");
+    // executable directory
+    wchar_t ExePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, ExePath, MAX_PATH);
+    wchar_t* LastSlash = wcsrchr(ExePath, L'\\');
+    if (LastSlash)
+    {
+        *(LastSlash + 1) = L'\0';
+    }
+
+    // <ExeDir>\logs\
+    wchar_t LogDir[MAX_PATH];
+    swprintf(LogDir, MAX_PATH, L"%slogs", ExePath);
+    CreateDirectoryW(LogDir, nullptr);
+
+    // filename: engine_YYYY-MM-DD_HH-MM-SS.log
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    wchar_t FullPath[MAX_PATH];
+    swprintf(FullPath, MAX_PATH, L"%s\\engine_%04d-%02d-%02d_%02d-%02d-%02d.log",
+             LogDir,
+             st.wYear, st.wMonth, st.wDay,
+             st.wHour, st.wMinute, st.wSecond);
+
+    _wfopen_s(&s_pFile, FullPath, L"w");
 }
 
 void FLogger::Shutdown()

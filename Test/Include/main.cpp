@@ -841,7 +841,7 @@ int main()
 
 	// Phase 5.5 - Logging / Error Handling
 	{
-		FLogger::Init(L"logs/engine.log");
+		FLogger::Init();
 
 		UE_LOG(LogCore,     Verbose, L"[5.5-1] Verbose message");
 		UE_LOG(LogCore,     Log,     L"[5.5-1] Log message %d", 42);
