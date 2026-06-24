@@ -34,6 +34,9 @@
     <Filter Include="01. Core\06. Logging">
       <UniqueIdentifier>{a2c1f3e7-9b4d-4e2a-8f6c-1d0e5b3a7c9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\07. SmartPointer">
+      <UniqueIdentifier>{b3d4e5f6-a7c8-4d9e-b0a1-c2d3e4f5a6b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -138,6 +141,18 @@
     <ClInclude Include="Core\Templates\TResult.h">
       <Filter>01. Core\02. Templates</Filter>
     </ClInclude>
+    <ClInclude Include="Core\SmartPointer\SharedPointerInternals.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TWeakPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedRef.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -208,6 +223,15 @@
     </ClCompile>
     <ClCompile Include="Core\Logging\FLogger.cpp">
       <Filter>01. Core\06. Logging</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\SmartPointer\TSharedPtr.cpp">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\SmartPointer\TWeakPtr.cpp">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\SmartPointer\TSharedRef.cpp">
+      <Filter>01. Core\07. SmartPointer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

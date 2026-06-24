@@ -71,6 +71,23 @@ namespace
 	int32 FLifecycle::DtorCount = 0;
 }
 
+struct FBossComponent;
+struct FBossActor
+{
+	TSharedPtr<FBossComponent> m_pComponent;
+	static int32 s_DestroyCount;
+	~FBossActor() { ++s_DestroyCount; }
+};
+int32 FBossActor::s_DestroyCount = 0;
+
+struct FBossComponent
+{
+	TWeakPtr<FBossActor> m_pOwner;
+	static int32 s_DestroyCount;
+	~FBossComponent() { ++s_DestroyCount; }
+};
+int32 FBossComponent::s_DestroyCount = 0;
+
 int main()
 {
 	FMemory::InitMemory();
@@ -868,6 +885,74 @@ int main()
 	}
 
 	wprintf(L"[Tests] Phase 5.5 Logging/ErrorHandling - ALL PASSED\n");
+
+	// Phase 6 - TSharedPtr / TWeakPtr / TSharedRef
+	{
+		// Phase 6-1. TSharedPtr Basic
+		{
+			TSharedPtr<int32> A = MakeShared<int32>(42);
+			check(A.IsValid() && *A == 42 && A.GetRefCount() == 1);
+
+			TSharedPtr<int32> B = A;
+			check(A.GetRefCount() == 2 && B.GetRefCount() == 2);
+
+			TSharedPtr<int32> C = MoveTemp(B);
+			check(!B.IsValid() && A.GetRefCount() == 2 && *C == 42);
+
+			C.Reset();
+			check(A.GetRefCount() == 1);
+
+			wprintf(L"[Tests] Phase 6-1 TSharedPtr Basic - PASSED\n");
+		}
+
+		// Phase 6-2. TWeakPtr
+		{
+			TWeakPtr<int32> Weak;
+			{
+				TSharedPtr<int32> Shared = MakeShared<int32>(100);
+				Weak = Shared;
+				check(Weak.IsValid());
+
+				TSharedPtr<int32> Pinned = Weak.Pin();
+				check(Pinned.IsValid() && *Pinned == 100 && Shared.GetRefCount() == 2);
+			}
+			check(!Weak.IsValid());
+			check(!Weak.Pin().IsValid());
+
+			wprintf(L"[Tests] Phase 6-2 TWeakPtr - PASSED\n");
+		}
+
+		// Phase 6-3. Circular Reference (Boss <-> Component)
+		{
+			FBossActor::s_DestroyCount    = 0;
+			FBossComponent::s_DestroyCount = 0;
+			{
+				TSharedPtr<FBossActor>     Boss      = MakeShared<FBossActor>();
+				TSharedPtr<FBossComponent> Component = MakeShared<FBossComponent>();
+				Boss->m_pComponent = Component;
+				Component->m_pOwner = Boss;
+				check(Boss.GetRefCount() == 1);
+				check(Component.GetRefCount() == 2);
+			}
+			check(FBossActor::s_DestroyCount    == 1);
+			check(FBossComponent::s_DestroyCount == 1);
+
+			wprintf(L"[Tests] Phase 6-3 Circular Reference - PASSED\n");
+		}
+
+		// Phase 6-4. TSharedRef
+		{
+			TSharedRef<int32> Ref(new int32(77));
+			check(*Ref == 77 && Ref.GetRefCount() == 1);
+
+			TSharedPtr<int32> Ptr = Ref.ToSharedPtr();
+			check(*Ptr == 77 && Ptr.GetRefCount() == 2 && Ref.GetRefCount() == 2);
+
+			wprintf(L"[Tests] Phase 6-4 TSharedRef - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 6 TSharedPtr/TWeakPtr/TSharedRef - ALL PASSED\n");
+	}
 
 	return 0;
 }
