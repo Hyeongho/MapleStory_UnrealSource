@@ -6,7 +6,7 @@
 class FLogger
 {
 public:
-    static void Init(const wchar_t* LogFilePath = L"logs/engine.log");
+    static void Init();
     static void Shutdown();
 
     static void Log(const FLogCategoryBase& Category, ELogVerbosity Verbosity, const wchar_t* Format, ...);
