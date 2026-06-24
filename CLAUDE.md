@@ -205,20 +205,20 @@ using uint64 = uint64_t;
 
 ---
 
-### Phase 5.5 — 로깅 / 에러처리 (2일) ★추가
+### Phase 5.5 — 로깅 / 에러처리 (2일) ★추가 ✅
 
 파일 위치: `Engine/Core/Logging/`
 
-- [ ] `check(expr)` — 항상 터지는 하드 assert
-- [ ] `verify(expr)` — 릴리즈에서도 평가, 실패 시 assert
-- [ ] `ensure(expr)` — 한 번만 터지는 soft assert
-- [ ] `UE_LOG(Category, Level, Format, ...)` 매크로  
+- [x] `check(expr)` — 항상 터지는 하드 assert
+- [x] `verify(expr)` — 릴리즈에서도 평가, 실패 시 assert
+- [x] `ensure(expr)` — 한 번만 터지는 soft assert
+- [x] `UE_LOG(Category, Level, Format, ...)` 매크로  
   레벨: Verbose / Log / Warning / Error / Fatal  
   카테고리: LogCore / LogAI / LogUI / LogRenderer / LogPhysics
-- [ ] 로그 파일 저장 (`logs/engine.log`)
-- [ ] 예외 없는 에러 전파 전략 (`Result<T,E>` 패턴)
+- [x] 로그 파일 저장 (`logs/engine.log`)
+- [x] 예외 없는 에러 전파 전략 (`TResult<T,E>` 패턴) — `Engine/Core/Templates/TResult.h`
 
-완료 기준: `UE_LOG(LogCore, Warning, L"test %d", 42)` 콘솔 + 파일에 기록
+완료 기준: `UE_LOG(LogCore, Warning, L"test %d", 42)` 콘솔 + 파일에 기록 ✅
 
 ---
 
