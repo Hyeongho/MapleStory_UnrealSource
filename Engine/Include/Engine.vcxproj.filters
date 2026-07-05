@@ -34,6 +34,9 @@
     <Filter Include="01. Core\06. Logging">
       <UniqueIdentifier>{b14af183-10b2-4b7e-af38-1fc5315a6ee1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01. Core\07. SmartPointer">
+      <UniqueIdentifier>{3a875f95-d6ff-4dd3-ac50-64665a6a26b3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -137,6 +140,18 @@
     </ClInclude>
     <ClInclude Include="Core\Templates\TResult.h">
       <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\SharedPointerInternals.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TWeakPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedRef.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

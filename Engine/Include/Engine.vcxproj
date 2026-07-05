@@ -184,6 +184,10 @@
     <ClInclude Include="Core\Memory\FPoolAllocator.h" />
     <ClInclude Include="Core\Memory\FStackAllocator.h" />
     <ClInclude Include="Core\Memory\IAllocator.h" />
+    <ClInclude Include="Core\SmartPointer\SharedPointerInternals.h" />
+    <ClInclude Include="Core\SmartPointer\TSharedPtr.h" />
+    <ClInclude Include="Core\SmartPointer\TSharedRef.h" />
+    <ClInclude Include="Core\SmartPointer\TWeakPtr.h" />
     <ClInclude Include="Core\String\FName.h" />
     <ClInclude Include="Core\String\FString.h" />
     <ClInclude Include="Core\String\FText.h" />
