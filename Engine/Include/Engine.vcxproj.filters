@@ -37,6 +37,9 @@
     <Filter Include="01. Core\07. SmartPointer">
       <UniqueIdentifier>{b3d4e5f6-a7c8-4d9e-b0a1-c2d3e4f5a6b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02. Object">
+      <UniqueIdentifier>{c4d5e6f7-b8a9-4e0f-c1b2-d3e4f5a6b7c8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -153,6 +156,30 @@
     <ClInclude Include="Core\SmartPointer\TSharedRef.h">
       <Filter>01. Core\07. SmartPointer</Filter>
     </ClInclude>
+    <ClInclude Include="Object\ObjectMacros.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UClass.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\CastTemplates.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\TSubclassOf.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UObject.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UActorComponent.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\USceneComponent.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\AActor.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -232,6 +259,21 @@
     </ClCompile>
     <ClCompile Include="Core\SmartPointer\TSharedRef.cpp">
       <Filter>01. Core\07. SmartPointer</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UClass.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UObject.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UActorComponent.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\USceneComponent.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\AActor.cpp">
+      <Filter>02. Object</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -68,3 +68,12 @@ using uint64 = uint64_t;
 // 스마트 포인터 (TSharedPtr, TWeakPtr, TSharedRef, MakeShared)
 // -----------------------------------------------------------------------
 #include "Core/SmartPointer/TSharedRef.h"
+
+// -----------------------------------------------------------------------
+// Object 타입 시스템 (UClass, Cast, TSubclassOf — Phase 7)
+// -----------------------------------------------------------------------
+#include "Object/ObjectMacros.h"
+#include "Object/UClass.h"
+#include "Object/CastTemplates.h"
+#include "Object/TSubclassOf.h"
+// UObject.h / AActor.h 는 PCH 제외 — 필요 파일에서 직접 include

@@ -195,6 +195,14 @@
     <ClInclude Include="Core\SmartPointer\TSharedPtr.h" />
     <ClInclude Include="Core\SmartPointer\TWeakPtr.h" />
     <ClInclude Include="Core\SmartPointer\TSharedRef.h" />
+    <ClInclude Include="Object\ObjectMacros.h" />
+    <ClInclude Include="Object\UClass.h" />
+    <ClInclude Include="Object\CastTemplates.h" />
+    <ClInclude Include="Object\TSubclassOf.h" />
+    <ClInclude Include="Object\UObject.h" />
+    <ClInclude Include="Object\UActorComponent.h" />
+    <ClInclude Include="Object\USceneComponent.h" />
+    <ClInclude Include="Object\AActor.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
   </ItemGroup>
@@ -223,6 +231,11 @@
     <ClCompile Include="Core\SmartPointer\TSharedPtr.cpp" />
     <ClCompile Include="Core\SmartPointer\TWeakPtr.cpp" />
     <ClCompile Include="Core\SmartPointer\TSharedRef.cpp" />
+    <ClCompile Include="Object\UClass.cpp" />
+    <ClCompile Include="Object\UObject.cpp" />
+    <ClCompile Include="Object\UActorComponent.cpp" />
+    <ClCompile Include="Object\USceneComponent.cpp" />
+    <ClCompile Include="Object\AActor.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
