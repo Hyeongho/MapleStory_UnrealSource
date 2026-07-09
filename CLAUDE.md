@@ -33,6 +33,7 @@ MyEngine.sln
 │   │   └── Math/            (Phase 3.5)
 │   ├── Object/              (Phase 7)
 │   ├── Timer/               (Phase 7.5)
+│   ├── Ability/             (Phase 7.7)
 │   ├── Renderer/            (Phase 8)
 │   ├── Animation/           (Phase 9)
 │   ├── Physics/             (Phase 10)
@@ -222,39 +223,39 @@ using uint64 = uint64_t;
 
 ---
 
-### Phase 6 — TSharedPtr / TWeakPtr (3일)
+### Phase 6 — TSharedPtr / TWeakPtr (3일) ✅
 
 파일 위치: `Engine/Core/SmartPointer/`
 
-- [ ] `SharedPointerInternals.h` — FRefCountBlock (SharedCount + WeakCount)
-- [ ] `TSharedPtr.h / .cpp` — 복사 / 이동 / 소멸
-- [ ] `TSharedRef.h / .cpp` — null 불가 버전
-- [ ] `TWeakPtr.h / .cpp` — IsValid() / Pin()
-- [ ] `MakeShared<T>()` 헬퍼
-- [ ] 순환 참조 테스트 케이스 (보스↔파츠 참조 구조)
+- [x] `SharedPointerInternals.h` — FRefCountBlock (SharedCount + WeakCount)
+- [x] `TSharedPtr.h / .cpp` — 복사 / 이동 / 소멸
+- [x] `TSharedRef.h / .cpp` — null 불가 버전
+- [x] `TWeakPtr.h / .cpp` — IsValid() / Pin()
+- [x] `MakeShared<T>()` 헬퍼
+- [x] 순환 참조 테스트 케이스 (보스↔파츠 참조 구조)
 
-완료 기준: 순환 참조 상황에서 메모리 릭 없음 확인
+완료 기준: 순환 참조 상황에서 메모리 릭 없음 확인 ✅
 
 ---
 
-### Phase 7 — UObject / Cast 시스템 (5~6일)
+### Phase 7 — UObject / Cast 시스템 (5~6일) ✅
 
 파일 위치: `Engine/Object/`
 
-- [ ] `UClass.h / .cpp` — Name(FName) + SuperClass + IsChildOf() 체인
-- [ ] `DECLARE_CLASS(TClass, TSuperClass)` 매크로 — StaticClass() + GetClass()
-- [ ] `Cast<T>(obj)` — 실패 시 nullptr
-- [ ] `CastChecked<T>(obj)` — 실패 시 check() assert
-- [ ] `ExactCast<T>(obj)` — 정확히 그 타입만
-- [ ] `TSubclassOf<T>` — 타입 안전 클래스 레퍼런스 (직업 등록용)
-- [ ] `UObject.h / .cpp` — 베이스 클래스 (BeginPlay, Tick, EndPlay)
-- [ ] `AActor.h / .cpp` — AddComponent<T>() / GetComponent<T>() 템플릿
-- [ ] `UActorComponent.h / .cpp` / `USceneComponent.h / .cpp` (Transform 보유)
-- [ ] CDO — Class Default Object (아이템·몬스터 기본값)
-- [ ] UPROPERTY / UFUNCTION 매크로 기초
-- [ ] UObject GC (몬스터 사망 후 자동 해제)
+- [x] `UClass.h / .cpp` — Name(FName) + SuperClass + IsChildOf() 체인
+- [x] `DECLARE_CLASS(TClass, TSuperClass)` 매크로 — StaticClass() + GetClass()
+- [x] `Cast<T>(obj)` — 실패 시 nullptr
+- [x] `CastChecked<T>(obj)` — 실패 시 check() assert
+- [x] `ExactCast<T>(obj)` — 정확히 그 타입만
+- [x] `TSubclassOf<T>` — 타입 안전 클래스 레퍼런스 (직업 등록용)
+- [x] `UObject.h / .cpp` — 베이스 클래스 (BeginPlay, Tick, EndPlay)
+- [x] `AActor.h / .cpp` — AddComponent<T>() / GetComponent<T>() 템플릿
+- [x] `UActorComponent.h / .cpp` / `USceneComponent.h / .cpp` (Transform 보유)
+- [x] UPROPERTY / UFUNCTION 매크로 기초 (stub)
+- [ ] CDO — Class Default Object (아이템·몬스터 기본값) ← Phase 7.5+ 예정
+- [ ] UObject 완전 GC (몬스터 사망 후 자동 해제) ← Phase 7.5+ 예정
 
-완료 기준: `Cast<USpriteComponent>(comp)` 정상 동작 확인
+완료 기준: `Cast<USpriteComponent>(comp)` 정상 동작 확인 ✅
 
 ---
 
@@ -268,6 +269,73 @@ using uint64 = uint64_t;
 - [ ] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근
 
 완료 기준: 3초 뒤 콜백 정확히 호출 확인
+
+---
+
+### Phase 7.7 — Gameplay Ability System (6~7일) ★추가
+
+파일 위치: `Engine/Ability/`
+
+**설계 원리:** RTTI 없이 UClass + Cast<T> 기반으로 언리얼 GAS를 직접 구현.  
+MapleStory의 패시브·액티브 스킬, 독 도트, 힐, 쿨다운, 장비 스탯, 상태이상을 모두 커버.
+
+#### 핵심 타입 (`AbilityTypes.h`)
+
+```
+EGameplayEffectDurationType : Instant / Duration / Infinite
+EGameplayModifierOperation  : Add / Multiply / Override
+FGameplayEffectModifier     : AttributeName + Operation + Magnitude
+FActiveGameplayEffect       : pSpec + Duration + PeriodTimer + StackCount
+FGameplayAbilitySpec        : pAbility + Level + bIsActive
+```
+
+#### 구현 파일 목록
+
+- [ ] `AbilityTypes.h` — 공통 열거형·구조체 (헤더 전용)
+- [ ] `FGameplayTag.h / .cpp` — 계층 태그 (L"Skill.Attack.Slash", L"Status.Stun")
+  - `MatchesParent()` — "Skill.Attack"이 "Skill"의 자식인지 문자열 접두사로 판별
+- [ ] `FGameplayTagContainer.h / .cpp` — 태그 묶음
+  - `HasTag()` / `HasParentTag()` / `HasAnyTag()` / `HasAllTags()`
+- [ ] `FGameplayAttribute.h` — 단일 속성 (BaseValue + CurrentValue + Min/Max 클램프, 헤더 전용)
+- [ ] `UAttributeSet.h / .cpp` — `TMap<FName, FGameplayAttribute>` 기반 속성 집합
+  - `InitAttribute(Name, Base, Min, Max)` / `GetAttribute()` / `GetCurrentValue()`
+- [ ] `UGameplayEffect.h / .cpp` — 효과 정의
+  - Instant: 즉시 적용 후 소멸 (데미지, 회복)
+  - Duration: N초 유지 후 만료 (버프/디버프)
+  - Infinite: 명시 제거 전까지 유지 (패시브, 장비 스탯)
+  - `m_Period` — 0이면 없음, >0이면 N초마다 Modifier 재적용 (독 도트)
+  - `m_MaxStacks` — 중첩 버프 최대 스택 수 (기본 1)
+- [ ] `UGameplayAbility.h / .cpp` — 스킬 정의
+  - `m_pCostEffect` — MP 소모 효과
+  - `m_pCooldownEffect` — 쿨다운 태그 부여 효과
+  - `m_ActivationBlockedTags` — 스턴 등 차단 조건
+  - `virtual CanActivate()` / `ActivateAbility()` / `EndAbility()`
+- [ ] `UAbilitySystemComponent.h / .cpp` — 캐릭터에 붙는 메인 컴포넌트 (UActorComponent 상속)
+  - `SetAttributeSet()` / `GetAttributeCurrentValue()`
+  - `ApplyGameplayEffect()` — Instant 즉시 처리, Duration/Infinite 목록 추가
+  - `RemoveEffectsWithTag()` — 상태이상 해제 스킬에서 사용
+  - `GrantAbility()` / `TryActivateAbility()` / `TryActivateAbilityByTag()`
+  - `Tick(DeltaTime)` — Duration 차감, Period 도트 발동, 만료 효과 제거
+  - `AddLooseTag()` / `RemoveLooseTag()` — 직접 태그 조작
+
+#### MapleStory 패턴별 구현 방식
+
+| 패턴 | GAS 구현 |
+|------|---------|
+| 패시브 스킬 (ATK +20% 영구) | Infinite UGameplayEffect, 스킬 습득 시 적용 |
+| 독 디버프 (1초마다 HP -50) | Duration + Period UGameplayEffect |
+| 힐 포션 (HP 즉시 +500) | Instant UGameplayEffect |
+| 스킬 쿨다운 (3초) | Duration + L"Cooldown.Slash" 태그 부여 |
+| 상태이상 해제 | RemoveEffectsWithTag(L"Status") 호출 |
+| 장비 스탯 (활: ATK +200) | Infinite 효과, 장비 해제 시 제거 |
+| 크리티컬 충전 스택 | MaxStacks=5 Duration 효과 |
+
+완료 기준:
+- 독 도트 1초마다 HP 감소 확인
+- 쿨다운 중 재발동 차단 확인
+- 패시브 Infinite 효과 ATK 영구 증가 확인
+- 상태이상 차단 및 해제 확인
+- FMemoryTracker 릭 없음 확인
 
 ---
 
@@ -561,7 +629,8 @@ C++ 구현 위치: `WzTest/wz_test.cpp`
 | 2~3주 | 3 | TArray 완성 + 단위 테스트 |
 | 3~4주 | 3.5 | 수학 라이브러리 |
 | 4~5주 | 4·5 | TMap·TSet + FString·FName |
-| 5~6주 | 5.5·6·7·7.5 | 로그 + SmartPtr + UObject + Timer |
+| 5~6주 | 5.5·6·7 | 로그 + SmartPtr + UObject |
+| 6~7주 | 7.5·7.7 | Timer + Gameplay Ability System |
 | 7~8주 | 8·9 | Renderer + Animation (WZ Canvas 변환 병행) |
 | 8~9주 | 10·11 | Physics + Audio (WZ Foothold 병행) |
 | 10~12주 | 12~15 | UI + Input + Resource + World (WZ 통합) |
@@ -605,4 +674,5 @@ Claude Code는 파일 생성·빌드 오류 수정·리팩터링 전담.
 - POD 분기 최적화 (if constexpr + TIsPOD)
 - FName O(1) 비교 (uint32 인덱스)
 - UClass 기반 Cast<T>() — RTTI 없이 동작
+- Gameplay Ability System 직접 구현 — 태그·속성·효과·스킬 계층 (언리얼 GAS 패턴)
 - WZ 파서 직접 C++ 이식 (AES 복호화, 분할 파일 merge)
