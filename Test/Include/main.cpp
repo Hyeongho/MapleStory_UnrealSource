@@ -33,6 +33,7 @@
 #include "Core/String/FText.h"
 #include "Core/Logging/FLogger.h"
 #include "Core/Templates/TResult.h"
+#include "Timer/FTimerManager.h"
 
 namespace
 {

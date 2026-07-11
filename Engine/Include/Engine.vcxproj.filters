@@ -41,7 +41,7 @@
       <UniqueIdentifier>{07875042-78e6-4b07-b832-bcfc962beac9}</UniqueIdentifier>
     </Filter>
     <Filter Include="03. Timer">
-      <UniqueIdentifier>{d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a}</UniqueIdentifier>
+      <UniqueIdentifier>{d56e832a-51ec-4ad5-bc53-0490fae6de9a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -183,10 +183,10 @@
     <ClInclude Include="Object\UClass.h">
       <Filter>02. Object</Filter>
     </ClInclude>
-    <ClInclude Include="Timer\FTimerHandle.h">
+    <ClInclude Include="Timer\FTimerDelegate.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
-    <ClInclude Include="Timer\FTimerDelegate.h">
+    <ClInclude Include="Timer\FTimerHandle.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
     <ClInclude Include="Timer\FTimerManager.h">
