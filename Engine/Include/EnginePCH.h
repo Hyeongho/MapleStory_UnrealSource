@@ -80,3 +80,13 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #include "Timer/FTimerHandle.h"
 #include "Timer/FTimerDelegate.h"
+
+// -----------------------------------------------------------------------
+// Ability System (AbilityTypes, Tag, TagContainer, Attribute — Phase 7.7)
+// UAttributeSet / UGameplayEffect / UGameplayAbility / UAbilitySystemComponent
+// → PCH 제외, 필요 파일에서 직접 include
+// -----------------------------------------------------------------------
+#include "Ability/AbilityTypes.h"
+#include "Ability/FGameplayTag.h"
+#include "Ability/FGameplayTagContainer.h"
+#include "Ability/FGameplayAttribute.h"

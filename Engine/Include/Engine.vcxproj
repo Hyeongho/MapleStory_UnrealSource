@@ -215,6 +215,14 @@
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
+    <ClInclude Include="Ability\AbilityTypes.h" />
+    <ClInclude Include="Ability\FGameplayTag.h" />
+    <ClInclude Include="Ability\FGameplayTagContainer.h" />
+    <ClInclude Include="Ability\FGameplayAttribute.h" />
+    <ClInclude Include="Ability\UAttributeSet.h" />
+    <ClInclude Include="Ability\UGameplayEffect.h" />
+    <ClInclude Include="Ability\UGameplayAbility.h" />
+    <ClInclude Include="Ability\UAbilitySystemComponent.h" />
     <ClInclude Include="Object\AActor.h" />
     <ClInclude Include="Object\CastTemplates.h" />
     <ClInclude Include="Object\ObjectMacros.h" />
@@ -259,6 +267,12 @@
     <ClCompile Include="Object\USceneComponent.cpp" />
     <ClCompile Include="Object\AActor.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
+    <ClCompile Include="Ability\FGameplayTag.cpp" />
+    <ClCompile Include="Ability\FGameplayTagContainer.cpp" />
+    <ClCompile Include="Ability\UAttributeSet.cpp" />
+    <ClCompile Include="Ability\UGameplayEffect.cpp" />
+    <ClCompile Include="Ability\UGameplayAbility.cpp" />
+    <ClCompile Include="Ability\UAbilitySystemComponent.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

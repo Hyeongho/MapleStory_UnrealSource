@@ -34,6 +34,10 @@
 #include "Core/Logging/FLogger.h"
 #include "Core/Templates/TResult.h"
 #include "Timer/FTimerManager.h"
+#include "Ability/UAttributeSet.h"
+#include "Ability/UGameplayEffect.h"
+#include "Ability/UGameplayAbility.h"
+#include "Ability/UAbilitySystemComponent.h"
 
 namespace
 {
@@ -1190,6 +1194,273 @@ int main()
 		GTimerManager = nullptr;
 
 		wprintf(L"[Tests] Phase 7.5 Timer System - ALL PASSED\n");
+	}
+
+	// Phase 7.7 - Gameplay Ability System (GAS)
+	{
+		// 7.7-1. FGameplayTag 계층 일치
+		{
+			FGameplayTag TagSword(L"Skill.Attack.Sword");
+			FGameplayTag TagSkill(L"Skill");
+			FGameplayTag TagSkillAttack(L"Skill.Attack");
+
+			check(TagSword.MatchesParent(TagSkill));
+			check(TagSword.MatchesParent(TagSkillAttack));
+			check(!TagSkill.MatchesParent(TagSkillAttack));
+			check(!TagSkillAttack.MatchesParent(TagSword));
+			check(TagSkill.MatchesParent(TagSkill));
+
+			wprintf(L"[Tests] Phase 7.7-1 FGameplayTag Hierarchy - PASSED\n");
+		}
+
+		// 7.7-2. FGameplayTagContainer
+		{
+			FGameplayTagContainer Container;
+			FGameplayTag TagStun(L"Status.Stun");
+			FGameplayTag TagStatus(L"Status");
+
+			Container.AddTag(TagStun);
+			check(Container.HasTag(TagStun));
+			check(Container.HasParentTag(TagStatus));
+			check(!Container.HasTag(FGameplayTag(L"Status.Freeze")));
+
+			Container.RemoveTag(TagStun);
+			check(!Container.HasTag(TagStun));
+			check(Container.IsEmpty());
+
+			wprintf(L"[Tests] Phase 7.7-2 FGameplayTagContainer - PASSED\n");
+		}
+
+		// 7.7-3. UAttributeSet
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"HP"),  1000.f, 0.f, 9999.f);
+			pSet->InitAttribute(FName(L"ATK"),  100.f, 0.f, 9999.f);
+
+			check(pSet->GetCurrentValue(FName(L"HP"))  == 1000.f);
+			check(pSet->GetCurrentValue(FName(L"ATK")) == 100.f);
+
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-3 UAttributeSet - PASSED\n");
+		}
+
+		// 7.7-4. Instant 데미지
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"HP"), 1000.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pDmg = new UGameplayEffect();
+			pDmg->m_DurationType = EGameplayEffectDurationType::Instant;
+			pDmg->AddModifier(FName(L"HP"), EGameplayModifierOperation::Add, -200.f);
+
+			pASC->ApplyGameplayEffect(pDmg);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 800.f);
+
+			delete pDmg;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-4 Instant Damage - PASSED\n");
+		}
+
+		// 7.7-5. Duration 버프
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"ATK"), 100.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pBuff = new UGameplayEffect();
+			pBuff->m_DurationType = EGameplayEffectDurationType::Duration;
+			pBuff->m_Duration = 2.f;
+			pBuff->AddModifier(FName(L"ATK"), EGameplayModifierOperation::Add, 50.f);
+
+			pASC->ApplyGameplayEffect(pBuff);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 150.f);
+
+			pASC->Tick(2.1f);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 100.f);
+
+			delete pBuff;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-5 Duration Buff Expiry - PASSED\n");
+		}
+
+		// 7.7-6. Infinite 패시브
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"ATK"), 100.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pPassive = new UGameplayEffect();
+			pPassive->m_DurationType = EGameplayEffectDurationType::Infinite;
+			pPassive->AddModifier(FName(L"ATK"), EGameplayModifierOperation::Multiply, 0.2f);
+
+			pASC->ApplyGameplayEffect(pPassive);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 120.f);
+
+			pASC->RemoveEffectsOfClass(pPassive);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 100.f);
+
+			delete pPassive;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-6 Infinite Passive Multiply - PASSED\n");
+		}
+
+		// 7.7-7. Period 독 도트
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"HP"), 1000.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pDot = new UGameplayEffect();
+			pDot->m_DurationType = EGameplayEffectDurationType::Duration;
+			pDot->m_Duration = 3.f;
+			pDot->m_Period   = 1.f;
+			pDot->AddModifier(FName(L"HP"), EGameplayModifierOperation::Add, -50.f);
+
+			pASC->ApplyGameplayEffect(pDot);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 1000.f);
+
+			pASC->Tick(1.1f);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 950.f);
+
+			pASC->Tick(1.1f);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 900.f);
+
+			pASC->Tick(1.1f);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 850.f);
+
+			pASC->Tick(0.5f);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 850.f);
+
+			delete pDot;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-7 Period Dot Damage - PASSED\n");
+		}
+
+		// 7.7-8. Stack 중첩 버프
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"ATK"), 100.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pStack = new UGameplayEffect();
+			pStack->m_DurationType = EGameplayEffectDurationType::Duration;
+			pStack->m_Duration  = 5.f;
+			pStack->m_MaxStacks = 3;
+			pStack->AddModifier(FName(L"ATK"), EGameplayModifierOperation::Add, 10.f);
+
+			pASC->ApplyGameplayEffect(pStack);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 110.f);
+
+			pASC->ApplyGameplayEffect(pStack);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 120.f);
+
+			pASC->ApplyGameplayEffect(pStack);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 130.f);
+
+			pASC->ApplyGameplayEffect(pStack);
+			check(pASC->GetAttributeCurrentValue(FName(L"ATK")) == 130.f);
+
+			delete pStack;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-8 Stack Buff - PASSED\n");
+		}
+
+		// 7.7-9. UGameplayAbility 쿨다운
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"MP"), 100.f, 0.f, 100.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pCost = new UGameplayEffect();
+			pCost->m_DurationType = EGameplayEffectDurationType::Instant;
+			pCost->AddModifier(FName(L"MP"), EGameplayModifierOperation::Add, -30.f);
+
+			UGameplayEffect* pCooldown = new UGameplayEffect();
+			pCooldown->m_DurationType = EGameplayEffectDurationType::Duration;
+			pCooldown->m_Duration = 3.f;
+			pCooldown->AddGrantedTag(FGameplayTag(L"Cooldown.Slash"));
+
+			UGameplayAbility* pSlash = new UGameplayAbility();
+			pSlash->m_pCostEffect     = pCost;
+			pSlash->m_pCooldownEffect = pCooldown;
+			pSlash->m_AbilityTags.AddTag(FGameplayTag(L"Ability.Slash"));
+			pSlash->m_ActivationBlockedTags.AddTag(FGameplayTag(L"Cooldown.Slash"));
+
+			int32 Idx = pASC->GrantAbility(pSlash);
+
+			bool bFirst = pASC->TryActivateAbility(Idx);
+			check(bFirst);
+			check(pASC->GetAttributeCurrentValue(FName(L"MP")) == 70.f);
+			check(pASC->HasTag(FGameplayTag(L"Cooldown.Slash")));
+
+			bool bSecond = pASC->TryActivateAbility(Idx);
+			check(!bSecond);
+
+			pASC->Tick(3.1f);
+			check(!pASC->HasTag(FGameplayTag(L"Cooldown.Slash")));
+
+			bool bThird = pASC->TryActivateAbility(Idx);
+			check(bThird);
+
+			delete pASC;
+			delete pSlash;
+			delete pCooldown;
+			delete pCost;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-9 Ability Cooldown - PASSED\n");
+		}
+
+		// 7.7-10. 상태이상 차단 + 해제
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"ATK"), 100.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayAbility* pAbility = new UGameplayAbility();
+			pAbility->m_AbilityTags.AddTag(FGameplayTag(L"Ability.Attack"));
+			pAbility->m_ActivationBlockedTags.AddTag(FGameplayTag(L"Status.Stun"));
+
+			int32 Idx = pASC->GrantAbility(pAbility);
+
+			pASC->AddLooseTag(FGameplayTag(L"Status.Stun"));
+			check(pASC->HasTag(FGameplayTag(L"Status.Stun")));
+
+			bool bStunned = pASC->TryActivateAbility(Idx);
+			check(!bStunned);
+
+			pASC->RemoveLooseTag(FGameplayTag(L"Status.Stun"));
+			check(!pASC->HasTag(FGameplayTag(L"Status.Stun")));
+
+			bool bFree = pASC->TryActivateAbility(Idx);
+			check(bFree);
+
+			delete pAbility;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-10 Status Stun Block/Clear - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 7.7 Gameplay Ability System - ALL PASSED\n");
 	}
 
 	return 0;
