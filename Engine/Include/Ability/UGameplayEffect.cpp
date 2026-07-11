@@ -7,8 +7,8 @@ void UGameplayEffect::AddModifier(const FName& Attr, EGameplayModifierOperation 
 {
     FGameplayEffectModifier Mod;
     Mod.m_AttributeName = Attr;
-    Mod.m_Operation     = Op;
-    Mod.m_Magnitude     = Mag;
+    Mod.m_Operation = Op;
+    Mod.m_Magnitude = Mag;
     m_Modifiers.Add(Mod);
 }
 

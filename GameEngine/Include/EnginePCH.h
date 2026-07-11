@@ -68,7 +68,7 @@ using uint64 = uint64_t;
 #include "Core/SmartPointer/TSharedRef.h"
 
 // -----------------------------------------------------------------------
-// Object 타입 시스템 (UClass, Cast, TSubclassOf — Phase 7)
+// Object 타입 시스템 (UClass, Cast, TSubclassOf)
 // -----------------------------------------------------------------------
 #include "Object/ObjectMacros.h"
 #include "Object/UClass.h"
@@ -76,7 +76,15 @@ using uint64 = uint64_t;
 #include "Object/TSubclassOf.h"
 
 // -----------------------------------------------------------------------
-// 타이머 시스템 (FTimerHandle, FTimerDelegate — Phase 7.5)
+// 타이머 시스템 (FTimerHandle, FTimerDelegate)
 // -----------------------------------------------------------------------
 #include "Timer/FTimerHandle.h"
 #include "Timer/FTimerDelegate.h"
+
+// -----------------------------------------------------------------------
+// 어빌리티 시스템 (AbilityTypes, Tag, TagContainer, Attribute)
+// -----------------------------------------------------------------------
+#include "Ability/AbilityTypes.h"
+#include "Ability/FGameplayTag.h"
+#include "Ability/FGameplayTagContainer.h"
+#include "Ability/FGameplayAttribute.h"

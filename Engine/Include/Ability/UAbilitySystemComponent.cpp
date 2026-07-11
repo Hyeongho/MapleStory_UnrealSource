@@ -5,15 +5,14 @@
 #include "Ability/UGameplayAbility.h"
 #include "Core/Math/FMath.h"
 
-UAbilitySystemComponent::UAbilitySystemComponent()
-    : m_pAttributeSet(nullptr)
+UAbilitySystemComponent::UAbilitySystemComponent() : m_pAttributeSet(nullptr)
 {
 }
 
 UAbilitySystemComponent::~UAbilitySystemComponent() = default;
 
 // ---------------------------------------------------------------------------
-// ì†ì„±
+// ¼Ó¼º
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::SetAttributeSet(UAttributeSet* pSet)
@@ -45,7 +44,7 @@ float UAbilitySystemComponent::GetAttributeBaseValue(const FName& Name) const
 }
 
 // ---------------------------------------------------------------------------
-// íƒœê·¸
+// ÅÂ±×
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::HasTag(const FGameplayTag& Tag) const
@@ -69,7 +68,7 @@ void UAbilitySystemComponent::RemoveLooseTag(const FGameplayTag& Tag)
 }
 
 // ---------------------------------------------------------------------------
-// íš¨ê³¼ ì ìš©
+// È¿°ú Àû¿ë
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::ApplyGameplayEffect(UGameplayEffect* pEffect)
@@ -92,15 +91,15 @@ bool UAbilitySystemComponent::ApplyGameplayEffect(UGameplayEffect* pEffect)
     }
 
     FActiveGameplayEffect Active;
-    Active.m_pSpec       = pEffect;
-    Active.m_Duration    = pEffect->m_Duration;
+    Active.m_pSpec = pEffect;
+    Active.m_Duration = pEffect->m_Duration;
     Active.m_PeriodTimer = pEffect->m_Period;
-    Active.m_StackCount  = 1;
+    Active.m_StackCount = 1;
 
     m_ActiveEffects.Add(Active);
 
     const TArray<FGameplayTag>& GrantedTags = pEffect->m_GrantedTags.GetTags();
-    for (int32 i = 0; i < GrantedTags.Num(); ++i)
+    for (int32 i = 0; i < GrantedTags.Num(); i++)
     {
         m_ActiveTags.AddTag(GrantedTags[i]);
     }
@@ -116,7 +115,7 @@ bool UAbilitySystemComponent::TryStackEffect(UGameplayEffect* pEffect)
         return false;
     }
 
-    for (int32 i = 0; i < m_ActiveEffects.Num(); ++i)
+    for (int32 i = 0; i < m_ActiveEffects.Num(); i++)
     {
         if (m_ActiveEffects[i].m_pSpec == pEffect)
         {
@@ -133,16 +132,17 @@ bool UAbilitySystemComponent::TryStackEffect(UGameplayEffect* pEffect)
 
 void UAbilitySystemComponent::RemoveEffectsWithTag(const FGameplayTag& Tag)
 {
-    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; --i)
+    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; i--)
     {
         UGameplayEffect* pSpec = m_ActiveEffects[i].m_pSpec;
         if (pSpec && pSpec->m_GrantedTags.HasTag(Tag))
         {
             const TArray<FGameplayTag>& GrantedTags = pSpec->m_GrantedTags.GetTags();
-            for (int32 t = 0; t < GrantedTags.Num(); ++t)
+            for (int32 t = 0; t < GrantedTags.Num(); t++)
             {
                 m_ActiveTags.RemoveTag(GrantedTags[t]);
             }
+
             m_ActiveEffects.RemoveAtSwap(i);
         }
     }
@@ -151,30 +151,33 @@ void UAbilitySystemComponent::RemoveEffectsWithTag(const FGameplayTag& Tag)
 
 void UAbilitySystemComponent::RemoveEffectsOfClass(UGameplayEffect* pEffect)
 {
-    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; --i)
+    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; i--)
     {
         if (m_ActiveEffects[i].m_pSpec == pEffect)
         {
             const TArray<FGameplayTag>& GrantedTags = pEffect->m_GrantedTags.GetTags();
-            for (int32 t = 0; t < GrantedTags.Num(); ++t)
+
+            for (int32 t = 0; t < GrantedTags.Num(); t++)
             {
                 m_ActiveTags.RemoveTag(GrantedTags[t]);
             }
+
             m_ActiveEffects.RemoveAtSwap(i);
         }
     }
+
     RecalculateAttributes();
 }
 
 // ---------------------------------------------------------------------------
-// ìŠ¤í‚¬
+// ½ºÅ³
 // ---------------------------------------------------------------------------
 
 int32 UAbilitySystemComponent::GrantAbility(UGameplayAbility* pAbility, int32 Level)
 {
     FGameplayAbilitySpec Spec;
-    Spec.m_pAbility  = pAbility;
-    Spec.m_Level     = Level;
+    Spec.m_pAbility = pAbility;
+    Spec.m_Level = Level;
     Spec.m_bIsActive = false;
     m_GrantedAbilities.Add(Spec);
     return m_GrantedAbilities.Num() - 1;
@@ -229,7 +232,7 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
 {
     bool bNeedRecalc = false;
 
-    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; --i)
+    for (int32 i = m_ActiveEffects.Num() - 1; i >= 0; i--)
     {
         FActiveGameplayEffect& Active = m_ActiveEffects[i];
         UGameplayEffect* pSpec = Active.m_pSpec;
@@ -271,10 +274,12 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
         if (Active.m_Duration <= 0.f)
         {
             const TArray<FGameplayTag>& GrantedTags = pSpec->m_GrantedTags.GetTags();
-            for (int32 t = 0; t < GrantedTags.Num(); ++t)
+
+            for (int32 t = 0; t < GrantedTags.Num(); t++)
             {
                 m_ActiveTags.RemoveTag(GrantedTags[t]);
             }
+
             m_ActiveEffects.RemoveAtSwap(i);
             bNeedRecalc = true;
         }
@@ -287,10 +292,10 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
 }
 
 // ---------------------------------------------------------------------------
-// ì†ì„± ìž¬ê³„ì‚°
-// RecalculateAttributes: ë¹„Period Duration/Infinite íš¨ê³¼ë§Œ ë‹¤ì‹œ ì ìš©.
-//   1. ê´€ë ¨ ì†ì„± CurrentValue = BaseValue ì´ˆê¸°í™”
-//   2. Add ì ìš© â†’ Multiply ì ìš© â†’ Override ì ìš©
+// ¼Ó¼º Àç°è»ê
+// RecalculateAttributes: ºñPeriod Duration/Infinite È¿°ú¸¸ ´Ù½Ã Àû¿ë.
+//   1. °ü·Ã ¼Ó¼º CurrentValue = BaseValue ÃÊ±âÈ­
+//   2. Add Àû¿ë ¡æ Multiply Àû¿ë ¡æ Override Àû¿ë
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::RecalculateAttributes()
@@ -305,11 +310,23 @@ void UAbilitySystemComponent::RecalculateAttributes()
     for (int32 pass = 0; pass < 3; ++pass)
     {
         EGameplayModifierOperation OpFilter;
-        if (pass == 0) { OpFilter = EGameplayModifierOperation::Add; }
-        else if (pass == 1) { OpFilter = EGameplayModifierOperation::Multiply; }
-        else { OpFilter = EGameplayModifierOperation::Override; }
 
-        for (int32 i = 0; i < m_ActiveEffects.Num(); ++i)
+        if (pass == 0) 
+        { 
+            OpFilter = EGameplayModifierOperation::Add; 
+        }
+
+        else if (pass == 1) 
+        { 
+            OpFilter = EGameplayModifierOperation::Multiply; 
+        }
+
+        else 
+        { 
+            OpFilter = EGameplayModifierOperation::Override; 
+        }
+
+        for (int32 i = 0; i < m_ActiveEffects.Num(); i++)
         {
             const FActiveGameplayEffect& Active = m_ActiveEffects[i];
             UGameplayEffect* pSpec = Active.m_pSpec;
@@ -319,7 +336,7 @@ void UAbilitySystemComponent::RecalculateAttributes()
             }
 
             const TArray<FGameplayEffectModifier>& Mods = pSpec->m_Modifiers;
-            for (int32 m = 0; m < Mods.Num(); ++m)
+            for (int32 m = 0; m < Mods.Num(); m++)
             {
                 const FGameplayEffectModifier& Mod = Mods[m];
                 if (Mod.m_Operation != OpFilter)
@@ -340,10 +357,12 @@ void UAbilitySystemComponent::RecalculateAttributes()
                 {
                     Val += Mag;
                 }
+
                 else if (OpFilter == EGameplayModifierOperation::Multiply)
                 {
                     Val += Val * Mag;
                 }
+
                 else
                 {
                     Val = Mod.m_Magnitude;
@@ -362,7 +381,7 @@ void UAbilitySystemComponent::ApplyModifiersToBase(const TArray<FGameplayEffectM
         return;
     }
 
-    for (int32 i = 0; i < Mods.Num(); ++i)
+    for (int32 i = 0; i < Mods.Num(); i++)
     {
         const FGameplayEffectModifier& Mod = Mods[i];
         FGameplayAttribute* Attr = m_pAttributeSet->GetAttribute(Mod.m_AttributeName);
@@ -377,11 +396,14 @@ void UAbilitySystemComponent::ApplyModifiersToBase(const TArray<FGameplayEffectM
         {
             Attr->SetBaseValue(Attr->GetBaseValue() + Mag);
         }
+
         else if (Mod.m_Operation == EGameplayModifierOperation::Multiply)
         {
             float Base = Attr->GetBaseValue();
+
             Attr->SetBaseValue(Base + Base * Mag);
         }
+
         else
         {
             Attr->SetBaseValue(Mod.m_Magnitude);

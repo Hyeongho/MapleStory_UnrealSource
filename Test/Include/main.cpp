@@ -1,5 +1,4 @@
 ﻿#include "EnginePCH.h"
-#include "Timer/FTimerManager.h"
 #include "Object/UObject.h"
 #include "Object/AActor.h"
 #include "Object/UActorComponent.h"
@@ -959,7 +958,7 @@ int main()
 
 			wprintf(L"[Tests] Phase 6-2 TWeakPtr - PASSED\n");
 		}
-
+			
 		// Phase 6-3. Circular Reference (Boss <-> Component)
 		{
 			FBossActor::s_DestroyCount = 0;
@@ -1234,10 +1233,10 @@ int main()
 		// 7.7-3. UAttributeSet
 		{
 			UAttributeSet* pSet = new UAttributeSet();
-			pSet->InitAttribute(FName(L"HP"),  1000.f, 0.f, 9999.f);
-			pSet->InitAttribute(FName(L"ATK"),  100.f, 0.f, 9999.f);
+			pSet->InitAttribute(FName(L"HP"), 1000.f, 0.f, 9999.f);
+			pSet->InitAttribute(FName(L"ATK"), 100.f, 0.f, 9999.f);
 
-			check(pSet->GetCurrentValue(FName(L"HP"))  == 1000.f);
+			check(pSet->GetCurrentValue(FName(L"HP")) == 1000.f);
 			check(pSet->GetCurrentValue(FName(L"ATK")) == 100.f);
 
 			delete pSet;
@@ -1325,7 +1324,7 @@ int main()
 			UGameplayEffect* pDot = new UGameplayEffect();
 			pDot->m_DurationType = EGameplayEffectDurationType::Duration;
 			pDot->m_Duration = 3.f;
-			pDot->m_Period   = 1.f;
+			pDot->m_Period = 1.f;
 			pDot->AddModifier(FName(L"HP"), EGameplayModifierOperation::Add, -50.f);
 
 			pASC->ApplyGameplayEffect(pDot);
@@ -1359,7 +1358,7 @@ int main()
 
 			UGameplayEffect* pStack = new UGameplayEffect();
 			pStack->m_DurationType = EGameplayEffectDurationType::Duration;
-			pStack->m_Duration  = 5.f;
+			pStack->m_Duration = 5.f;
 			pStack->m_MaxStacks = 3;
 			pStack->AddModifier(FName(L"ATK"), EGameplayModifierOperation::Add, 10.f);
 
@@ -1399,7 +1398,7 @@ int main()
 			pCooldown->AddGrantedTag(FGameplayTag(L"Cooldown.Slash"));
 
 			UGameplayAbility* pSlash = new UGameplayAbility();
-			pSlash->m_pCostEffect     = pCost;
+			pSlash->m_pCostEffect = pCost;
 			pSlash->m_pCooldownEffect = pCooldown;
 			pSlash->m_AbilityTags.AddTag(FGameplayTag(L"Ability.Slash"));
 			pSlash->m_ActivationBlockedTags.AddTag(FGameplayTag(L"Cooldown.Slash"));

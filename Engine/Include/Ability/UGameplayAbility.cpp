@@ -2,9 +2,7 @@
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
 
-UGameplayAbility::UGameplayAbility()
-    : m_pCostEffect(nullptr)
-    , m_pCooldownEffect(nullptr)
+UGameplayAbility::UGameplayAbility() : m_pCostEffect(nullptr) , m_pCooldownEffect(nullptr)
 {
 }
 
@@ -18,7 +16,8 @@ bool UGameplayAbility::CanActivate(UAbilitySystemComponent* ASC) const
     if (!m_ActivationBlockedTags.IsEmpty())
     {
         const TArray<FGameplayTag>& BlockedTags = m_ActivationBlockedTags.GetTags();
-        for (int32 i = 0; i < BlockedTags.Num(); ++i)
+
+        for (int32 i = 0; i < BlockedTags.Num(); i++)
         {
             if (ASC->HasTag(BlockedTags[i]))
             {
@@ -30,7 +29,7 @@ bool UGameplayAbility::CanActivate(UAbilitySystemComponent* ASC) const
     if (!m_ActivationRequiredTags.IsEmpty())
     {
         const TArray<FGameplayTag>& RequiredTags = m_ActivationRequiredTags.GetTags();
-        for (int32 i = 0; i < RequiredTags.Num(); ++i)
+        for (int32 i = 0; i < RequiredTags.Num(); i++)
         {
             if (!ASC->HasTag(RequiredTags[i]))
             {

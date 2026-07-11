@@ -6,13 +6,11 @@ FGameplayTag::FGameplayTag()
 {
 }
 
-FGameplayTag::FGameplayTag(const wchar_t* TagName)
-    : m_TagName(TagName)
+FGameplayTag::FGameplayTag(const wchar_t* TagName) : m_TagName(TagName)
 {
 }
 
-FGameplayTag::FGameplayTag(const FName& TagName)
-    : m_TagName(TagName)
+FGameplayTag::FGameplayTag(const FName& TagName) : m_TagName(TagName)
 {
 }
 
@@ -43,7 +41,7 @@ bool FGameplayTag::MatchesParent(const FGameplayTag& Parent) const
         return false;
     }
 
-    FString ThisStr  = m_TagName.ToString();
+    FString ThisStr = m_TagName.ToString();
     FString ParentStr = Parent.m_TagName.ToString();
 
     if (ThisStr == ParentStr)

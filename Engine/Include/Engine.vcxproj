@@ -159,6 +159,14 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Ability\AbilityTypes.h" />
+    <ClInclude Include="Ability\FGameplayAttribute.h" />
+    <ClInclude Include="Ability\FGameplayTag.h" />
+    <ClInclude Include="Ability\FGameplayTagContainer.h" />
+    <ClInclude Include="Ability\UAbilitySystemComponent.h" />
+    <ClInclude Include="Ability\UAttributeSet.h" />
+    <ClInclude Include="Ability\UGameplayAbility.h" />
+    <ClInclude Include="Ability\UGameplayEffect.h" />
     <ClInclude Include="Core\Containers\HashFunctions.h" />
     <ClInclude Include="Core\Containers\TArray.h" />
     <ClInclude Include="Core\Containers\TArrayView.h" />
@@ -236,6 +244,12 @@
     <ClInclude Include="Timer\FTimerManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Ability\FGameplayTag.cpp" />
+    <ClCompile Include="Ability\FGameplayTagContainer.cpp" />
+    <ClCompile Include="Ability\UAbilitySystemComponent.cpp" />
+    <ClCompile Include="Ability\UAttributeSet.cpp" />
+    <ClCompile Include="Ability\UGameplayAbility.cpp" />
+    <ClCompile Include="Ability\UGameplayEffect.cpp" />
     <ClCompile Include="Core\Logging\FLogger.cpp" />
     <ClCompile Include="Core\Math\FColor.cpp" />
     <ClCompile Include="Core\Math\FIntPoint.cpp" />
