@@ -37,6 +37,9 @@
     <Filter Include="01. Core\07. SmartPointer">
       <UniqueIdentifier>{3a875f95-d6ff-4dd3-ac50-64665a6a26b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02. Object">
+      <UniqueIdentifier>{07875042-78e6-4b07-b832-bcfc962beac9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -153,6 +156,30 @@
     <ClInclude Include="Core\SmartPointer\TSharedRef.h">
       <Filter>01. Core\07. SmartPointer</Filter>
     </ClInclude>
+    <ClInclude Include="Object\CastTemplates.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\ObjectMacros.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UActorComponent.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\TSubclassOf.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\AActor.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\USceneComponent.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UObject.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UClass.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -223,6 +250,21 @@
     </ClCompile>
     <ClCompile Include="Core\Logging\FLogger.cpp">
       <Filter>01. Core\06. Logging</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\AActor.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UActorComponent.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\USceneComponent.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UObject.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UClass.cpp">
+      <Filter>02. Object</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

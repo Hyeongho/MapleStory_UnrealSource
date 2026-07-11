@@ -8,7 +8,10 @@ struct TIntegralConstant
 	static constexpr T Value = Val;
 	using ValueType = T;
 	using Type = TIntegralConstant;
-	constexpr operator ValueType() const noexcept { return Value; }
+	constexpr operator ValueType() const noexcept 
+	{ 
+		return Value; 
+	}
 };
 
 using FTrueType = TIntegralConstant<bool, true>;
@@ -16,7 +19,7 @@ using FFalseType = TIntegralConstant<bool, false>;
 
 // --- 동일 타입 검사 ---
 template<typename A, typename B> struct TIsSame : FFalseType {};
-template<typename T>             struct TIsSame<T, T> : FTrueType {};
+template<typename T> struct TIsSame<T, T> : FTrueType {};
 
 // --- 참조 제거 ---
 template<typename T> struct TRemoveReference { using Type = T; };
@@ -59,7 +62,7 @@ template<typename T> struct TIsClass : TIntegralConstant<bool, __is_class(T)> {}
 
 // --- SFINAE 유틸 ---
 template<bool Condition, typename T = void> struct TEnableIf {};
-template<typename T>                        struct TEnableIf<true, T> { using Type = T; };
+template<typename T> struct TEnableIf<true, T> { using Type = T; };
 
 // --- 조건부 타입 선택 ---
 template<bool Cond, typename TrueT, typename FalseT> struct TConditional { using Type = FalseT; };
@@ -71,3 +74,18 @@ struct TDecay
 {
 	using Type = typename TRemoveCV<typename TRemoveReference<T>::Type>::Type;
 };
+
+
+namespace UObjectPrivate
+{
+	template<typename Base, typename Derived>
+	struct TIsBaseOfHelper
+	{
+		static char Test(const Base*);
+		static char (&Test(...))[2];
+		static constexpr bool Value = sizeof(Test(static_cast<const Derived*>(nullptr))) == sizeof(char);
+	};
+}
+
+template<typename Base, typename Derived>
+struct TIsBaseOf : TIntegralConstant<bool, UObjectPrivate::TIsBaseOfHelper<Base, Derived>::Value> {};

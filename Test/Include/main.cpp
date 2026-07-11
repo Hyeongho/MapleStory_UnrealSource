@@ -1,4 +1,8 @@
 ﻿#include "EnginePCH.h"
+#include "Object/UObject.h"
+#include "Object/AActor.h"
+#include "Object/UActorComponent.h"
+#include "Object/USceneComponent.h"
 #include "Core/Memory/FMemory.h"
 #include "Core/Memory/FPoolAllocator.h"
 #include "Core/Memory/FStackAllocator.h"
@@ -37,17 +41,17 @@ namespace
 		static int32 DtorCount;
 		int32 m_Value;
 
-		FLifecycle() : m_Value(0) 
-		{ 
+		FLifecycle() : m_Value(0)
+		{
 			CtorCount++;
 		}
-		explicit FLifecycle(int32 v) : m_Value(v) 
-		{ 
+		explicit FLifecycle(int32 v) : m_Value(v)
+		{
 			CtorCount++;
 		}
 
-		FLifecycle(const FLifecycle& O) : m_Value(O.m_Value) 
-		{ 
+		FLifecycle(const FLifecycle& O) : m_Value(O.m_Value)
+		{
 			CtorCount++;
 		}
 		FLifecycle(FLifecycle&& O) noexcept : m_Value(O.m_Value)
@@ -56,20 +60,48 @@ namespace
 			CtorCount++;
 		}
 
-		~FLifecycle() 
-		{ 
+		~FLifecycle()
+		{
 			DtorCount++;
 		}
 
-		bool operator==(const FLifecycle& O) const 
-		{ 
-			return m_Value == O.m_Value; 
+		bool operator==(const FLifecycle& O) const
+		{
+			return m_Value == O.m_Value;
 		}
 	};
 
 	int32 FLifecycle::CtorCount = 0;
 	int32 FLifecycle::DtorCount = 0;
 }
+
+class UTestObject : public UObject
+{
+	DECLARE_CLASS(UTestObject, UObject)
+public:
+	UTestObject() = default;
+};
+
+class UDerivedObject : public UTestObject
+{
+	DECLARE_CLASS(UDerivedObject, UTestObject)
+public:
+	UDerivedObject() = default;
+};
+
+class UUnrelatedObject : public UObject
+{
+	DECLARE_CLASS(UUnrelatedObject, UObject)
+public:
+	UUnrelatedObject() = default;
+};
+
+class UTestComponent : public UActorComponent
+{
+	DECLARE_CLASS(UTestComponent, UActorComponent)
+public:
+	UTestComponent() = default;
+};
 
 struct FBossComponent;
 struct FBossActor
@@ -371,9 +403,9 @@ int main()
 
 			FPoint(int32 X, int32 Y) : m_X(X), m_Y(Y) {}
 
-			bool operator==(const FPoint& O) const 
-			{ 
-				return m_X == O.m_X && m_Y == O.m_Y; 
+			bool operator==(const FPoint& O) const
+			{
+				return m_X == O.m_X && m_Y == O.m_Y;
 			}
 		};
 
@@ -952,6 +984,79 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 6 TSharedPtr/TWeakPtr/TSharedRef - ALL PASSED\n");
+	}
+
+	// Phase 7 - UObject / Cast
+	{
+		// 7-1. UClass 계층 검증
+		{
+			check(UDerivedObject::StaticClass()->IsChildOf(UObject::StaticClass()));
+			check(UDerivedObject::StaticClass()->IsChildOf(UTestObject::StaticClass()));
+			check(!UObject::StaticClass()->IsChildOf(UTestObject::StaticClass()));
+			wprintf(L"[Tests] Phase 7-1 UClass Hierarchy - PASSED\n");
+		}
+
+		// 7-2. Cast<T>
+		{
+			void* Mem = FMemory::Malloc(sizeof(UDerivedObject), alignof(UDerivedObject));
+			UDerivedObject* Raw = new (Mem) UDerivedObject();
+			UObject* Base = Raw;
+			check(Cast<UDerivedObject>(Base) != nullptr);
+			check(Cast<UTestObject>(Base) != nullptr);
+			check(Cast<UUnrelatedObject>(Base) == nullptr);
+			Raw->~UDerivedObject();
+			FMemory::Free(Raw);
+			wprintf(L"[Tests] Phase 7-2 Cast - PASSED\n");
+		}
+
+		// 7-3. ExactCast<T>
+		{
+			void* Mem = FMemory::Malloc(sizeof(UDerivedObject), alignof(UDerivedObject));
+			UDerivedObject* Raw = new (Mem) UDerivedObject();
+			UObject* Base = Raw;
+			check(ExactCast<UDerivedObject>(Base) != nullptr);
+			check(ExactCast<UTestObject>(Base) == nullptr);
+			Raw->~UDerivedObject();
+			FMemory::Free(Raw);
+			wprintf(L"[Tests] Phase 7-3 ExactCast - PASSED\n");
+		}
+
+		// 7-4. TSubclassOf
+		{
+			TSubclassOf<UObject> ClassRef(UDerivedObject::StaticClass());
+			check(ClassRef.IsValid());
+			check(ClassRef.Get() == UDerivedObject::StaticClass());
+			wprintf(L"[Tests] Phase 7-4 TSubclassOf - PASSED\n");
+		}
+
+		// 7-5. AActor + AddComponent / GetComponent
+		{
+			void* Mem = FMemory::Malloc(sizeof(AActor), alignof(AActor));
+			AActor* Actor = new (Mem) AActor();
+			UTestComponent* Comp = Actor->AddComponent<UTestComponent>();
+			check(Comp != nullptr);
+			check(Actor->GetComponent<UTestComponent>() == Comp);
+			check(Actor->GetComponent<UActorComponent>() == Comp);
+			check(Actor->GetComponent<USceneComponent>() == nullptr);
+			Actor->~AActor();
+			FMemory::Free(Actor);
+			wprintf(L"[Tests] Phase 7-5 AActor Components - PASSED\n");
+		}
+
+		// 7-6. Lifecycle
+		{
+			void* Mem = FMemory::Malloc(sizeof(AActor), alignof(AActor));
+			AActor* Actor = new (Mem) AActor();
+			Actor->AddComponent<UTestComponent>();
+			Actor->BeginPlay();
+			Actor->Tick(0.016f);
+			Actor->EndPlay();
+			Actor->~AActor();
+			FMemory::Free(Actor);
+			wprintf(L"[Tests] Phase 7-6 Lifecycle - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 7 UObject/Cast - ALL PASSED\n");
 	}
 
 	return 0;
