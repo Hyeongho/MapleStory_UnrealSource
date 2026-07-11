@@ -98,3 +98,8 @@ inline uint32 GetTypeHash(T* Ptr)
 
     return GetTypeHash(Addr);
 }
+
+inline uint32 GetTypeHash(const FTimerHandle& H)
+{
+    return GetTypeHash(H.m_Handle);
+}

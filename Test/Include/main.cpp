@@ -1,4 +1,5 @@
 ﻿#include "EnginePCH.h"
+#include "Timer/FTimerManager.h"
 #include "Object/UObject.h"
 #include "Object/AActor.h"
 #include "Object/UActorComponent.h"
@@ -1057,6 +1058,137 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7 UObject/Cast - ALL PASSED\n");
+	}
+
+	// Phase 7.5 - Timer System
+	{
+		GTimerManager = new FTimerManager();
+
+		// 7.5-1. SetTimer 1회성
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 1.5f, false);
+			GTimerManager->Tick(1.0f);
+			check(s_Count == 0);
+			GTimerManager->Tick(0.6f);
+			check(s_Count == 1);
+			GTimerManager->Tick(5.0f);
+			check(s_Count == 1);
+			wprintf(L"[Tests] Phase 7.5-1 SetTimer (1-shot) - PASSED\n");
+		}
+
+		// 7.5-2. SetTimer 반복(Loop)
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 0.5f, true);
+			GTimerManager->Tick(0.6f);
+			check(s_Count == 1);
+			GTimerManager->Tick(0.6f);
+			check(s_Count == 2);
+			GTimerManager->Tick(0.6f);
+			check(s_Count == 3);
+			GTimerManager->ClearTimer(H);
+			wprintf(L"[Tests] Phase 7.5-2 SetTimer (Loop) - PASSED\n");
+		}
+
+		// 7.5-3. ClearTimer
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 2.0f, false);
+			GTimerManager->Tick(1.0f);
+			check(s_Count == 0);
+			GTimerManager->ClearTimer(H);
+			GTimerManager->Tick(1.5f);
+			check(s_Count == 0);
+			wprintf(L"[Tests] Phase 7.5-3 ClearTimer - PASSED\n");
+		}
+
+		// 7.5-4. PauseTimer / ResumeTimer
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 1.0f, false);
+			GTimerManager->Tick(0.6f);
+			check(s_Count == 0);
+			GTimerManager->PauseTimer(H);
+			check(GTimerManager->IsTimerPaused(H));
+			GTimerManager->Tick(1.0f);
+			check(s_Count == 0);
+			GTimerManager->ResumeTimer(H);
+			check(!GTimerManager->IsTimerPaused(H));
+			GTimerManager->Tick(0.5f);
+			check(s_Count == 1);
+			wprintf(L"[Tests] Phase 7.5-4 PauseTimer/ResumeTimer - PASSED\n");
+		}
+
+		// 7.5-5. SetTimerNextFrame
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimerNextFrame(H, D);
+			GTimerManager->Tick(0.016f);
+			check(s_Count == 1);
+			wprintf(L"[Tests] Phase 7.5-5 SetTimerNextFrame - PASSED\n");
+		}
+
+		// 7.5-6. 중복 SetTimer (핸들 재사용)
+		{
+			static int32 s_OldCount = 0;
+			static int32 s_NewCount = 0;
+			s_OldCount = 0;
+			s_NewCount = 0;
+
+			FTimerHandle H;
+			FTimerDelegate DOld{ [](void*) { s_OldCount++; } };
+			FTimerDelegate DNew{ [](void*) { s_NewCount++; } };
+			GTimerManager->SetTimer(H, DOld, 5.0f, false);
+			GTimerManager->SetTimer(H, DNew, 0.5f, false);
+			GTimerManager->Tick(0.6f);
+			check(s_OldCount == 0);
+			check(s_NewCount == 1);
+			wprintf(L"[Tests] Phase 7.5-6 Duplicate SetTimer - PASSED\n");
+		}
+
+		// 7.5-7. IsTimerActive / GetTimerRemaining
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 1.0f, false);
+			GTimerManager->Tick(0.3f);
+			check(GTimerManager->IsTimerActive(H));
+			float Rem = GTimerManager->GetTimerRemaining(H);
+			check(Rem > 0.6f && Rem < 0.8f);
+			GTimerManager->Tick(0.8f);
+			check(!GTimerManager->IsTimerActive(H));
+			check(s_Count == 1);
+			wprintf(L"[Tests] Phase 7.5-7 IsTimerActive/GetTimerRemaining - PASSED\n");
+		}
+
+		delete GTimerManager;
+		GTimerManager = nullptr;
+
+		wprintf(L"[Tests] Phase 7.5 Timer System - ALL PASSED\n");
 	}
 
 	return 0;

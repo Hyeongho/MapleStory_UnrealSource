@@ -212,6 +212,9 @@
     <ClInclude Include="Object\AActor.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
+    <ClInclude Include="Timer\FTimerHandle.h" />
+    <ClInclude Include="Timer\FTimerDelegate.h" />
+    <ClInclude Include="Timer\FTimerManager.h" />
     <ClInclude Include="Object\AActor.h" />
     <ClInclude Include="Object\CastTemplates.h" />
     <ClInclude Include="Object\ObjectMacros.h" />
@@ -252,6 +255,7 @@
     <ClCompile Include="Object\UActorComponent.cpp" />
     <ClCompile Include="Object\USceneComponent.cpp" />
     <ClCompile Include="Object\AActor.cpp" />
+    <ClCompile Include="Timer\FTimerManager.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnginePCH.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

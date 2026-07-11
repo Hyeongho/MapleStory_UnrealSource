@@ -74,3 +74,10 @@ using uint64 = uint64_t;
 #include "Object/UClass.h"
 #include "Object/CastTemplates.h"
 #include "Object/TSubclassOf.h"
+
+// -----------------------------------------------------------------------
+// 타이머 시스템 (FTimerHandle, FTimerDelegate — Phase 7.5)
+// -----------------------------------------------------------------------
+#include "Timer/FTimerHandle.h"
+#include "Timer/FTimerDelegate.h"
+// FTimerManager.h → PCH 제외, 필요 파일에서 직접 include
