@@ -41,17 +41,17 @@ namespace
 		static int32 DtorCount;
 		int32 m_Value;
 
-		FLifecycle() : m_Value(0) 
-		{ 
+		FLifecycle() : m_Value(0)
+		{
 			CtorCount++;
 		}
-		explicit FLifecycle(int32 v) : m_Value(v) 
-		{ 
+		explicit FLifecycle(int32 v) : m_Value(v)
+		{
 			CtorCount++;
 		}
 
-		FLifecycle(const FLifecycle& O) : m_Value(O.m_Value) 
-		{ 
+		FLifecycle(const FLifecycle& O) : m_Value(O.m_Value)
+		{
 			CtorCount++;
 		}
 		FLifecycle(FLifecycle&& O) noexcept : m_Value(O.m_Value)
@@ -60,14 +60,14 @@ namespace
 			CtorCount++;
 		}
 
-		~FLifecycle() 
-		{ 
+		~FLifecycle()
+		{
 			DtorCount++;
 		}
 
-		bool operator==(const FLifecycle& O) const 
-		{ 
-			return m_Value == O.m_Value; 
+		bool operator==(const FLifecycle& O) const
+		{
+			return m_Value == O.m_Value;
 		}
 	};
 
@@ -77,30 +77,30 @@ namespace
 
 class UTestObject : public UObject
 {
-    DECLARE_CLASS(UTestObject, UObject)
+	DECLARE_CLASS(UTestObject, UObject)
 public:
-    UTestObject() = default;
+	UTestObject() = default;
 };
 
 class UDerivedObject : public UTestObject
 {
-    DECLARE_CLASS(UDerivedObject, UTestObject)
+	DECLARE_CLASS(UDerivedObject, UTestObject)
 public:
-    UDerivedObject() = default;
+	UDerivedObject() = default;
 };
 
 class UUnrelatedObject : public UObject
 {
-    DECLARE_CLASS(UUnrelatedObject, UObject)
+	DECLARE_CLASS(UUnrelatedObject, UObject)
 public:
-    UUnrelatedObject() = default;
+	UUnrelatedObject() = default;
 };
 
 class UTestComponent : public UActorComponent
 {
-    DECLARE_CLASS(UTestComponent, UActorComponent)
+	DECLARE_CLASS(UTestComponent, UActorComponent)
 public:
-    UTestComponent() = default;
+	UTestComponent() = default;
 };
 
 struct FBossComponent;
@@ -403,9 +403,9 @@ int main()
 
 			FPoint(int32 X, int32 Y) : m_X(X), m_Y(Y) {}
 
-			bool operator==(const FPoint& O) const 
-			{ 
-				return m_X == O.m_X && m_Y == O.m_Y; 
+			bool operator==(const FPoint& O) const
+			{
+				return m_X == O.m_X && m_Y == O.m_Y;
 			}
 		};
 
@@ -892,11 +892,11 @@ int main()
 	{
 		FLogger::Init();
 
-		UE_LOG(LogCore,     Verbose, L"[5.5-1] Verbose message");
-		UE_LOG(LogCore,     Log,     L"[5.5-1] Log message %d", 42);
-		UE_LOG(LogCore,     Warning, L"[5.5-1] Warning message");
-		UE_LOG(LogAI,       Error,   L"[5.5-1] Error message");
-		UE_LOG(LogRenderer, Log,     L"[5.5-2] Renderer log");
+		UE_LOG(LogCore, Verbose, L"[5.5-1] Verbose message");
+		UE_LOG(LogCore, Log, L"[5.5-1] Log message %d", 42);
+		UE_LOG(LogCore, Warning, L"[5.5-1] Warning message");
+		UE_LOG(LogAI, Error, L"[5.5-1] Error message");
+		UE_LOG(LogRenderer, Log, L"[5.5-2] Renderer log");
 
 		// ensure — expr true: no breakpoint
 		int32 x = 5;
@@ -904,7 +904,7 @@ int main()
 		check(bResult == true);
 
 		// TResult
-		TResult<int32> OkResult   = TResult<int32>::Ok(42);
+		TResult<int32> OkResult = TResult<int32>::Ok(42);
 		TResult<int32> FailResult = TResult<int32>::Fail(EEngineError::InvalidArgument);
 
 		check(OkResult.IsOk());
@@ -956,17 +956,17 @@ int main()
 
 		// Phase 6-3. Circular Reference (Boss <-> Component)
 		{
-			FBossActor::s_DestroyCount    = 0;
+			FBossActor::s_DestroyCount = 0;
 			FBossComponent::s_DestroyCount = 0;
 			{
-				TSharedPtr<FBossActor>     Boss      = MakeShared<FBossActor>();
+				TSharedPtr<FBossActor>     Boss = MakeShared<FBossActor>();
 				TSharedPtr<FBossComponent> Component = MakeShared<FBossComponent>();
 				Boss->m_pComponent = Component;
 				Component->m_pOwner = Boss;
 				check(Boss.GetRefCount() == 1);
 				check(Component.GetRefCount() == 2);
 			}
-			check(FBossActor::s_DestroyCount    == 1);
+			check(FBossActor::s_DestroyCount == 1);
 			check(FBossComponent::s_DestroyCount == 1);
 
 			wprintf(L"[Tests] Phase 6-3 Circular Reference - PASSED\n");
@@ -1002,7 +1002,7 @@ int main()
 			UDerivedObject* Raw = new (Mem) UDerivedObject();
 			UObject* Base = Raw;
 			check(Cast<UDerivedObject>(Base) != nullptr);
-			check(Cast<UTestObject>(Base)    != nullptr);
+			check(Cast<UTestObject>(Base) != nullptr);
 			check(Cast<UUnrelatedObject>(Base) == nullptr);
 			Raw->~UDerivedObject();
 			FMemory::Free(Raw);
@@ -1015,7 +1015,7 @@ int main()
 			UDerivedObject* Raw = new (Mem) UDerivedObject();
 			UObject* Base = Raw;
 			check(ExactCast<UDerivedObject>(Base) != nullptr);
-			check(ExactCast<UTestObject>(Base)    == nullptr);
+			check(ExactCast<UTestObject>(Base) == nullptr);
 			Raw->~UDerivedObject();
 			FMemory::Free(Raw);
 			wprintf(L"[Tests] Phase 7-3 ExactCast - PASSED\n");

@@ -2,7 +2,10 @@
 #include "Object/AActor.h"
 #include "Object/UActorComponent.h"
 
-AActor::AActor() {}
+AActor::AActor() 
+{
+
+}
 
 AActor::~AActor()
 {
@@ -12,6 +15,7 @@ AActor::~AActor()
         Comp->~UActorComponent();
         FMemory::Free(Comp);
     }
+
     m_Components.Empty();
 }
 
@@ -32,17 +36,23 @@ void AActor::RemoveComponent(UActorComponent* Comp)
 void AActor::BeginPlay()
 {
     for (int32 i = 0; i < m_Components.Num(); i++)
+    {
         m_Components[i]->BeginPlay();
+    }
 }
 
 void AActor::Tick(float DeltaTime)
 {
     for (int32 i = 0; i < m_Components.Num(); i++)
+    {
         m_Components[i]->Tick(DeltaTime);
+    }
 }
 
 void AActor::EndPlay()
 {
     for (int32 i = 0; i < m_Components.Num(); i++)
+    {
         m_Components[i]->EndPlay();
+    }
 }

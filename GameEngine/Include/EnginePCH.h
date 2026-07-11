@@ -51,3 +51,26 @@ using uint64 = uint64_t;
 #else
 #pragma comment(lib, "Engine.lib")
 #endif
+
+// -----------------------------------------------------------------------
+// 메모리 시스템
+// -----------------------------------------------------------------------
+#include "Core/Memory/FMemory.h"
+
+// -----------------------------------------------------------------------
+// 로깅 시스템 (UE_LOG, ensure, FLogger)
+// -----------------------------------------------------------------------
+#include "Core/Logging/FLogger.h"
+
+// -----------------------------------------------------------------------
+// 스마트 포인터 (TSharedPtr, TWeakPtr, TSharedRef, MakeShared)
+// -----------------------------------------------------------------------
+#include "Core/SmartPointer/TSharedRef.h"
+
+// -----------------------------------------------------------------------
+// Object 타입 시스템 (UClass, Cast, TSubclassOf — Phase 7)
+// -----------------------------------------------------------------------
+#include "Object/ObjectMacros.h"
+#include "Object/UClass.h"
+#include "Object/CastTemplates.h"
+#include "Object/TSubclassOf.h"

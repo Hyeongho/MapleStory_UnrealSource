@@ -41,8 +41,6 @@ using uint64 = uint64_t;
 #define check(expr)  assert(expr)
 #define verify(expr) assert(expr)
 
-// ensure(expr) — 1회만 발동하는 soft assert (LogMacros.h 에서 정의)
-
 // -----------------------------------------------------------------------
 // 플랫폼 식별
 // -----------------------------------------------------------------------
@@ -55,7 +53,7 @@ using uint64 = uint64_t;
 #endif
 
 // -----------------------------------------------------------------------
-// 메모리 시스템 (FMemory — SmartPointer 헤더보다 먼저 포함 필요)
+// 메모리 시스템
 // -----------------------------------------------------------------------
 #include "Core/Memory/FMemory.h"
 
@@ -76,4 +74,3 @@ using uint64 = uint64_t;
 #include "Object/UClass.h"
 #include "Object/CastTemplates.h"
 #include "Object/TSubclassOf.h"
-// UObject.h / AActor.h 는 PCH 제외 — 필요 파일에서 직접 include

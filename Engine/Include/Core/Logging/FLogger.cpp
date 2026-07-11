@@ -1,10 +1,11 @@
 #include "EnginePCH.h"
 #include "FLogger.h"
+
 #include <cstdarg>
 #include <cwchar>
 
-FILE* FLogger::s_pFile        = nullptr;
-bool  FLogger::s_bInitialized = false;
+FILE* FLogger::m_pFile = nullptr;
+bool FLogger::m_bInitialized = false;
 
 DEFINE_LOG_CATEGORY(LogCore);
 DEFINE_LOG_CATEGORY(LogRenderer);
@@ -14,22 +15,22 @@ DEFINE_LOG_CATEGORY(LogUI);
 
 void FLogger::Init()
 {
-    if (s_bInitialized)
+    if (m_bInitialized)
     {
         return;
     }
-    s_bInitialized = true;
 
-    // executable directory
+    m_bInitialized = true;
+
     wchar_t ExePath[MAX_PATH];
     GetModuleFileNameW(nullptr, ExePath, MAX_PATH);
     wchar_t* LastSlash = wcsrchr(ExePath, L'\\');
+
     if (LastSlash)
     {
         *(LastSlash + 1) = L'\0';
     }
 
-    // <ExeDir>\logs\
     wchar_t LogDir[MAX_PATH];
     swprintf(LogDir, MAX_PATH, L"%slogs", ExePath);
     CreateDirectoryW(LogDir, nullptr);
@@ -39,34 +40,38 @@ void FLogger::Init()
     GetLocalTime(&st);
 
     wchar_t FullPath[MAX_PATH];
-    swprintf(FullPath, MAX_PATH, L"%s\\engine_%04d-%02d-%02d_%02d-%02d-%02d.log",
-             LogDir,
-             st.wYear, st.wMonth, st.wDay,
-             st.wHour, st.wMinute, st.wSecond);
+    swprintf(FullPath, MAX_PATH, L"%s\\engine_%04d-%02d-%02d_%02d-%02d-%02d.log", LogDir, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
-    _wfopen_s(&s_pFile, FullPath, L"w");
+    _wfopen_s(&m_pFile, FullPath, L"w");
 }
 
 void FLogger::Shutdown()
 {
-    if (s_pFile)
+    if (m_pFile)
     {
-        fclose(s_pFile);
-        s_pFile = nullptr;
+        fclose(m_pFile);
+        m_pFile = nullptr;
     }
-    s_bInitialized = false;
+
+    m_bInitialized = false;
 }
 
 const wchar_t* FLogger::VerbosityToString(ELogVerbosity Verbosity)
 {
     switch (Verbosity)
     {
-    case ELogVerbosity::Verbose: return L"Verbose";
-    case ELogVerbosity::Log:     return L"Log";
-    case ELogVerbosity::Warning: return L"Warning";
-    case ELogVerbosity::Error:   return L"Error";
-    case ELogVerbosity::Fatal:   return L"Fatal";
-    default:                     return L"Unknown";
+    case ELogVerbosity::Verbose:
+        return L"Verbose";
+    case ELogVerbosity::Log:
+        return L"Log";
+    case ELogVerbosity::Warning:
+        return L"Warning";
+    case ELogVerbosity::Error:
+        return L"Error";
+    case ELogVerbosity::Fatal:
+        return L"Fatal";
+    default:
+        return L"Unknown";
     }
 }
 
@@ -74,6 +79,7 @@ static void WriteToOutputs(FILE* pFile, const wchar_t* FullBuf)
 {
     wprintf(L"%s", FullBuf);
     OutputDebugStringW(FullBuf);
+
     if (pFile)
     {
         fwprintf(pFile, L"%s", FullBuf);
@@ -81,8 +87,7 @@ static void WriteToOutputs(FILE* pFile, const wchar_t* FullBuf)
     }
 }
 
-void FLogger::Log(const FLogCategoryBase& Category, ELogVerbosity Verbosity,
-                  const wchar_t* Format, ...)
+void FLogger::Log(const FLogCategoryBase& Category, ELogVerbosity Verbosity, const wchar_t* Format, ...)
 {
     wchar_t MsgBuf[2048];
     va_list Args;
@@ -91,10 +96,9 @@ void FLogger::Log(const FLogCategoryBase& Category, ELogVerbosity Verbosity,
     va_end(Args);
 
     wchar_t FullBuf[2176];
-    swprintf(FullBuf, 2176, L"[%s] [%s] %s\n",
-             VerbosityToString(Verbosity), Category.m_Name, MsgBuf);
+    swprintf(FullBuf, 2176, L"[%s] [%s] %s\n", VerbosityToString(Verbosity), Category.m_Name, MsgBuf);
 
-    WriteToOutputs(s_pFile, FullBuf);
+    WriteToOutputs(m_pFile, FullBuf);
 
     if (Verbosity == ELogVerbosity::Fatal)
     {
@@ -108,7 +112,7 @@ void FLogger::LogRaw(ELogVerbosity Verbosity, const wchar_t* Message)
     wchar_t FullBuf[2176];
     swprintf(FullBuf, 2176, L"[%s] %s\n", VerbosityToString(Verbosity), Message);
 
-    WriteToOutputs(s_pFile, FullBuf);
+    WriteToOutputs(m_pFile, FullBuf);
 
     if (Verbosity == ELogVerbosity::Fatal)
     {

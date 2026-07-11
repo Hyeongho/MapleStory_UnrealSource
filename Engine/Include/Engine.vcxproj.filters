@@ -32,13 +32,13 @@
       <UniqueIdentifier>{5bdd35ac-856b-4b78-ae8f-f9695c48bacf}</UniqueIdentifier>
     </Filter>
     <Filter Include="01. Core\06. Logging">
-      <UniqueIdentifier>{a2c1f3e7-9b4d-4e2a-8f6c-1d0e5b3a7c9f}</UniqueIdentifier>
+      <UniqueIdentifier>{b14af183-10b2-4b7e-af38-1fc5315a6ee1}</UniqueIdentifier>
     </Filter>
     <Filter Include="01. Core\07. SmartPointer">
-      <UniqueIdentifier>{b3d4e5f6-a7c8-4d9e-b0a1-c2d3e4f5a6b7}</UniqueIdentifier>
+      <UniqueIdentifier>{3a875f95-d6ff-4dd3-ac50-64665a6a26b3}</UniqueIdentifier>
     </Filter>
     <Filter Include="02. Object">
-      <UniqueIdentifier>{c4d5e6f7-b8a9-4e0f-c1b2-d3e4f5a6b7c8}</UniqueIdentifier>
+      <UniqueIdentifier>{07875042-78e6-4b07-b832-bcfc962beac9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -156,28 +156,28 @@
     <ClInclude Include="Core\SmartPointer\TSharedRef.h">
       <Filter>01. Core\07. SmartPointer</Filter>
     </ClInclude>
-    <ClInclude Include="Object\ObjectMacros.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\UClass.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
     <ClInclude Include="Object\CastTemplates.h">
       <Filter>02. Object</Filter>
     </ClInclude>
-    <ClInclude Include="Object\TSubclassOf.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\UObject.h">
+    <ClInclude Include="Object\ObjectMacros.h">
       <Filter>02. Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\UActorComponent.h">
       <Filter>02. Object</Filter>
     </ClInclude>
-    <ClInclude Include="Object\USceneComponent.h">
+    <ClInclude Include="Object\TSubclassOf.h">
       <Filter>02. Object</Filter>
     </ClInclude>
     <ClInclude Include="Object\AActor.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\USceneComponent.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UObject.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UClass.h">
       <Filter>02. Object</Filter>
     </ClInclude>
   </ItemGroup>
@@ -251,19 +251,7 @@
     <ClCompile Include="Core\Logging\FLogger.cpp">
       <Filter>01. Core\06. Logging</Filter>
     </ClCompile>
-    <ClCompile Include="Core\SmartPointer\TSharedPtr.cpp">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\SmartPointer\TWeakPtr.cpp">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\SmartPointer\TSharedRef.cpp">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\UClass.cpp">
-      <Filter>02. Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\UObject.cpp">
+    <ClCompile Include="Object\AActor.cpp">
       <Filter>02. Object</Filter>
     </ClCompile>
     <ClCompile Include="Object\UActorComponent.cpp">
@@ -272,7 +260,10 @@
     <ClCompile Include="Object\USceneComponent.cpp">
       <Filter>02. Object</Filter>
     </ClCompile>
-    <ClCompile Include="Object\AActor.cpp">
+    <ClCompile Include="Object\UObject.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UClass.cpp">
       <Filter>02. Object</Filter>
     </ClCompile>
   </ItemGroup>
