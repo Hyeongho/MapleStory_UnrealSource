@@ -118,9 +118,7 @@ private:
             return;
         }
 
-        m_pRefCountBlock->m_WeakCount--;
-
-        if (m_pRefCountBlock->m_WeakCount == 0 && m_pRefCountBlock->m_SharedCount == 0)
+        if (--m_pRefCountBlock->m_WeakCount == 0)
         {
             FMemory::Free(m_pRefCountBlock);
         }
