@@ -958,7 +958,7 @@ int main()
 
 			wprintf(L"[Tests] Phase 6-2 TWeakPtr - PASSED\n");
 		}
-
+			
 		// Phase 6-3. Circular Reference (Boss <-> Component)
 		{
 			FBossActor::s_DestroyCount = 0;

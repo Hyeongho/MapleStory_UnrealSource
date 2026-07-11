@@ -11,7 +11,7 @@ struct FRefCountBlock
     int32 m_WeakCount;
     FSmartPtrDeleter m_Deleter;
 
-    FRefCountBlock(FSmartPtrDeleter InDeleter) : m_SharedCount(1), m_WeakCount(0), m_Deleter(InDeleter)
+    FRefCountBlock(FSmartPtrDeleter InDeleter) : m_SharedCount(1), m_WeakCount(1), m_Deleter(InDeleter)
     {
     }
 };
