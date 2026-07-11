@@ -43,6 +43,9 @@
     <Filter Include="03. Timer">
       <UniqueIdentifier>{d56e832a-51ec-4ad5-bc53-0490fae6de9a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="04. Ability">
+      <UniqueIdentifier>{938c909c-0a02-412a-b0e8-787cfbe79f07}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -192,6 +195,30 @@
     <ClInclude Include="Timer\FTimerManager.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
+    <ClInclude Include="Ability\AbilityTypes.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayAttribute.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UGameplayEffect.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UGameplayAbility.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UAttributeSet.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UAbilitySystemComponent.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayTagContainer.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayTag.h">
+      <Filter>04. Ability</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -280,6 +307,24 @@
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
       <Filter>03. Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\UGameplayEffect.cpp">
+      <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\UGameplayAbility.cpp">
+      <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\UAbilitySystemComponent.cpp">
+      <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\FGameplayTagContainer.cpp">
+      <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\FGameplayTag.cpp">
+      <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\UAttributeSet.cpp">
+      <Filter>04. Ability</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
