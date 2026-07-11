@@ -259,20 +259,20 @@ using uint64 = uint64_t;
 
 ---
 
-### Phase 7.5 — 타이머 시스템 (2~3일) ★추가
+### Phase 7.5 — 타이머 시스템 (2~3일) ★추가 ✅
 
 파일 위치: `Engine/Timer/`
 
-- [ ] `FTimerHandle.h / .cpp` — 개별 타이머 식별자
-- [ ] `FTimerManager.h / .cpp` — SetTimer / ClearTimer / PauseTimer / ResumeTimer
-- [ ] `SetTimerNextFrame` — 지연 실행 (사망 후 N초 뒤 리스폰)
-- [ ] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근
+- [x] `FTimerHandle.h / .cpp` — 개별 타이머 식별자
+- [x] `FTimerManager.h / .cpp` — SetTimer / ClearTimer / PauseTimer / ResumeTimer
+- [x] `SetTimerNextFrame` — 지연 실행 (사망 후 N초 뒤 리스폰)
+- [x] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근
 
-완료 기준: 3초 뒤 콜백 정확히 호출 확인
+완료 기준: 3초 뒤 콜백 정확히 호출 확인 ✅
 
 ---
 
-### Phase 7.7 — Gameplay Ability System (6~7일) ★추가
+### Phase 7.7 — Gameplay Ability System (6~7일) ★추가 ✅
 
 파일 위치: `Engine/Ability/`
 
@@ -291,26 +291,26 @@ FGameplayAbilitySpec        : pAbility + Level + bIsActive
 
 #### 구현 파일 목록
 
-- [ ] `AbilityTypes.h` — 공통 열거형·구조체 (헤더 전용)
-- [ ] `FGameplayTag.h / .cpp` — 계층 태그 (L"Skill.Attack.Slash", L"Status.Stun")
+- [x] `AbilityTypes.h` — 공통 열거형·구조체 (헤더 전용)
+- [x] `FGameplayTag.h / .cpp` — 계층 태그 (L"Skill.Attack.Slash", L"Status.Stun")
   - `MatchesParent()` — "Skill.Attack"이 "Skill"의 자식인지 문자열 접두사로 판별
-- [ ] `FGameplayTagContainer.h / .cpp` — 태그 묶음
+- [x] `FGameplayTagContainer.h / .cpp` — 태그 묶음
   - `HasTag()` / `HasParentTag()` / `HasAnyTag()` / `HasAllTags()`
-- [ ] `FGameplayAttribute.h` — 단일 속성 (BaseValue + CurrentValue + Min/Max 클램프, 헤더 전용)
-- [ ] `UAttributeSet.h / .cpp` — `TMap<FName, FGameplayAttribute>` 기반 속성 집합
+- [x] `FGameplayAttribute.h` — 단일 속성 (BaseValue + CurrentValue + Min/Max 클램프, 헤더 전용)
+- [x] `UAttributeSet.h / .cpp` — `TMap<FName, FGameplayAttribute>` 기반 속성 집합
   - `InitAttribute(Name, Base, Min, Max)` / `GetAttribute()` / `GetCurrentValue()`
-- [ ] `UGameplayEffect.h / .cpp` — 효과 정의
+- [x] `UGameplayEffect.h / .cpp` — 효과 정의
   - Instant: 즉시 적용 후 소멸 (데미지, 회복)
   - Duration: N초 유지 후 만료 (버프/디버프)
   - Infinite: 명시 제거 전까지 유지 (패시브, 장비 스탯)
   - `m_Period` — 0이면 없음, >0이면 N초마다 Modifier 재적용 (독 도트)
   - `m_MaxStacks` — 중첩 버프 최대 스택 수 (기본 1)
-- [ ] `UGameplayAbility.h / .cpp` — 스킬 정의
+- [x] `UGameplayAbility.h / .cpp` — 스킬 정의
   - `m_pCostEffect` — MP 소모 효과
   - `m_pCooldownEffect` — 쿨다운 태그 부여 효과
   - `m_ActivationBlockedTags` — 스턴 등 차단 조건
   - `virtual CanActivate()` / `ActivateAbility()` / `EndAbility()`
-- [ ] `UAbilitySystemComponent.h / .cpp` — 캐릭터에 붙는 메인 컴포넌트 (UActorComponent 상속)
+- [x] `UAbilitySystemComponent.h / .cpp` — 캐릭터에 붙는 메인 컴포넌트 (UActorComponent 상속)
   - `SetAttributeSet()` / `GetAttributeCurrentValue()`
   - `ApplyGameplayEffect()` — Instant 즉시 처리, Duration/Infinite 목록 추가
   - `RemoveEffectsWithTag()` — 상태이상 해제 스킬에서 사용
@@ -331,11 +331,11 @@ FGameplayAbilitySpec        : pAbility + Level + bIsActive
 | 크리티컬 충전 스택 | MaxStacks=5 Duration 효과 |
 
 완료 기준:
-- 독 도트 1초마다 HP 감소 확인
-- 쿨다운 중 재발동 차단 확인
-- 패시브 Infinite 효과 ATK 영구 증가 확인
-- 상태이상 차단 및 해제 확인
-- FMemoryTracker 릭 없음 확인
+- 독 도트 1초마다 HP 감소 확인 ✅
+- 쿨다운 중 재발동 차단 확인 ✅
+- 패시브 Infinite 효과 ATK 영구 증가 확인 ✅
+- 상태이상 차단 및 해제 확인 ✅
+- FMemoryTracker 릭 없음 확인 ✅
 
 ---
 
