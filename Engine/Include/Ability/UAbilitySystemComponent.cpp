@@ -342,7 +342,7 @@ void UAbilitySystemComponent::RecalculateAttributes()
                 }
                 else if (OpFilter == EGameplayModifierOperation::Multiply)
                 {
-                    Val *= (1.f + Mag);
+                    Val += Val * Mag;
                 }
                 else
                 {
@@ -379,7 +379,8 @@ void UAbilitySystemComponent::ApplyModifiersToBase(const TArray<FGameplayEffectM
         }
         else if (Mod.m_Operation == EGameplayModifierOperation::Multiply)
         {
-            Attr->SetBaseValue(Attr->GetBaseValue() * (1.f + Mag));
+            float Base = Attr->GetBaseValue();
+            Attr->SetBaseValue(Base + Base * Mag);
         }
         else
         {
