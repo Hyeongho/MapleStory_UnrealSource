@@ -205,6 +205,9 @@
     <ClInclude Include="Object\UClass.h" />
     <ClInclude Include="Object\UObject.h" />
     <ClInclude Include="Object\USceneComponent.h" />
+    <ClInclude Include="Timer\FTimerDelegate.h" />
+    <ClInclude Include="Timer\FTimerHandle.h" />
+    <ClInclude Include="Timer\FTimerManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Core\Logging\FLogger.cpp" />
@@ -238,6 +241,7 @@
     <ClCompile Include="Object\UClass.cpp" />
     <ClCompile Include="Object\UObject.cpp" />
     <ClCompile Include="Object\USceneComponent.cpp" />
+    <ClCompile Include="Timer\FTimerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Copy.bat" />

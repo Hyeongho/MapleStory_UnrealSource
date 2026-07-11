@@ -40,6 +40,9 @@
     <Filter Include="02. Object">
       <UniqueIdentifier>{07875042-78e6-4b07-b832-bcfc962beac9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03. Timer">
+      <UniqueIdentifier>{d56e832a-51ec-4ad5-bc53-0490fae6de9a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -180,6 +183,15 @@
     <ClInclude Include="Object\UClass.h">
       <Filter>02. Object</Filter>
     </ClInclude>
+    <ClInclude Include="Timer\FTimerDelegate.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer\FTimerHandle.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer\FTimerManager.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -265,6 +277,9 @@
     </ClCompile>
     <ClCompile Include="Object\UClass.cpp">
       <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer\FTimerManager.cpp">
+      <Filter>03. Timer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
