@@ -7,11 +7,8 @@
 
 class FName
 {
-private:
-    uint32 m_Index;
-
 public:
-    FName() : m_Index(0)
+    FName() : m_Index(0) 
     {
 
     }
@@ -32,32 +29,39 @@ public:
         }
     }
 
-    bool operator==(const FName& Other) const
-    {
-        return m_Index == Other.m_Index;
+    bool operator==(const FName& Other) const 
+    { 
+        return m_Index == Other.m_Index; 
     }
 
-    bool operator!=(const FName& Other) const
-    {
-        return m_Index != Other.m_Index;
+    bool operator!=(const FName& Other) const 
+    { 
+        return m_Index != Other.m_Index; 
     }
 
-    bool operator<(const FName& Other) const
-    {
-        return m_Index < Other.m_Index;
+    bool operator<(const FName& Other) const 
+    { 
+        return m_Index < Other.m_Index; 
     }
 
-    FString ToString() const;
-
-    bool IsNone() const
+    FString ToString() const
     {
-        return m_Index == 0;
+        const wchar_t* pEntryName = FNamePool::Get().GetEntryName(m_Index);
+        return FString(pEntryName);
     }
 
-    uint32 GetIndex() const
-    {
-        return m_Index;
+    bool IsNone() const 
+    { 
+        return m_Index == 0; 
     }
+
+    uint32 GetIndex() const 
+    { 
+        return m_Index; 
+    }
+
+private:
+    uint32 m_Index;
 };
 
 inline uint32 GetTypeHash(const FName& Name)

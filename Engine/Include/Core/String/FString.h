@@ -21,7 +21,9 @@ public:
             m_Length = (int32)wcslen(Str);
             m_Capacity = m_Length + 1;
             m_pData = (wchar_t*)FMemory::Malloc(sizeof(wchar_t) * m_Capacity, alignof(wchar_t));
+
             check(m_pData != nullptr);
+
             FMemory::Memcpy(m_pData, Str, sizeof(wchar_t) * m_Capacity);
         }
     }
@@ -31,8 +33,7 @@ public:
         *this = Other;
     }
 
-    FString(FString&& Other) noexcept
-        : m_pData(Other.m_pData), m_Length(Other.m_Length), m_Capacity(Other.m_Capacity)
+    FString(FString&& Other) noexcept : m_pData(Other.m_pData), m_Length(Other.m_Length), m_Capacity(Other.m_Capacity)
     {
         Other.m_pData = nullptr;
         Other.m_Length = 0;
@@ -67,13 +68,16 @@ public:
         {
             return *this;
         }
+
         if (m_pData)
         {
             FMemory::Free(m_pData);
             m_pData = nullptr;
         }
+
         m_Length = 0;
         m_Capacity = 0;
+
         if (Other.m_Length > 0)
         {
             m_Length = Other.m_Length;
@@ -81,6 +85,7 @@ public:
             m_pData = (wchar_t*)FMemory::Malloc(sizeof(wchar_t) * m_Capacity, alignof(wchar_t));
             FMemory::Memcpy(m_pData, Other.m_pData, sizeof(wchar_t) * m_Capacity);
         }
+
         return *this;
     }
 
@@ -90,16 +95,20 @@ public:
         {
             return *this;
         }
+
         if (m_pData)
         {
             FMemory::Free(m_pData);
         }
+
         m_pData = Other.m_pData;
         m_Length = Other.m_Length;
         m_Capacity = Other.m_Capacity;
+
         Other.m_pData = nullptr;
         Other.m_Length = 0;
         Other.m_Capacity = 0;
+
         return *this;
     }
 
@@ -119,13 +128,16 @@ public:
         {
             return *this;
         }
+
         int32 NewLength = m_Length + Other.m_Length;
         int32 NewCapacity = NewLength + 1;
+
         if (NewCapacity > m_Capacity)
         {
             int32 GrowTo = (m_Capacity * 2 > NewCapacity) ? m_Capacity * 2 : NewCapacity;
             Grow(GrowTo);
         }
+
         FMemory::Memcpy(m_pData + m_Length, Other.m_pData, sizeof(wchar_t) * (Other.m_Length + 1));
         m_Length = NewLength;
         return *this;
@@ -137,6 +149,7 @@ public:
         {
             return *this;
         }
+
         return *this += FString(Str);
     }
 
@@ -144,18 +157,22 @@ public:
     {
         int32 NewLength = m_Length + 1;
         int32 NewCapacity = NewLength + 1;
+
         if (NewCapacity > m_Capacity)
         {
             int32 GrowTo = (m_Capacity * 2 > NewCapacity) ? m_Capacity * 2 : NewCapacity;
             Grow(GrowTo);
         }
+
         else if (!m_pData)
         {
             Grow(NewCapacity);
         }
+
         m_pData[m_Length] = Ch;
         m_pData[m_Length + 1] = L'\0';
         m_Length = NewLength;
+
         return *this;
     }
 
@@ -183,10 +200,12 @@ public:
         {
             return false;
         }
+
         if (m_Length == 0)
         {
             return true;
         }
+
         return wcscmp(m_pData, Other.m_pData) == 0;
     }
 

@@ -4,7 +4,6 @@
 
 FNamePool::FNamePool()
 {
-    // Entry 0 is reserved for "None" so a default FName maps to it.
     FindOrRegister(L"None");
 }
 

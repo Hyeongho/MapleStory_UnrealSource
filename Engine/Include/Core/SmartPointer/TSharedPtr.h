@@ -9,7 +9,7 @@ template<typename T>
 class TSharedPtr
 {
 public:
-    TSharedPtr() noexcept: m_pElement(nullptr), m_pRefCountBlock(nullptr)
+    TSharedPtr() noexcept : m_pElement(nullptr), m_pRefCountBlock(nullptr)
     {
     }
 
@@ -77,29 +77,29 @@ public:
         return *this;
     }
 
-    ~TSharedPtr() 
-    { 
-        ReleaseRef(); 
+    ~TSharedPtr()
+    {
+        ReleaseRef();
     }
 
-    T* operator->() const 
-    { 
-        check(m_pElement != nullptr); return m_pElement; 
+    T* operator->() const
+    {
+        check(m_pElement != nullptr); return m_pElement;
     }
 
-    T& operator*() const 
-    { 
-        check(m_pElement != nullptr); return *m_pElement; 
+    T& operator*() const
+    {
+        check(m_pElement != nullptr); return *m_pElement;
     }
 
-    T* Get() const 
-    { 
-        return m_pElement; 
+    T* Get() const
+    {
+        return m_pElement;
     }
 
-    bool IsValid() const 
-    { 
-        return m_pElement != nullptr; 
+    bool IsValid() const
+    {
+        return m_pElement != nullptr;
     }
 
     int32 GetRefCount() const
@@ -107,9 +107,9 @@ public:
         return m_pRefCountBlock ? m_pRefCountBlock->GetSharedCount() : 0;
     }
 
-    explicit operator bool() const 
-    { 
-        return IsValid(); 
+    explicit operator bool() const
+    {
+        return IsValid();
     }
 
     void Reset()
@@ -119,13 +119,13 @@ public:
         m_pRefCountBlock = nullptr;
     }
 
-    bool operator==(const TSharedPtr& Other) const 
-    { 
+    bool operator==(const TSharedPtr& Other) const
+    {
         return m_pElement == Other.m_pElement;
     }
 
-    bool operator!=(const TSharedPtr& Other) const 
-    { 
+    bool operator!=(const TSharedPtr& Other) const
+    {
         return m_pElement != Other.m_pElement;
     }
 

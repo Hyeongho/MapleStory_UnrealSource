@@ -60,9 +60,6 @@
     <ClInclude Include="Core\Memory\FMallocAnsi.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
-    <ClInclude Include="Core\Memory\FMallocBinned.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
     <ClInclude Include="Core\Memory\IAllocator.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
@@ -144,9 +141,6 @@
     <ClInclude Include="Core\String\FName.h">
       <Filter>01. Core\05. String</Filter>
     </ClInclude>
-    <ClInclude Include="Core\String\FNamePool.h">
-      <Filter>01. Core\05. String</Filter>
-    </ClInclude>
     <ClInclude Include="Core\Logging\FLogger.h">
       <Filter>01. Core\06. Logging</Filter>
     </ClInclude>
@@ -225,6 +219,12 @@
     <ClInclude Include="Ability\FGameplayTag.h">
       <Filter>04. Ability</Filter>
     </ClInclude>
+    <ClInclude Include="Core\String\FNamePool.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMallocBinned.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -237,9 +237,6 @@
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\Memory\FMallocBinned.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\MemoryOverride.cpp">
@@ -293,12 +290,6 @@
     <ClCompile Include="Core\String\FString.cpp">
       <Filter>01. Core\05. String</Filter>
     </ClCompile>
-    <ClCompile Include="Core\String\FName.cpp">
-      <Filter>01. Core\05. String</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\String\FNamePool.cpp">
-      <Filter>01. Core\05. String</Filter>
-    </ClCompile>
     <ClCompile Include="Core\Logging\FLogger.cpp">
       <Filter>01. Core\06. Logging</Filter>
     </ClCompile>
@@ -337,6 +328,12 @@
     </ClCompile>
     <ClCompile Include="Ability\UAttributeSet.cpp">
       <Filter>04. Ability</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\String\FNamePool.cpp">
+      <Filter>01. Core\05. String</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMallocBinned.cpp">
+      <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@ FMallocBinned::FMallocBinned() : m_pAllPages(nullptr)
     static_assert((HEADER_SIZE % BIN_MAX_ALIGN) == 0, "first block must start BIN_MAX_ALIGN-aligned");
 
     int32 size = 16;
+
     for (int32 i = 0; i < NUM_BINS; i++)
     {
         m_FreeLists[i] = nullptr;
@@ -17,7 +18,6 @@ FMallocBinned::FMallocBinned() : m_pAllPages(nullptr)
 
 FMallocBinned::~FMallocBinned()
 {
-    // Return every reserved page to the OS.
     FPageHeader* pPage = m_pAllPages;
     while (pPage)
     {
@@ -25,6 +25,7 @@ FMallocBinned::~FMallocBinned()
         _aligned_free(pPage);
         pPage = pNext;
     }
+
     m_pAllPages = nullptr;
 }
 
@@ -37,6 +38,7 @@ int32 FMallocBinned::SizeToBin(size_t size) const
             return i;
         }
     }
+
     return LARGE_BIN;
 }
 
@@ -63,7 +65,6 @@ void FMallocBinned::GrowBin(int32 binIndex)
     pHeader->m_pNextPage = m_pAllPages;
     m_pAllPages = pHeader;
 
-    // Carve the remainder of the page into blocks and push them onto the bin.
     uint8* pStart = reinterpret_cast<uint8*>(pRaw) + HEADER_SIZE;
     const size_t usable = PAGE_SIZE - HEADER_SIZE;
     const size_t blockCount = usable / blockSize;
@@ -83,12 +84,8 @@ void* FMallocBinned::AllocateLarge(size_t size, uint32 alignment)
         alignment = BIN_MAX_ALIGN;
     }
 
-    // The payload must stay inside the first page so PageOf(ptr) can recover
-    // the header by masking. Any alignment below PAGE_SIZE satisfies this.
     check((size_t)alignment < PAGE_SIZE);
 
-    // One or more whole pages so masking any payload address still yields the
-    // page header. Reserve HEADER_SIZE (plus alignment slack) up front.
     size_t needed = HEADER_SIZE + alignment + size;
     size_t totalSize = (needed + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
 
@@ -150,12 +147,12 @@ void FMallocBinned::Free(void* ptr)
 
     if (pHeader->m_BinIndex == LARGE_BIN)
     {
-        // Unlink from the page list, then release to the OS.
         FPageHeader** ppCursor = &m_pAllPages;
         while (*ppCursor && *ppCursor != pHeader)
         {
             ppCursor = &(*ppCursor)->m_pNextPage;
         }
+
         if (*ppCursor == pHeader)
         {
             *ppCursor = pHeader->m_pNextPage;
@@ -193,6 +190,7 @@ void* FMallocBinned::Realloc(void* ptr, size_t newSize, uint32 alignment)
     {
         oldSize = pHeader->m_AllocSize;
     }
+
     else
     {
         oldSize = (size_t)m_BinBlockSize[pHeader->m_BinIndex];

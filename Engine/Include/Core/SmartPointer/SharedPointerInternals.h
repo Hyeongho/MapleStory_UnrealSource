@@ -9,12 +9,8 @@
 
 using FSmartPtrDeleter = void(*)(void*);
 
-// Atomic reference-count operations. Compiler-branched so the shared-pointer
-// reference counting is thread-safe on MSVC (Interlocked intrinsics) while
-// still building and running under GCC/Clang for verification.
 struct FSmartPtrAtomics
 {
-    // Returns the value AFTER the increment.
     static int32 Increment(volatile int32* pValue)
     {
 #if defined(_MSC_VER)
@@ -24,7 +20,6 @@ struct FSmartPtrAtomics
 #endif
     }
 
-    // Returns the value AFTER the decrement.
     static int32 Decrement(volatile int32* pValue)
     {
 #if defined(_MSC_VER)
@@ -34,7 +29,6 @@ struct FSmartPtrAtomics
 #endif
     }
 
-    // Plain atomic load for read-only queries (GetRefCount / IsValid).
     static int32 Load(const volatile int32* pValue)
     {
 #if defined(_MSC_VER)
@@ -70,9 +64,6 @@ struct FRefCountBlock
         return FSmartPtrAtomics::Load(&m_SharedCount);
     }
 
-    // Releases one shared reference. If it was the last shared owner, runs the
-    // deleter and then releases the implicit weak reference held by the shared
-    // group. Frees the block when no weak references remain.
     void ReleaseShared(void* pElement)
     {
         if (FSmartPtrAtomics::Decrement(&m_SharedCount) == 0)
@@ -89,7 +80,6 @@ struct FRefCountBlock
         }
     }
 
-    // Releases one weak reference and frees the block when none remain.
     void ReleaseWeak()
     {
         if (FSmartPtrAtomics::Decrement(&m_WeakCount) == 0)

@@ -9,7 +9,7 @@ template<typename T>
 class TSharedPtr
 {
 public:
-    TSharedPtr() noexcept: m_pElement(nullptr), m_pRefCountBlock(nullptr)
+    TSharedPtr() noexcept : m_pElement(nullptr), m_pRefCountBlock(nullptr)
     {
     }
 
@@ -27,7 +27,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_SharedCount++;
+            m_pRefCountBlock->AddShared();
         }
     }
 
@@ -42,7 +42,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_SharedCount++;
+            m_pRefCountBlock->AddShared();
         }
     }
 
@@ -56,7 +56,7 @@ public:
 
             if (m_pRefCountBlock)
             {
-                m_pRefCountBlock->m_SharedCount++;
+                m_pRefCountBlock->AddShared();
             }
         }
 
@@ -77,39 +77,39 @@ public:
         return *this;
     }
 
-    ~TSharedPtr() 
-    { 
-        ReleaseRef(); 
+    ~TSharedPtr()
+    {
+        ReleaseRef();
     }
 
-    T* operator->() const 
-    { 
-        check(m_pElement != nullptr); return m_pElement; 
+    T* operator->() const
+    {
+        check(m_pElement != nullptr); return m_pElement;
     }
 
-    T& operator*() const 
-    { 
-        check(m_pElement != nullptr); return *m_pElement; 
+    T& operator*() const
+    {
+        check(m_pElement != nullptr); return *m_pElement;
     }
 
-    T* Get() const 
-    { 
-        return m_pElement; 
+    T* Get() const
+    {
+        return m_pElement;
     }
 
-    bool IsValid() const 
-    { 
-        return m_pElement != nullptr; 
+    bool IsValid() const
+    {
+        return m_pElement != nullptr;
     }
 
-    int32 GetRefCount() const 
-    { 
-        return m_pRefCountBlock ? m_pRefCountBlock->m_SharedCount : 0; 
+    int32 GetRefCount() const
+    {
+        return m_pRefCountBlock ? m_pRefCountBlock->GetSharedCount() : 0;
     }
 
-    explicit operator bool() const 
-    { 
-        return IsValid(); 
+    explicit operator bool() const
+    {
+        return IsValid();
     }
 
     void Reset()
@@ -119,13 +119,13 @@ public:
         m_pRefCountBlock = nullptr;
     }
 
-    bool operator==(const TSharedPtr& Other) const 
-    { 
+    bool operator==(const TSharedPtr& Other) const
+    {
         return m_pElement == Other.m_pElement;
     }
 
-    bool operator!=(const TSharedPtr& Other) const 
-    { 
+    bool operator!=(const TSharedPtr& Other) const
+    {
         return m_pElement != Other.m_pElement;
     }
 
@@ -144,22 +144,7 @@ private:
             return;
         }
 
-        m_pRefCountBlock->m_SharedCount--;
-
-        if (m_pRefCountBlock->m_SharedCount == 0)
-        {
-            if (m_pRefCountBlock->m_Deleter)
-            {
-                m_pRefCountBlock->m_Deleter(m_pElement);
-            }
-
-            m_pRefCountBlock->m_WeakCount--;
-
-            if (m_pRefCountBlock->m_WeakCount == 0)
-            {
-                FMemory::Free(m_pRefCountBlock);
-            }
-        }
+        m_pRefCountBlock->ReleaseShared(m_pElement);
     }
 
     static void DefaultDeleter(void* p)

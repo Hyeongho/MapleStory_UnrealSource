@@ -13,15 +13,13 @@
 //  - TIsTriviallyCopyable<T> == false → placement new + 명시적 ~T() 호출
 //  - 메모리: FMemory::Malloc(size, alignof(T))
 //  - 성장 전략: capacity==0 → 4, 이후 ×2
-//
 // Allocator policy:
-//  - TDefaultAllocator      → 항상 힙 할당 (기존 동작과 100% 동일)
-//  - TInlineAllocator<N>    → 첫 N개 원소를 인스턴스 내부(스택)에 저장,
-//                             N 초과 시에만 힙으로 이관
-//    예) TArray<FName, TInlineAllocator<4>>
+//- TDefaultAllocator      → 항상 힙 할당 (기존 동작과 100% 동일)
+//- TInlineAllocator<N>    → 첫 N개 원소를 인스턴스 내부(스택)에 저장,
+//                           N 초과 시에만 힙으로 이관
+//  예) TArray<FName, TInlineAllocator<4>>
 //=============================================================================
 
-// Allocator policies: expose a compile-time inline capacity.
 struct TDefaultAllocator
 {
 	static const int32 InlineCapacity = 0;
@@ -33,8 +31,6 @@ struct TInlineAllocator
 	static const int32 InlineCapacity = N;
 };
 
-// Inline storage base. Empty (zero-size via EBO) when the inline capacity is 0,
-// so TArray<T> pays no size cost for the feature.
 template<typename T, int32 N>
 struct TArrayInlineStorage
 {
@@ -147,6 +143,7 @@ public:
 		}
 
 		Empty();
+
 		MoveFrom(static_cast<TArray&&>(Other));
 
 		return *this;
@@ -412,22 +409,21 @@ public:
 	// Capacity를 Size로 축소
 	void Shrink()
 	{
-		// Inline storage is fixed-size and cannot shrink below InlineCapacity.
 		if (IsInline())
 		{
 			return;
 		}
 
-		if (m_Size == m_Capacity)
+		if (m_Size == m_Capacity) 
 		{
 			return;
 		}
 
-		if (m_Size == 0)
-		{
-			FreeRaw();
-			InitInlineBaseline();
-			return;
+		if (m_Size == 0) 
+		{ 
+			FreeRaw(); 
+			m_Capacity = 0; 
+			return; 
 		}
 
 		if constexpr (InlineCapacity > 0)
@@ -689,6 +685,7 @@ private:
 		}
 
 		FMemory::Free(pHeap);
+
 		m_pData = pInline;
 		m_Capacity = InlineCapacity;
 	}
