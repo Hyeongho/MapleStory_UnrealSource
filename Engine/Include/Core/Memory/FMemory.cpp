@@ -5,8 +5,10 @@
 
 void FMemory::InitMemory()
 {
-	static FMallocBinned BinnedAllocator;
-	GMalloc = &BinnedAllocator;
+	// DIAGNOSTIC: temporarily reverted to FMallocAnsi to bisect a Windows
+	// Debug-only crash (see plan doc). Restore FMallocBinned once resolved.
+	static FMallocAnsi AnsiAllocator;
+	GMalloc = &AnsiAllocator;
 }
 
 void* FMemory::Malloc(size_t size, uint32 alignment)
