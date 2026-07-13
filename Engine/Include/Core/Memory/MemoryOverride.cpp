@@ -35,3 +35,22 @@ void operator delete[](void* ptr) noexcept
 #endif
 	FMemory::Free(ptr);
 }
+
+// Sized deallocation (C++14+). The compiler prefers these overloads when the
+// size is statically known - route them to GMalloc as well so every delete
+// stays inside the engine allocator.
+void operator delete(void* ptr, size_t) noexcept
+{
+#ifdef _DEBUG
+	FMemoryTracker::OnFree();
+#endif
+	FMemory::Free(ptr);
+}
+
+void operator delete[](void* ptr, size_t) noexcept
+{
+#ifdef _DEBUG
+	FMemoryTracker::OnFree();
+#endif
+	FMemory::Free(ptr);
+}

@@ -6,18 +6,72 @@
 #include "Core/Templates/Utility.h"
 
 //=============================================================================
-// TArray<T> — STL-free 동적 배열 (언리얼 엔진 스타일)
+// TArray<T, AllocatorType> — STL-free 동적 배열 (언리얼 엔진 스타일)
 //
 // 설계 원칙:
 //  - TIsTriviallyCopyable<T> == true  → FMemory::Memcpy / Memmove (비트 복사)
 //  - TIsTriviallyCopyable<T> == false → placement new + 명시적 ~T() 호출
 //  - 메모리: FMemory::Malloc(size, alignof(T))
 //  - 성장 전략: capacity==0 → 4, 이후 ×2
+//
+// Allocator policy:
+//  - TDefaultAllocator      → 항상 힙 할당 (기존 동작과 100% 동일)
+//  - TInlineAllocator<N>    → 첫 N개 원소를 인스턴스 내부(스택)에 저장,
+//                             N 초과 시에만 힙으로 이관
+//    예) TArray<FName, TInlineAllocator<4>>
 //=============================================================================
 
-template<typename T>
-class TArray
+// Allocator policies: expose a compile-time inline capacity.
+struct TDefaultAllocator
 {
+	static const int32 InlineCapacity = 0;
+};
+
+template<int32 N>
+struct TInlineAllocator
+{
+	static const int32 InlineCapacity = N;
+};
+
+// Inline storage base. Empty (zero-size via EBO) when the inline capacity is 0,
+// so TArray<T> pays no size cost for the feature.
+template<typename T, int32 N>
+struct TArrayInlineStorage
+{
+	alignas(T) uint8 m_InlineBytes[sizeof(T) * N];
+
+	T* GetInline()
+	{
+		return reinterpret_cast<T*>(m_InlineBytes);
+	}
+
+	const T* GetInline() const
+	{
+		return reinterpret_cast<const T*>(m_InlineBytes);
+	}
+};
+
+template<typename T>
+struct TArrayInlineStorage<T, 0>
+{
+	T* GetInline()
+	{
+		return nullptr;
+	}
+
+	const T* GetInline() const
+	{
+		return nullptr;
+	}
+};
+
+template<typename T, typename AllocatorType = TDefaultAllocator>
+class TArray : private TArrayInlineStorage<T, AllocatorType::InlineCapacity>
+{
+private:
+	static const int32 InlineCapacity = AllocatorType::InlineCapacity;
+	using StorageType = TArrayInlineStorage<T, InlineCapacity>;
+
 public:
 	// -------------------------------------------------------------------------
 	// 생성자 / 소멸자
@@ -25,31 +79,35 @@ public:
 
 	TArray() noexcept : m_pData(nullptr), m_Size(0), m_Capacity(0)
 	{
+		InitInlineBaseline();
 	}
 
 	explicit TArray(int32 InitialCapacity) : m_pData(nullptr), m_Size(0), m_Capacity(0)
 	{
+		InitInlineBaseline();
+
 		if (InitialCapacity > 0)
 		{
-			GrowTo(InitialCapacity);
+			Reserve(InitialCapacity);
 		}
 	}
 
 	TArray(const TArray& Other) : m_pData(nullptr), m_Size(0), m_Capacity(0)
 	{
+		InitInlineBaseline();
+
 		if (Other.m_Size > 0)
 		{
-			GrowTo(Other.m_Size);
+			EnsureCapacity(Other.m_Size);
 			CopyElementsFrom(Other.m_pData, Other.m_Size);
 			m_Size = Other.m_Size;
 		}
 	}
 
-	TArray(TArray&& Other) noexcept : m_pData(Other.m_pData), m_Size(Other.m_Size), m_Capacity(Other.m_Capacity)
+	TArray(TArray&& Other) noexcept : m_pData(nullptr), m_Size(0), m_Capacity(0)
 	{
-		Other.m_pData = nullptr;
-		Other.m_Size = 0;
-		Other.m_Capacity = 0;
+		InitInlineBaseline();
+		MoveFrom(static_cast<TArray&&>(Other));
 	}
 
 	~TArray()
@@ -63,7 +121,7 @@ public:
 
 	TArray& operator=(const TArray& Other)
 	{
-		if (this == &Other) 
+		if (this == &Other)
 		{
 			return *this;
 		}
@@ -71,34 +129,25 @@ public:
 		DestroyElements(0, m_Size);
 		m_Size = 0;
 
-		if (m_Capacity < Other.m_Size)
+		if (Other.m_Size > 0)
 		{
-			FreeRaw();
-			m_Capacity = 0;
-			GrowTo(Other.m_Size);
+			EnsureCapacity(Other.m_Size);
+			CopyElementsFrom(Other.m_pData, Other.m_Size);
+			m_Size = Other.m_Size;
 		}
 
-		CopyElementsFrom(Other.m_pData, Other.m_Size);
-		m_Size = Other.m_Size;
 		return *this;
 	}
 
 	TArray& operator=(TArray&& Other) noexcept
 	{
-		if (this == &Other) 
+		if (this == &Other)
 		{
 			return *this;
 		}
 
 		Empty();
-
-		m_pData = Other.m_pData;
-		m_Size = Other.m_Size;
-		m_Capacity = Other.m_Capacity;
-
-		Other.m_pData = nullptr;
-		Other.m_Size = 0;
-		Other.m_Capacity = 0;
+		MoveFrom(static_cast<TArray&&>(Other));
 
 		return *this;
 	}
@@ -363,16 +412,32 @@ public:
 	// Capacity를 Size로 축소
 	void Shrink()
 	{
-		if (m_Size == m_Capacity) 
+		// Inline storage is fixed-size and cannot shrink below InlineCapacity.
+		if (IsInline())
 		{
 			return;
 		}
 
-		if (m_Size == 0) 
-		{ 
-			FreeRaw(); 
-			m_Capacity = 0; 
-			return; 
+		if (m_Size == m_Capacity)
+		{
+			return;
+		}
+
+		if (m_Size == 0)
+		{
+			FreeRaw();
+			InitInlineBaseline();
+			return;
+		}
+
+		if constexpr (InlineCapacity > 0)
+		{
+			// Move back into inline storage when it fits again.
+			if (m_Size <= InlineCapacity)
+			{
+				MoveToInline();
+				return;
+			}
 		}
 
 		GrowTo(m_Size);
@@ -385,13 +450,13 @@ public:
 		m_Size = 0;
 	}
 
-	// ~T() 호출 + 메모리 해제
+	// ~T() 호출 + 메모리 해제 (인라인 스토리지로 복귀)
 	void Empty()
 	{
 		DestroyElements(0, m_Size);
 		m_Size = 0;
 		FreeRaw();
-		m_Capacity = 0;
+		InitInlineBaseline();
 	}
 
 	// -------------------------------------------------------------------------
@@ -505,7 +570,7 @@ private:
 		GrowTo(NewCap);
 	}
 
-	// 새 버퍼 할당 → 원소 이전 → 구 버퍼 해제
+	// 새 힙 버퍼 할당 → 원소 이전 → 구 버퍼 해제 (인라인이면 해제 생략)
 	void GrowTo(int32 NewCapacity)
 	{
 		T* pNew = static_cast<T*>(FMemory::Malloc(static_cast<size_t>(NewCapacity) * sizeof(T), static_cast<uint32>(alignof(T))));
@@ -514,19 +579,7 @@ private:
 
 		if (m_Size > 0)
 		{
-			if constexpr (TIsTriviallyCopyable<T>::Value)
-			{
-				FMemory::Memcpy(pNew, m_pData, static_cast<size_t>(m_Size) * sizeof(T));
-			}
-
-			else
-			{
-				for (int32 i = 0; i < m_Size; i++)
-				{
-					new (pNew + i) T(MoveTemp(m_pData[i]));
-					m_pData[i].~T();
-				}
-			}
+			RelocateElements(pNew, m_pData, m_Size);
 		}
 
 		FreeRaw();
@@ -534,14 +587,110 @@ private:
 		m_Capacity = NewCapacity;
 	}
 
-	// 원시 메모리 해제 (소멸자 호출 없음)
+	// 원시 메모리 해제 (소멸자 호출 없음) — 인라인 스토리지는 해제 대상 아님
 	void FreeRaw()
 	{
-		if (m_pData)
+		if (m_pData && !IsInline())
 		{
 			FMemory::Free(m_pData);
-			m_pData = nullptr;
 		}
+
+		m_pData = nullptr;
+	}
+
+	// -------------------------------------------------------------------------
+	// 인라인 스토리지 헬퍼
+	// -------------------------------------------------------------------------
+
+	// 빈 상태의 기본 저장소로 초기화 (인라인 있으면 인라인, 없으면 nullptr)
+	void InitInlineBaseline()
+	{
+		if constexpr (InlineCapacity > 0)
+		{
+			m_pData = StorageType::GetInline();
+			m_Capacity = InlineCapacity;
+		}
+
+		else
+		{
+			m_pData = nullptr;
+			m_Capacity = 0;
+		}
+	}
+
+	// 현재 데이터가 인라인 스토리지에 있는가
+	bool IsInline() const
+	{
+		if constexpr (InlineCapacity > 0)
+		{
+			return m_pData == StorageType::GetInline();
+		}
+
+		else
+		{
+			return false;
+		}
+	}
+
+	// Src[0..Count) → Dest 로 이전 (move + 원본 파괴). 겹치지 않는 버퍼 전제.
+	static void RelocateElements(T* pDest, T* pSrc, int32 Count)
+	{
+		if constexpr (TIsTriviallyCopyable<T>::Value)
+		{
+			FMemory::Memcpy(pDest, pSrc, static_cast<size_t>(Count) * sizeof(T));
+		}
+
+		else
+		{
+			for (int32 i = 0; i < Count; i++)
+			{
+				new (pDest + i) T(MoveTemp(pSrc[i]));
+				pSrc[i].~T();
+			}
+		}
+	}
+
+	// 이동 소스에서 인수. *this 는 빈 기본 상태 전제.
+	// 힙 소스면 포인터 탈취, 인라인 소스면 원소 단위 이전.
+	void MoveFrom(TArray&& Other)
+	{
+		if (Other.IsInline())
+		{
+			// Other.m_Size <= InlineCapacity == 우리 기본 capacity → 항상 수용 가능
+			if (Other.m_Size > 0)
+			{
+				RelocateElements(m_pData, Other.m_pData, Other.m_Size);
+				m_Size = Other.m_Size;
+			}
+
+			Other.m_Size = 0;
+		}
+
+		else
+		{
+			m_pData = Other.m_pData;
+			m_Size = Other.m_Size;
+			m_Capacity = Other.m_Capacity;
+
+			Other.m_Size = 0;
+			Other.InitInlineBaseline();
+		}
+	}
+
+	// 힙 → 인라인 복귀 (m_Size <= InlineCapacity 전제, Shrink에서 호출)
+	void MoveToInline()
+	{
+		T* pHeap = m_pData;
+		T* pInline = StorageType::GetInline();
+
+		if (m_Size > 0)
+		{
+			RelocateElements(pInline, pHeap, m_Size);
+		}
+
+		FMemory::Free(pHeap);
+		m_pData = pInline;
+		m_Capacity = InlineCapacity;
 	}
 
 	// [Begin, Begin+Count) 소멸자 호출 (POD는 no-op)

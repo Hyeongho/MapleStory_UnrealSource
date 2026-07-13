@@ -60,6 +60,9 @@
     <ClInclude Include="Core\Memory\FMallocAnsi.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Memory\FMallocBinned.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
     <ClInclude Include="Core\Memory\IAllocator.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
@@ -234,6 +237,9 @@
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMallocBinned.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\MemoryOverride.cpp">

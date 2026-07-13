@@ -27,7 +27,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_SharedCount++;
+            m_pRefCountBlock->AddShared();
         }
     }
 
@@ -42,7 +42,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_SharedCount++;
+            m_pRefCountBlock->AddShared();
         }
     }
 
@@ -56,7 +56,7 @@ public:
 
             if (m_pRefCountBlock)
             {
-                m_pRefCountBlock->m_SharedCount++;
+                m_pRefCountBlock->AddShared();
             }
         }
 
@@ -102,9 +102,9 @@ public:
         return m_pElement != nullptr; 
     }
 
-    int32 GetRefCount() const 
-    { 
-        return m_pRefCountBlock ? m_pRefCountBlock->m_SharedCount : 0; 
+    int32 GetRefCount() const
+    {
+        return m_pRefCountBlock ? m_pRefCountBlock->GetSharedCount() : 0;
     }
 
     explicit operator bool() const 
@@ -144,22 +144,7 @@ private:
             return;
         }
 
-        m_pRefCountBlock->m_SharedCount--;
-
-        if (m_pRefCountBlock->m_SharedCount == 0)
-        {
-            if (m_pRefCountBlock->m_Deleter)
-            {
-                m_pRefCountBlock->m_Deleter(m_pElement);
-            }
-
-            m_pRefCountBlock->m_WeakCount--;
-
-            if (m_pRefCountBlock->m_WeakCount == 0)
-            {
-                FMemory::Free(m_pRefCountBlock);
-            }
-        }
+        m_pRefCountBlock->ReleaseShared(m_pElement);
     }
 
     static void DefaultDeleter(void* p)

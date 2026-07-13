@@ -1,11 +1,12 @@
 #include "EnginePCH.h"
 #include "FMemory.h"
 #include "FMallocAnsi.h"
+#include "FMallocBinned.h"
 
 void FMemory::InitMemory()
 {
-	static FMallocAnsi AnsiAllocator;
-	GMalloc = &AnsiAllocator;
+	static FMallocBinned BinnedAllocator;
+	GMalloc = &BinnedAllocator;
 }
 
 void* FMemory::Malloc(size_t size, uint32 alignment)

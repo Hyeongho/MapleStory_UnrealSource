@@ -187,6 +187,7 @@
     <ClInclude Include="Core\Math\FTransform2D.h" />
     <ClInclude Include="Core\Math\FVector2D.h" />
     <ClInclude Include="Core\Memory\FMallocAnsi.h" />
+    <ClInclude Include="Core\Memory\FMallocBinned.h" />
     <ClInclude Include="Core\Memory\FMemory.h" />
     <ClInclude Include="Core\Memory\FMemoryTracker.h" />
     <ClInclude Include="Core\Memory\FPoolAllocator.h" />
@@ -264,6 +265,7 @@
     <ClCompile Include="Core\Math\FTransform2D.cpp" />
     <ClCompile Include="Core\Math\FVector2D.cpp" />
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp" />
+    <ClCompile Include="Core\Memory\FMallocBinned.cpp" />
     <ClCompile Include="Core\Memory\FMemory.cpp" />
     <ClCompile Include="Core\Memory\FMemoryTracker.cpp" />
     <ClCompile Include="Core\Memory\FPoolAllocator.cpp" />

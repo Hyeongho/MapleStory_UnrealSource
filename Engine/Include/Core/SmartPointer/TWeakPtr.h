@@ -13,7 +13,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_WeakCount++;
+            m_pRefCountBlock->AddWeak();
         }
     }
 
@@ -21,7 +21,7 @@ public:
     {
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_WeakCount++;
+            m_pRefCountBlock->AddWeak();
         }
     }
 
@@ -45,7 +45,7 @@ public:
 
         if (m_pRefCountBlock)
         {
-            m_pRefCountBlock->m_WeakCount++;
+            m_pRefCountBlock->AddWeak();
         }
 
         return *this;
@@ -62,7 +62,7 @@ public:
 
             if (m_pRefCountBlock)
             {
-                m_pRefCountBlock->m_WeakCount++;
+                m_pRefCountBlock->AddWeak();
             }
         }
 
@@ -86,7 +86,7 @@ public:
 
     bool IsValid() const
     {
-        return m_pRefCountBlock != nullptr && m_pRefCountBlock->m_SharedCount > 0;
+        return m_pRefCountBlock != nullptr && m_pRefCountBlock->GetSharedCount() > 0;
     }
 
     TSharedPtr<T> Pin() const
@@ -96,7 +96,7 @@ public:
             return TSharedPtr<T>();
         }
 
-        m_pRefCountBlock->m_SharedCount++;
+        m_pRefCountBlock->AddShared();
         return TSharedPtr<T>(m_pElement, m_pRefCountBlock);
     }
 
@@ -118,12 +118,7 @@ private:
             return;
         }
 
-        m_pRefCountBlock->m_WeakCount--;
-
-        if (m_pRefCountBlock->m_WeakCount == 0)
-        {
-            FMemory::Free(m_pRefCountBlock);
-        }
+        m_pRefCountBlock->ReleaseWeak();
     }
 
     template<typename U> friend class TWeakPtr;

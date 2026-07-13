@@ -27,8 +27,9 @@ public:
 		check(InData != nullptr || InSize == 0);
 	}
 
-	// TArray → TArrayView 암묵적 변환
-	TArrayView(const TArray<T>& InArray) noexcept : m_pData(InArray.GetData()), m_Size(InArray.Num())
+	// TArray → TArrayView 암묵적 변환 (임의 Allocator 허용)
+	template<typename AllocatorType>
+	TArrayView(const TArray<T, AllocatorType>& InArray) noexcept : m_pData(InArray.GetData()), m_Size(InArray.Num())
 	{
 	}
 

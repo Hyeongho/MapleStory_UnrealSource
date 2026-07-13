@@ -7,6 +7,7 @@
 #include "Core/Memory/FPoolAllocator.h"
 #include "Core/Memory/FStackAllocator.h"
 #include "Core/Memory/FMemoryTracker.h"
+#include "Core/Memory/FMallocBinned.h"
 #include "Core/Templates/TypeTraits.h"
 #include "Core/Templates/AndOrNot.h"
 #include "Core/Templates/Utility.h"
@@ -126,6 +127,41 @@ struct FBossComponent
 	~FBossComponent() { ++s_DestroyCount; }
 };
 int32 FBossComponent::s_DestroyCount = 0;
+
+// --- Phase 7.5+ helpers ---
+
+// True if the array's element buffer lives inside the array object itself
+// (i.e. inline storage is active, no heap allocation happened).
+template<typename ArrayType>
+static bool IsUsingInlineStorage(const ArrayType& Arr)
+{
+	const uint8* pData = reinterpret_cast<const uint8*>(Arr.GetData());
+	const uint8* pLo = reinterpret_cast<const uint8*>(&Arr);
+	const uint8* pHi = pLo + sizeof(ArrayType);
+	return pData >= pLo && pData < pHi;
+}
+
+// Worker for the atomic ref-count stress test: copy/drop the shared pointer
+// in a tight loop from multiple threads.
+struct FAtomicStressContext
+{
+	TSharedPtr<int32>* m_pShared;
+	int32 m_Iterations;
+};
+
+static DWORD WINAPI AtomicStressWorker(LPVOID pParam)
+{
+	FAtomicStressContext* pCtx = static_cast<FAtomicStressContext*>(pParam);
+
+	for (int32 i = 0; i < pCtx->m_Iterations; i++)
+	{
+		TSharedPtr<int32> Local = *pCtx->m_pShared;
+		volatile int32 RefCount = Local.GetRefCount();
+		(void)RefCount;
+	}
+
+	return 0;
+}
 
 int main()
 {
@@ -1547,6 +1583,215 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7.5+ (1) FNamePool - ALL PASSED\n");
+	}
+
+	// Phase 7.5+ (2) - TInlineAllocator<N>
+	{
+		// 7.5+ 2-1. First N elements live inside the array object (no heap)
+		{
+			TArray<int32, TInlineAllocator<4>> Arr;
+			check(Arr.Max() == 4);
+
+			for (int32 i = 0; i < 4; i++)
+			{
+				Arr.Add(i * 10);
+			}
+
+			check(IsUsingInlineStorage(Arr));
+			check(Arr.Max() == 4);
+
+			// 5th element spills to the heap
+			Arr.Add(40);
+			check(!IsUsingInlineStorage(Arr));
+			check(Arr.Num() == 5 && Arr.Max() >= 5);
+
+			for (int32 i = 0; i < 5; i++)
+			{
+				check(Arr[i] == i * 10);
+			}
+
+			wprintf(L"[Tests] Phase 7.5+ 2-1 Inline->Heap Spill - PASSED\n");
+		}
+
+		// 7.5+ 2-2. Move semantics: heap buffer is stolen, inline is element-moved
+		{
+			TArray<int32, TInlineAllocator<2>> Heap;
+			for (int32 i = 0; i < 10; i++)
+			{
+				Heap.Add(i);
+			}
+
+			const int32* pHeapData = Heap.GetData();
+			TArray<int32, TInlineAllocator<2>> Stolen = MoveTemp(Heap);
+			check(Stolen.GetData() == pHeapData);
+			check(Stolen.Num() == 10 && Heap.Num() == 0);
+
+			// moved-from array returns to inline storage and stays usable
+			Heap.Add(7);
+			check(IsUsingInlineStorage(Heap) && Heap[0] == 7);
+
+			TArray<int32, TInlineAllocator<2>> Small;
+			Small.Add(1);
+			TArray<int32, TInlineAllocator<2>> Moved = MoveTemp(Small);
+			check(IsUsingInlineStorage(Moved) && Moved[0] == 1);
+			check(Small.Num() == 0);
+
+			wprintf(L"[Tests] Phase 7.5+ 2-2 Inline Move Semantics - PASSED\n");
+		}
+
+		// 7.5+ 2-3. Shrink returns to inline storage when it fits again
+		{
+			TArray<int32, TInlineAllocator<4>> Arr;
+			for (int32 i = 0; i < 8; i++)
+			{
+				Arr.Add(i);
+			}
+			check(!IsUsingInlineStorage(Arr));
+
+			while (Arr.Num() > 3)
+			{
+				Arr.RemoveAt(Arr.Num() - 1);
+			}
+
+			Arr.Shrink();
+			check(IsUsingInlineStorage(Arr));
+			check(Arr.Max() == 4);
+			check(Arr[0] == 0 && Arr[1] == 1 && Arr[2] == 2);
+
+			wprintf(L"[Tests] Phase 7.5+ 2-3 Shrink Back To Inline - PASSED\n");
+		}
+
+		// 7.5+ 2-4. Non-POD elements: destructor balance across the spill
+		{
+			FBossActor::s_DestroyCount = 0;
+			{
+				TArray<TSharedPtr<FBossActor>, TInlineAllocator<2>> Arr;
+				for (int32 i = 0; i < 5; i++)
+				{
+					Arr.Add(MakeShared<FBossActor>());
+				}
+				check(!IsUsingInlineStorage(Arr));
+				check(Arr[0].GetRefCount() == 1);
+			}
+			check(FBossActor::s_DestroyCount == 5);
+
+			wprintf(L"[Tests] Phase 7.5+ 2-4 Inline Non-POD Destruction - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 7.5+ (2) TInlineAllocator - ALL PASSED\n");
+	}
+
+	// Phase 7.5+ (3) - FMallocBinned
+	{
+		// 7.5+ 3-1. Small blocks: 16-byte alignment, block reuse after free
+		{
+			FMallocBinned Binned;
+
+			void* pA = Binned.Malloc(24, 16);
+			void* pB = Binned.Malloc(24, 16);
+			check(pA && pB && pA != pB);
+			check((reinterpret_cast<uintptr_t>(pA) % 16) == 0);
+			check((reinterpret_cast<uintptr_t>(pB) % 16) == 0);
+
+			Binned.Free(pA);
+			void* pC = Binned.Malloc(30, 16);   // same 32B bin -> reuses pA's block
+			check(pC == pA);
+
+			Binned.Free(pB);
+			Binned.Free(pC);
+
+			wprintf(L"[Tests] Phase 7.5+ 3-1 Binned Small Block Reuse - PASSED\n");
+		}
+
+		// 7.5+ 3-2. Large allocation fallthrough + Realloc preserves contents
+		{
+			FMallocBinned Binned;
+
+			uint8* pLarge = static_cast<uint8*>(Binned.Malloc(4096, 16));
+			check(pLarge != nullptr);
+
+			for (int32 i = 0; i < 4096; i++)
+			{
+				pLarge[i] = (uint8)(i & 0xFF);
+			}
+
+			uint8* pGrown = static_cast<uint8*>(Binned.Realloc(pLarge, 8192, 16));
+			check(pGrown != nullptr);
+
+			for (int32 i = 0; i < 4096; i++)
+			{
+				check(pGrown[i] == (uint8)(i & 0xFF));
+			}
+
+			// small -> large realloc across the bin boundary
+			uint8* pSmall = static_cast<uint8*>(Binned.Malloc(100, 16));
+			for (int32 i = 0; i < 100; i++)
+			{
+				pSmall[i] = (uint8)(200 - i);
+			}
+
+			uint8* pCrossed = static_cast<uint8*>(Binned.Realloc(pSmall, 2000, 16));
+			for (int32 i = 0; i < 100; i++)
+			{
+				check(pCrossed[i] == (uint8)(200 - i));
+			}
+
+			Binned.Free(pGrown);
+			Binned.Free(pCrossed);
+
+			wprintf(L"[Tests] Phase 7.5+ 3-2 Binned Large/Realloc - PASSED\n");
+		}
+
+		// 7.5+ 3-3. GMalloc is now the binned allocator (engine-wide integration)
+		{
+			void* p1 = FMemory::Malloc(64);
+			void* p2 = FMemory::Malloc(64);
+			check(p1 && p2 && p1 != p2);
+
+			FMemory::Free(p1);
+			void* p3 = FMemory::Malloc(64);
+			check(p3 == p1);   // bin reuse proves GMalloc routes through FMallocBinned
+
+			FMemory::Free(p2);
+			FMemory::Free(p3);
+
+			wprintf(L"[Tests] Phase 7.5+ 3-3 GMalloc Binned Integration - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 7.5+ (3) FMallocBinned - ALL PASSED\n");
+	}
+
+	// Phase 7.5+ (4) - TSharedPtr atomic reference counting
+	{
+		// 4 threads copy/drop the same shared pointer 200k times each.
+		// With non-atomic counts this loses/gains references; with atomic
+		// counts the final count is exactly 1.
+		TSharedPtr<int32> Shared = MakeShared<int32>(42);
+
+		FAtomicStressContext Context;
+		Context.m_pShared = &Shared;
+		Context.m_Iterations = 200000;
+
+		const int32 ThreadCount = 4;
+		HANDLE Threads[ThreadCount];
+
+		for (int32 t = 0; t < ThreadCount; t++)
+		{
+			Threads[t] = CreateThread(nullptr, 0, AtomicStressWorker, &Context, 0, nullptr);
+			check(Threads[t] != nullptr);
+		}
+
+		WaitForMultipleObjects(ThreadCount, Threads, TRUE, INFINITE);
+
+		for (int32 t = 0; t < ThreadCount; t++)
+		{
+			CloseHandle(Threads[t]);
+		}
+
+		check(Shared.GetRefCount() == 1);
+		check(*Shared == 42);
+
+		wprintf(L"[Tests] Phase 7.5+ (4) TSharedPtr Atomic RefCount - ALL PASSED\n");
 	}
 
 	return 0;
