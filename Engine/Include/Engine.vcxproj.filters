@@ -141,6 +141,9 @@
     <ClInclude Include="Core\String\FName.h">
       <Filter>01. Core\05. String</Filter>
     </ClInclude>
+    <ClInclude Include="Core\String\FNamePool.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
     <ClInclude Include="Core\Logging\FLogger.h">
       <Filter>01. Core\06. Logging</Filter>
     </ClInclude>
@@ -285,6 +288,9 @@
       <Filter>01. Core\05. String</Filter>
     </ClCompile>
     <ClCompile Include="Core\String\FName.cpp">
+      <Filter>01. Core\05. String</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\String\FNamePool.cpp">
       <Filter>01. Core\05. String</Filter>
     </ClCompile>
     <ClCompile Include="Core\Logging\FLogger.cpp">

@@ -29,6 +29,7 @@
 #include "Core/Containers/TMultiMap.h"
 #include "Core/String/FString.h"
 #include "Core/String/FName.h"
+#include "Core/String/FNamePool.h"
 #include "Core/String/FText.h"
 #include "Core/Logging/FLogger.h"
 #include "Core/Templates/TResult.h"
@@ -37,6 +38,7 @@
 #include "Ability/UGameplayEffect.h"
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
+#include <ctime>
 
 namespace
 {
@@ -1460,6 +1462,91 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7.7 Gameplay Ability System - ALL PASSED\n");
+	}
+
+	// Phase 7.5+ (1) - FNamePool (inline entry storage + content hash pool)
+	{
+		// 7.5+ 1-1. Same string registers to the same index, different strings differ
+		{
+			FName A(L"PoolTest.Player");
+			FName B(L"PoolTest.Player");
+			FName C(L"PoolTest.Monster");
+
+			check(A.GetIndex() == B.GetIndex());
+			check(A == B);
+			check(A.GetIndex() != C.GetIndex());
+			check(A != C);
+
+			wprintf(L"[Tests] Phase 7.5+ 1-1 FNamePool Dedup - PASSED\n");
+		}
+
+		// 7.5+ 1-2. Default / empty string maps to None (index 0)
+		{
+			FName Default;
+			FName Empty(L"");
+
+			check(Default.IsNone() && Default.GetIndex() == 0);
+			check(Empty.IsNone() && Empty.GetIndex() == 0);
+			check(Default.ToString() == FString(L"None"));
+
+			wprintf(L"[Tests] Phase 7.5+ 1-2 FNamePool None - PASSED\n");
+		}
+
+		// 7.5+ 1-3. ToString round trip (wchar_t* and FString constructors)
+		{
+			FName Tag(L"Skill.Attack.Slash");
+			check(Tag.ToString() == FString(L"Skill.Attack.Slash"));
+
+			FName FromFString(FString(L"Status.Poison"));
+			check(FromFString.ToString() == FString(L"Status.Poison"));
+
+			wprintf(L"[Tests] Phase 7.5+ 1-3 FNamePool RoundTrip - PASSED\n");
+		}
+
+		// 7.5+ 1-4. Content hash is stable and content-based (not pointer-based)
+		{
+			wchar_t Buffer[32] = L"Skill.Attack.Slash";
+
+			uint32 H1 = FNamePool::HashString(L"Skill.Attack.Slash");
+			uint32 H2 = FNamePool::HashString(Buffer);
+			check(H1 == H2);
+
+			wprintf(L"[Tests] Phase 7.5+ 1-4 FNamePool ContentHash - PASSED\n");
+		}
+
+		// 7.5+ 1-5. Bulk registration: 1000 unique names, all distinct + round trip
+		{
+			const int32 BulkCount = 1000;
+
+			clock_t Start = clock();
+
+			TArray<FName> Names;
+			Names.Reserve(BulkCount);
+
+			for (int32 i = 0; i < BulkCount; i++)
+			{
+				Names.Add(FName(FString::Printf(L"Entity_%d", i)));
+			}
+
+			clock_t Elapsed = clock() - Start;
+
+			TSet<uint32> Indices;
+			for (int32 i = 0; i < BulkCount; i++)
+			{
+				check(!Indices.Contains(Names[i].GetIndex()));
+				Indices.Add(Names[i].GetIndex());
+
+				check(Names[i].ToString() == FString::Printf(L"Entity_%d", i));
+			}
+
+			FName Again(L"Entity_500");
+			check(Again == Names[500]);
+
+			wprintf(L"[Tests] Phase 7.5+ 1-5 FNamePool Bulk %d names in %ld ms (pool size %d) - PASSED\n",
+				BulkCount, (long)(Elapsed * 1000 / CLOCKS_PER_SEC), FNamePool::Get().Num());
+		}
+
+		wprintf(L"[Tests] Phase 7.5+ (1) FNamePool - ALL PASSED\n");
 	}
 
 	return 0;

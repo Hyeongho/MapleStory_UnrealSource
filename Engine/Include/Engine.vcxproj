@@ -197,6 +197,7 @@
     <ClInclude Include="Core\SmartPointer\TSharedRef.h" />
     <ClInclude Include="Core\SmartPointer\TWeakPtr.h" />
     <ClInclude Include="Core\String\FName.h" />
+    <ClInclude Include="Core\String\FNamePool.h" />
     <ClInclude Include="Core\String\FString.h" />
     <ClInclude Include="Core\String\FText.h" />
     <ClInclude Include="Core\Logging\FLogger.h" />
@@ -269,6 +270,7 @@
     <ClCompile Include="Core\Memory\FStackAllocator.cpp" />
     <ClCompile Include="Core\Memory\MemoryOverride.cpp" />
     <ClCompile Include="Core\String\FName.cpp" />
+    <ClCompile Include="Core\String\FNamePool.cpp" />
     <ClCompile Include="Core\String\FString.cpp" />
     <ClCompile Include="Core\String\FText.cpp" />
     <ClCompile Include="Core\Logging\FLogger.cpp" />
