@@ -47,11 +47,7 @@ public:
         return m_Index < Other.m_Index;
     }
 
-    FString ToString() const
-    {
-        const wchar_t* pEntryName = FNamePool::Get().GetEntryName(m_Index);
-        return FString(pEntryName);
-    }
+    FString ToString() const;
 
     bool IsNone() const
     {
