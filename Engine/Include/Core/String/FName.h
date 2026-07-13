@@ -49,7 +49,8 @@ public:
 
     FString ToString() const
     {
-        return FString(FNamePool::Get().GetEntryName(m_Index));
+        const wchar_t* pEntryName = FNamePool::Get().GetEntryName(m_Index);
+        return FString(pEntryName);
     }
 
     bool IsNone() const
