@@ -35,3 +35,19 @@ void operator delete[](void* ptr) noexcept
 #endif
 	FMemory::Free(ptr);
 }
+
+void operator delete(void* ptr, size_t) noexcept
+{
+#ifdef _DEBUG
+	FMemoryTracker::OnFree();
+#endif
+	FMemory::Free(ptr);
+}
+
+void operator delete[](void* ptr, size_t) noexcept
+{
+#ifdef _DEBUG
+	FMemoryTracker::OnFree();
+#endif
+	FMemory::Free(ptr);
+}
