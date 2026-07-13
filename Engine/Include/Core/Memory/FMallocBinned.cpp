@@ -53,6 +53,7 @@ void FMallocBinned::GrowBin(int32 binIndex)
 
     void* pRaw = _aligned_malloc(PAGE_SIZE, PAGE_SIZE);
     check(pRaw != nullptr);
+    check((reinterpret_cast<uintptr_t>(pRaw) & (PAGE_SIZE - 1)) == 0);
 
     FPageHeader* pHeader = reinterpret_cast<FPageHeader*>(pRaw);
     pHeader->m_Magic = PAGE_MAGIC;
@@ -93,6 +94,7 @@ void* FMallocBinned::AllocateLarge(size_t size, uint32 alignment)
 
     void* pRaw = _aligned_malloc(totalSize, PAGE_SIZE);
     check(pRaw != nullptr);
+    check((reinterpret_cast<uintptr_t>(pRaw) & (PAGE_SIZE - 1)) == 0);
 
     FPageHeader* pHeader = reinterpret_cast<FPageHeader*>(pRaw);
     pHeader->m_Magic = PAGE_MAGIC;
@@ -126,6 +128,7 @@ void* FMallocBinned::Malloc(size_t size, uint32 alignment)
             }
 
             FFreeBlock* pBlock = m_FreeLists[bin];
+            check(pBlock != nullptr);
             m_FreeLists[bin] = pBlock->m_pNext;
             return pBlock;
         }
@@ -143,6 +146,7 @@ void FMallocBinned::Free(void* ptr)
 
     FPageHeader* pHeader = PageOf(ptr);
     check(pHeader->m_Magic == PAGE_MAGIC);
+    check(pHeader->m_BinIndex == LARGE_BIN || (pHeader->m_BinIndex >= 0 && pHeader->m_BinIndex < NUM_BINS));
 
     if (pHeader->m_BinIndex == LARGE_BIN)
     {
@@ -182,6 +186,7 @@ void* FMallocBinned::Realloc(void* ptr, size_t newSize, uint32 alignment)
 
     FPageHeader* pHeader = PageOf(ptr);
     check(pHeader->m_Magic == PAGE_MAGIC);
+    check(pHeader->m_BinIndex == LARGE_BIN || (pHeader->m_BinIndex >= 0 && pHeader->m_BinIndex < NUM_BINS));
 
     size_t oldSize;
     if (pHeader->m_BinIndex == LARGE_BIN)

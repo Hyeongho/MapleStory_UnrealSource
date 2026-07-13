@@ -21,6 +21,7 @@ public:
             m_Length = (int32)wcslen(Str);
             m_Capacity = m_Length + 1;
             m_pData = (wchar_t*)FMemory::Malloc(sizeof(wchar_t) * m_Capacity, alignof(wchar_t));
+            check(m_pData != nullptr);
             FMemory::Memcpy(m_pData, Str, sizeof(wchar_t) * m_Capacity);
         }
     }
