@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -173,6 +173,7 @@
     <ClInclude Include="Core\Containers\TMap.h" />
     <ClInclude Include="Core\Containers\TMultiMap.h" />
     <ClInclude Include="Core\Containers\TSet.h" />
+    <ClInclude Include="Core\Containers\TSparseArray.h" />
     <ClInclude Include="Core\Logging\FLogger.h" />
     <ClInclude Include="Core\Logging\LogMacros.h" />
     <ClInclude Include="Core\Math\FColor.h" />

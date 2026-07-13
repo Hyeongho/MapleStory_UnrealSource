@@ -28,6 +28,7 @@
 #include "Core/Containers/TMap.h"
 #include "Core/Containers/TSet.h"
 #include "Core/Containers/TMultiMap.h"
+#include "Core/Containers/TSparseArray.h"
 #include "Core/String/FString.h"
 #include "Core/String/FName.h"
 #include "Core/String/FNamePool.h"
@@ -1792,6 +1793,145 @@ int main()
 		check(*Shared == 42);
 
 		wprintf(L"[Tests] Phase 7.5+ (4) TSharedPtr Atomic RefCount - ALL PASSED\n");
+	}
+
+	// Phase 7.5+ (5) - TSparseArray + TMap/TSet hash bucket rework
+	{
+		// 7.5+ 5-1. TSparseArray basics: stable indices, free-slot reuse, hole-skipping iteration
+		{
+			TSparseArray<int32> Sparse;
+
+			check(Sparse.Add(100) == 0);
+			check(Sparse.Add(200) == 1);
+			check(Sparse.Add(300) == 2);
+			check(Sparse.Num() == 3 && Sparse.GetMaxIndex() == 3);
+
+			Sparse.RemoveAt(1);
+			check(Sparse.Num() == 2);
+			check(!Sparse.IsAllocated(1));
+			check(Sparse[0] == 100 && Sparse[2] == 300);   // surviving indices stable
+
+			// iteration skips the hole
+			int32 IterCount = 0;
+			int32 Sum = 0;
+			for (int32 V : Sparse)
+			{
+				IterCount++;
+				Sum += V;
+			}
+			check(IterCount == 2 && Sum == 400);
+
+			// next Add reuses the freed slot; no new slot is consumed
+			check(Sparse.Add(999) == 1);
+			check(Sparse.Num() == 3 && Sparse.GetMaxIndex() == 3);
+			check(Sparse[1] == 999);
+
+			wprintf(L"[Tests] Phase 7.5+ 5-1 TSparseArray Basics - PASSED\n");
+		}
+
+		// 7.5+ 5-2. TSparseArray non-POD: contents survive growth relocation, destructors balance
+		{
+			FBossActor::s_DestroyCount = 0;
+			{
+				TSparseArray<TSharedPtr<FBossActor>> Sparse;
+
+				for (int32 i = 0; i < 20; i++)   // forces several growth relocations
+				{
+					Sparse.Add(MakeShared<FBossActor>());
+				}
+
+				check(Sparse.Num() == 20);
+				check(Sparse[0].GetRefCount() == 1 && Sparse[19].GetRefCount() == 1);
+
+				Sparse.RemoveAt(5);
+				Sparse.RemoveAt(6);
+				check(FBossActor::s_DestroyCount == 2);
+			}
+			check(FBossActor::s_DestroyCount == 20);
+
+			TSparseArray<FString> Strings;
+			for (int32 i = 0; i < 10; i++)
+			{
+				Strings.Add(FString::Printf(L"Str_%d", i));
+			}
+			check(Strings[0] == FString(L"Str_0"));
+			check(Strings[9] == FString(L"Str_9"));
+
+			wprintf(L"[Tests] Phase 7.5+ 5-2 TSparseArray NonPOD - PASSED\n");
+		}
+
+		// 7.5+ 5-3. TMap churn: repeated add/remove rounds never degrade (no tombstones)
+		{
+			TMap<int32, int32> Map;
+
+			for (int32 Round = 0; Round < 10; Round++)
+			{
+				for (int32 i = 0; i < 100; i++)
+				{
+					Map.Add(i, i * 2 + Round);
+				}
+
+				check(Map.Num() == 100);
+
+				for (int32 i = 0; i < 100; i++)
+				{
+					check(Map.Contains(i));
+					check(*Map.Find(i) == i * 2 + Round);
+				}
+
+				for (int32 i = 0; i < 100; i++)
+				{
+					check(Map.Remove(i));
+				}
+
+				check(Map.Num() == 0);
+				check(!Map.Contains(50));
+			}
+
+			// after all the churn a fresh fill still iterates cleanly
+			for (int32 i = 0; i < 100; i++)
+			{
+				Map.Add(i, i);
+			}
+
+			int32 IterCount = 0;
+			for (auto& Elem : Map)
+			{
+				check(Elem.Key == Elem.Value);
+				IterCount++;
+			}
+			check(IterCount == 100);
+
+			wprintf(L"[Tests] Phase 7.5+ 5-3 TMap Churn (No Tombstones) - PASSED\n");
+		}
+
+		// 7.5+ 5-4. TSet churn: remove then re-add reports true again
+		{
+			TSet<int32> Set;
+
+			for (int32 Round = 0; Round < 10; Round++)
+			{
+				for (int32 i = 0; i < 100; i++)
+				{
+					check(Set.Add(i));       // fresh insert every round
+					check(!Set.Add(i));      // duplicate rejected
+				}
+
+				check(Set.Num() == 100);
+
+				for (int32 i = 0; i < 100; i++)
+				{
+					check(Set.Remove(i));
+					check(!Set.Contains(i));
+				}
+
+				check(Set.Num() == 0);
+			}
+
+			wprintf(L"[Tests] Phase 7.5+ 5-4 TSet Churn - PASSED\n");
+		}
+
+		wprintf(L"[Tests] Phase 7.5+ (5) TSparseArray/TMap/TSet Rework - ALL PASSED\n");
 	}
 
 	return 0;

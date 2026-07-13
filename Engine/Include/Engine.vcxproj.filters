@@ -132,6 +132,9 @@
     <ClInclude Include="Core\Containers\TSet.h">
       <Filter>01. Core\03. Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Containers\TSparseArray.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
     <ClInclude Include="Core\String\FText.h">
       <Filter>01. Core\05. String</Filter>
     </ClInclude>
