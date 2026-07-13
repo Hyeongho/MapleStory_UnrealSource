@@ -889,24 +889,8 @@ int main()
 		check(FName().IsNone());
 		check(!NameA.IsNone());
 
-		// Decomposed to bisect exactly when m_pData goes bad (diagnostic-only).
-		FString ResultA = NameA.ToString();
-		check(ResultA.GetData() != nullptr);          // (a) already broken right after ToString()?
-
-		FString ResultB(L"Player");
-		check(ResultB.GetData() != nullptr);          // (b) sanity: literal ctor always fine
-
-		check(ResultA.GetData() != nullptr);          // (c) did building ResultB stomp ResultA?
-		check(ResultA == ResultB);                     // (d) original failure point reproduced
-
-		FString ResultC = NameC.ToString();
-		check(ResultC.GetData() != nullptr);          // (a) for the second sample
-
-		FString ResultD(L"Enemy");
-		check(ResultD.GetData() != nullptr);          // (b)
-
-		check(ResultC.GetData() != nullptr);          // (c)
-		check(ResultC == ResultD);                     // (d)
+		check(NameA.ToString() == FString(L"Player"));
+		check(NameC.ToString() == FString(L"Enemy"));
 
 		wprintf(L"[Tests] Phase 5-3 FName Basic - PASSED\n");
 	}
