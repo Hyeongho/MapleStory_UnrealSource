@@ -343,28 +343,28 @@ FGameplayAbilitySpec        : pAbility + Level + bIsActive
 
 LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에 맞게 일괄 최적화한다.
 
-**Phase 1 — FMallocBinned (소형 객체 Bin 할당자)**
+**Phase 1 — FMallocBinned (소형 객체 Bin 할당자)** ✅
 
 - 현재: `_aligned_malloc` 래핑 (FMallocAnsi) — 모든 크기를 동일하게 처리
 - 목표: 크기 클래스 버킷 방식 — 16 / 32 / 64 / 128 / 256 / 512B 등 Bin 단위 풀링
 - 변경 파일: `Engine/Core/Memory/FMallocBinned.h / .cpp`
 - 효과: 소형 객체 외부 단편화 제거, 스레드 로컬 캐시로 O(1) 할당
 
-**Phase 3 — TInlineAllocator\<N\>**
+**Phase 3 — TInlineAllocator\<N\>** ✅
 
 - 현재: TArray가 항상 힙 할당
 - 목표: 첫 N개 원소를 스택(인스턴스 내부)에 저장 — 초과 시 힙으로 이관
 - 변경 파일: `Engine/Core/Containers/TArray.h` (Allocator 템플릿 파라미터 추가)
 - 효과: 소형 배열 힙 할당 완전 제거 (예: `TArray<FName, TInlineAllocator<4>>`)
 
-**Phase 4 — TMap / TSet → TSparseArray + 해시 버킷 분리**
+**Phase 4 — TMap / TSet → TSparseArray + 해시 버킷 분리** ← 다음 예정
 
 - 현재: Open Addressing 선형 프로빙 — Deleted 슬롯 누적, Rehash 비용
 - 목표: TSparseArray(연속 메모리) + 해시 버킷 인덱스 체인 (언리얼 실제 구조)
 - 변경 파일: `Engine/Core/Containers/TSparseArray.h / .cpp`, `TMap.h`, `TSet.h`
 - 효과: Deleted 슬롯 없음, 반복 캐시 효율 개선, 삭제 후 공간 재사용
 
-**Phase 5 — FNameEntry 인라인 저장 + FNamePool**
+**Phase 5 — FNameEntry 인라인 저장 + FNamePool** ✅
 
 - 현재: `TArray<FString>` 선형 탐색 — FString은 별도 힙(`m_pData` 포인터) 보유
 - 목표:
@@ -372,15 +372,17 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   - `FNamePool`: `TMap<uint32, uint32>` (키 = 문자 내용 djb2 해시, 값 = 엔트리 인덱스)
   - 포인터 기반 해시 문제 원천 제거 (MSVC Debug 버그 재발 불가)
 - 변경 파일: `Engine/Core/String/FName.h / .cpp`
+- 참고: `FName::ToString()`은 MSVC Debug 인라인 코드생성 버그 회피를 위해
+  `FName.cpp`에 `noinline`으로 out-of-line 정의됨 (헤더 전용 구현 금지 원칙과도 일치)
 
-**Phase 6 — TSharedPtr 원자적 참조 카운트**
+**Phase 6 — TSharedPtr 원자적 참조 카운트** ✅
 
 - 현재: 단순 `int32` 증감 (단일 스레드 한정)
 - 목표: `FReferenceControllerBase` — SharedCount + WeakCount 원자적(Atomic) 연산
 - 변경 파일: `Engine/Core/SmartPointer/SharedPointerInternals.h`
 - 효과: 멀티스레드 안전 공유 소유권 (Phase 16+ 병렬 AI·렌더링 대비)
 
-완료 기준: LAYER 1 단위 테스트 전체 통과 후 최적화 브랜치 별도 생성
+완료 기준: LAYER 1 단위 테스트 전체 통과 후 최적화 브랜치 별도 생성 — Phase 1·3·5·6 ✅ (Debug/Release 양쪽 전체 81개 테스트 PASSED 확인), Phase 4(TSparseArray)만 남음
 
 ---
 
