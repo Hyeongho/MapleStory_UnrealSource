@@ -1801,9 +1801,12 @@ int main()
 		{
 			TSparseArray<int32> Sparse;
 
-			check(Sparse.Add(100) == 0);
-			check(Sparse.Add(200) == 1);
-			check(Sparse.Add(300) == 2);
+			// NOTE: mutations must stay OUTSIDE check() - in Release (NDEBUG)
+			// the whole check() expression is compiled out.
+			int32 Idx0 = Sparse.Add(100);
+			int32 Idx1 = Sparse.Add(200);
+			int32 Idx2 = Sparse.Add(300);
+			check(Idx0 == 0 && Idx1 == 1 && Idx2 == 2);
 			check(Sparse.Num() == 3 && Sparse.GetMaxIndex() == 3);
 
 			Sparse.RemoveAt(1);
@@ -1822,7 +1825,8 @@ int main()
 			check(IterCount == 2 && Sum == 400);
 
 			// next Add reuses the freed slot; no new slot is consumed
-			check(Sparse.Add(999) == 1);
+			int32 ReusedIdx = Sparse.Add(999);
+			check(ReusedIdx == 1);
 			check(Sparse.Num() == 3 && Sparse.GetMaxIndex() == 3);
 			check(Sparse[1] == 999);
 
@@ -1881,7 +1885,8 @@ int main()
 
 				for (int32 i = 0; i < 100; i++)
 				{
-					check(Map.Remove(i));
+					bool bRemoved = Map.Remove(i);
+					check(bRemoved);
 				}
 
 				check(Map.Num() == 0);
@@ -1913,15 +1918,17 @@ int main()
 			{
 				for (int32 i = 0; i < 100; i++)
 				{
-					check(Set.Add(i));       // fresh insert every round
-					check(!Set.Add(i));      // duplicate rejected
+					bool bFresh = Set.Add(i);       // fresh insert every round
+					bool bDup = Set.Add(i);         // duplicate rejected
+					check(bFresh && !bDup);
 				}
 
 				check(Set.Num() == 100);
 
 				for (int32 i = 0; i < 100; i++)
 				{
-					check(Set.Remove(i));
+					bool bRemoved = Set.Remove(i);
+					check(bRemoved);
 					check(!Set.Contains(i));
 				}
 
