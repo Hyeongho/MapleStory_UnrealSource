@@ -357,11 +357,11 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 - 변경 파일: `Engine/Core/Containers/TArray.h` (Allocator 템플릿 파라미터 추가)
 - 효과: 소형 배열 힙 할당 완전 제거 (예: `TArray<FName, TInlineAllocator<4>>`)
 
-**Phase 4 — TMap / TSet → TSparseArray + 해시 버킷 분리** ← 다음 예정
+**Phase 4 — TMap / TSet → TSparseArray + 해시 버킷 분리** ✅
 
 - 현재: Open Addressing 선형 프로빙 — Deleted 슬롯 누적, Rehash 비용
 - 목표: TSparseArray(연속 메모리) + 해시 버킷 인덱스 체인 (언리얼 실제 구조)
-- 변경 파일: `Engine/Core/Containers/TSparseArray.h / .cpp`, `TMap.h`, `TSet.h`
+- 변경 파일: `Engine/Core/Containers/TSparseArray.h`, `TMap.h`, `TSet.h`
 - 효과: Deleted 슬롯 없음, 반복 캐시 효율 개선, 삭제 후 공간 재사용
 
 **Phase 5 — FNameEntry 인라인 저장 + FNamePool** ✅
@@ -382,7 +382,7 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 - 변경 파일: `Engine/Core/SmartPointer/SharedPointerInternals.h`
 - 효과: 멀티스레드 안전 공유 소유권 (Phase 16+ 병렬 AI·렌더링 대비)
 
-완료 기준: LAYER 1 단위 테스트 전체 통과 후 최적화 브랜치 별도 생성 — Phase 1·3·5·6 ✅ (Debug/Release 양쪽 전체 81개 테스트 PASSED 확인), Phase 4(TSparseArray)만 남음
+완료 기준: LAYER 1 단위 테스트 전체 통과 후 최적화 브랜치 별도 생성 — Phase 1·3·4·5·6 ✅ 전부 완료 (Debug/Release 양쪽 전체 86개 테스트 PASSED 확인)
 
 ---
 
