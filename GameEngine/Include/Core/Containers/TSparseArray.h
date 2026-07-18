@@ -31,10 +31,6 @@ private:
         return reinterpret_cast<const T*>(m_pSlots[Index].m_Storage);
     }
 
-<<<<<<< Updated upstream
-    // Relocates every used slot into a larger buffer. Slot indices never change.
-=======
->>>>>>> Stashed changes
     void Grow(int32 NewCapacity)
     {
         FSlot* pNew = (FSlot*)FMemory::Malloc(sizeof(FSlot) * NewCapacity, alignof(FSlot));
@@ -69,12 +65,6 @@ private:
         m_Capacity = NewCapacity;
     }
 
-<<<<<<< Updated upstream
-    // Structural copy: identical indices, high water and free list as Other.
-    // Index stability across the copy is what lets TMap/TSet copy their
-    // bucket arrays verbatim.
-=======
->>>>>>> Stashed changes
     void CopyFrom(const TSparseArray& Other)
     {
         if (Other.m_HighWater > 0)
