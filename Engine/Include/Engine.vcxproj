@@ -173,6 +173,7 @@
     <ClInclude Include="Core\Containers\TMap.h" />
     <ClInclude Include="Core\Containers\TMultiMap.h" />
     <ClInclude Include="Core\Containers\TSet.h" />
+    <ClInclude Include="Core\Containers\TSparseArray.h" />
     <ClInclude Include="Core\Logging\FLogger.h" />
     <ClInclude Include="Core\Logging\LogMacros.h" />
     <ClInclude Include="Core\Math\FColor.h" />

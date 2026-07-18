@@ -36,10 +36,15 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #define INDEX_NONE   -1
 
-// check(expr)  — 항상 평가, 실패 시 assert (Debug/Release 모두)
-// verify(expr) — 항상 평가, 릴리즈에서도 실패 시 assert
+// check(expr)  — Debug 전용 hard assert. Release(NDEBUG)에서는 표현식 자체가 평가되지 않으므로 부수효과 있는 호출을 넣으면 안 됨.
+// verify(expr) — 항상 평가. Debug에서는 실패 시 assert, Release에서는 평가만 수행.
 #define check(expr)  assert(expr)
+
+#ifdef NDEBUG
+#define verify(expr) ((void)(expr))
+#else
 #define verify(expr) assert(expr)
+#endif
 
 // -----------------------------------------------------------------------
 // 플랫폼 식별

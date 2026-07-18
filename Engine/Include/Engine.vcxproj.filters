@@ -225,6 +225,9 @@
     <ClInclude Include="Core\Memory\FMallocBinned.h">
       <Filter>01. Core\01. Memory</Filter>
     </ClInclude>
+    <ClInclude Include="Core\Containers\TSparseArray.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
