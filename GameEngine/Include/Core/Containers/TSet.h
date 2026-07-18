@@ -4,183 +4,127 @@
 #include "Core/Templates/TypeTraits.h"
 #include "Core/Templates/Utility.h"
 #include "HashFunctions.h"
+#include "TSparseArray.h"
 
 template<typename KeyType>
 class TSet
 {
 private:
-    enum class EBucketState : uint8 
-    { 
-        Empty, 
-        Occupied, 
-        Deleted 
-    };
-
-    struct FBucket
+    struct FSetElement
     {
         KeyType Key;
-        EBucketState State;
+        int32 m_HashNext;   // next element index in the same bucket chain
 
-        FBucket() : Key(), State(EBucketState::Empty) 
+        FSetElement(const KeyType& InKey, int32 InHashNext) : Key(InKey), m_HashNext(InHashNext)
         {
+        }
 
+        FSetElement(KeyType&& InKey, int32 InHashNext) : Key(MoveTemp(InKey)), m_HashNext(InHashNext)
+        {
         }
     };
 
-    FBucket* m_pBuckets;
-    int32    m_Count;
-    int32    m_Capacity;
-    int32    m_DeletedCount;
+    TSparseArray<FSetElement> m_Elements;
+    int32* m_pBuckets;      // element index heads, INDEX_NONE-terminated chains
+    int32 m_NumBuckets;     // always a power of two
 
-    static const int32 INITIAL_CAPACITY = 16;
+    static const int32 INITIAL_BUCKETS = 16;
 
-    int32 ProbeIndex(const KeyType& Key) const
+    int32 BucketIndex(uint32 Hash) const
     {
-        uint32 Hash = GetTypeHash(Key);
-        int32 Index = (int32)(Hash & (uint32)(m_Capacity - 1));
-        int32 Start = Index;
+        return (int32)(Hash & (uint32)(m_NumBuckets - 1));
+    }
 
-        while(true)
+    void AllocateBuckets(int32 NumBuckets)
+    {
+        m_pBuckets = (int32*)FMemory::Malloc(sizeof(int32) * NumBuckets, alignof(int32));
+        m_NumBuckets = NumBuckets;
+
+        for (int32 i = 0; i < NumBuckets; i++)
         {
-            if (m_pBuckets[Index].State == EBucketState::Empty)
-            {
-                return INDEX_NONE;
-            }
-
-            if (m_pBuckets[Index].State == EBucketState::Occupied && m_pBuckets[Index].Key == Key)
-            {
-                return Index;
-            }
-
-            Index = (Index + 1) & (m_Capacity - 1);
-
-            if (Index == Start)
-            {
-                return INDEX_NONE;
-            }
+            m_pBuckets[i] = INDEX_NONE;
         }
     }
 
-    int32 ProbeInsertIndex(const KeyType& Key) const
+    void Rehash(int32 NewNumBuckets)
     {
-        uint32 Hash = GetTypeHash(Key);
-        int32 Index = (int32)(Hash & (uint32)(m_Capacity - 1));
-        int32 FirstDeleted = INDEX_NONE;
-        int32 Start = Index;
-
-        while (true)
+        if (m_pBuckets)
         {
-            EBucketState State = m_pBuckets[Index].State;
-            if (State == EBucketState::Empty)
-            {
-                return (FirstDeleted != INDEX_NONE) ? FirstDeleted : Index;
-            }
+            FMemory::Free(m_pBuckets);
+        }
 
-            if (State == EBucketState::Deleted)
-            {
-                if (FirstDeleted == INDEX_NONE)
-                {
-                    FirstDeleted = Index;
-                }
-            }
+        AllocateBuckets(NewNumBuckets);
 
-            else if (m_pBuckets[Index].Key == Key)
-            {
-                return Index;
-            }
-
-            Index = (Index + 1) & (m_Capacity - 1);
-
-            if (Index == Start)
-            {
-                return (FirstDeleted != INDEX_NONE) ? FirstDeleted : INDEX_NONE;
-            }
+        for (auto It = m_Elements.begin(); It != m_Elements.end(); ++It)
+        {
+            int32& Bucket = m_pBuckets[BucketIndex(GetTypeHash(It->Key))];
+            It->m_HashNext = Bucket;
+            Bucket = It.GetIndex();
         }
     }
 
-    bool NeedsRehash() const
+    void ConditionalRehash(int32 NumElements)
     {
-        return (m_Count + m_DeletedCount + 1) * 4 > m_Capacity * 3;
-    }
-
-    void Rehash(int32 NewCapacity)
-    {
-        FBucket* OldBuckets = m_pBuckets;
-        int32 OldCapacity = m_Capacity;
-
-        m_pBuckets = (FBucket*)FMemory::Malloc(sizeof(FBucket) * NewCapacity, alignof(FBucket));
-
-        for (int32 i = 0; i < NewCapacity; i++)
+        if (!m_pBuckets)
         {
-            new (&m_pBuckets[i]) FBucket();
+            AllocateBuckets(INITIAL_BUCKETS);
+            return;
         }
 
-        m_Capacity = NewCapacity;
-        m_Count = 0;
-        m_DeletedCount = 0;
-
-        if (OldBuckets)
+        if (NumElements > m_NumBuckets)
         {
-            for (int32 i = 0; i < OldCapacity; i++)
-            {
-                if (OldBuckets[i].State == EBucketState::Occupied)
-                {
-                    Add(MoveTemp(OldBuckets[i].Key));
-                }
+            int32 NewNumBuckets = m_NumBuckets;
 
-                OldBuckets[i].~FBucket();
+            while (NumElements > NewNumBuckets)
+            {
+                NewNumBuckets *= 2;
             }
 
-            FMemory::Free(OldBuckets);
+            Rehash(NewNumBuckets);
         }
     }
 
-    void AllocateIfEmpty()
+    int32 FindIndex(const KeyType& Key) const
     {
-        if (m_pBuckets == nullptr)
+        if (!m_pBuckets || m_Elements.IsEmpty())
         {
-            m_Capacity = INITIAL_CAPACITY;
-            m_pBuckets = (FBucket*)FMemory::Malloc(sizeof(FBucket) * m_Capacity, alignof(FBucket));
+            return INDEX_NONE;
+        }
 
-            for (int32 i = 0; i < m_Capacity; i++)
+        for (int32 i = m_pBuckets[BucketIndex(GetTypeHash(Key))]; i != INDEX_NONE; i = m_Elements[i].m_HashNext)
+        {
+            if (m_Elements[i].Key == Key)
             {
-                new (&m_pBuckets[i]) FBucket();
+                return i;
             }
         }
+
+        return INDEX_NONE;
     }
 
 public:
-    TSet() : m_pBuckets(nullptr), m_Count(0), m_Capacity(0), m_DeletedCount(0) 
+    TSet() : m_pBuckets(nullptr), m_NumBuckets(0)
     {
-
     }
 
-    TSet(const TSet& Other) : m_pBuckets(nullptr), m_Count(0), m_Capacity(0), m_DeletedCount(0)
+    TSet(const TSet& Other) : m_Elements(Other.m_Elements), m_pBuckets(nullptr), m_NumBuckets(0)
     {
-        *this = Other;
+        if (Other.m_pBuckets)
+        {
+            AllocateBuckets(Other.m_NumBuckets);
+            FMemory::Memcpy(m_pBuckets, Other.m_pBuckets, sizeof(int32) * m_NumBuckets);
+        }
     }
 
-    TSet(TSet&& Other) noexcept : m_pBuckets(Other.m_pBuckets), m_Count(Other.m_Count), m_Capacity(Other.m_Capacity), m_DeletedCount(Other.m_DeletedCount)
+    TSet(TSet&& Other) noexcept : m_Elements(MoveTemp(Other.m_Elements)), m_pBuckets(Other.m_pBuckets), m_NumBuckets(Other.m_NumBuckets)
     {
         Other.m_pBuckets = nullptr;
-        Other.m_Count = 0;
-        Other.m_Capacity = 0;
-        Other.m_DeletedCount = 0;
+        Other.m_NumBuckets = 0;
     }
 
     ~TSet()
     {
-        if (m_pBuckets)
-        {
-            for (int32 i = 0; i < m_Capacity; i++)
-            {
-                m_pBuckets[i].~FBucket();
-            }
-
-            FMemory::Free(m_pBuckets);
-
-            m_pBuckets = nullptr;
-        }
+        Empty();
     }
 
     TSet& operator=(const TSet& Other)
@@ -192,12 +136,12 @@ public:
 
         Empty();
 
-        for (int32 i = 0; i < Other.m_Capacity; i++)
+        m_Elements = Other.m_Elements;
+
+        if (Other.m_pBuckets)
         {
-            if (Other.m_pBuckets[i].State == EBucketState::Occupied)
-            {
-                Add(Other.m_pBuckets[i].Key);
-            }
+            AllocateBuckets(Other.m_NumBuckets);
+            FMemory::Memcpy(m_pBuckets, Other.m_pBuckets, sizeof(int32) * m_NumBuckets);
         }
 
         return *this;
@@ -210,25 +154,14 @@ public:
             return *this;
         }
 
-        if (m_pBuckets)
-        {
-            for (int32 i = 0; i < m_Capacity; i++)
-            {
-                m_pBuckets[i].~FBucket();
-            }
+        Empty();
 
-            FMemory::Free(m_pBuckets);
-        }
-
+        m_Elements = MoveTemp(Other.m_Elements);
         m_pBuckets = Other.m_pBuckets;
-        m_Count = Other.m_Count;
-        m_Capacity = Other.m_Capacity;
-        m_DeletedCount = Other.m_DeletedCount;
+        m_NumBuckets = Other.m_NumBuckets;
 
         Other.m_pBuckets = nullptr;
-        Other.m_Count = 0;
-        Other.m_Capacity = 0;
-        Other.m_DeletedCount = 0;
+        Other.m_NumBuckets = 0;
 
         return *this;
     }
@@ -239,65 +172,38 @@ public:
 
     bool Add(const KeyType& Key)
     {
-        AllocateIfEmpty();
+        ConditionalRehash(m_Elements.Num() + 1);
 
-        if (NeedsRehash())
+        int32& Bucket = m_pBuckets[BucketIndex(GetTypeHash(Key))];
+
+        for (int32 i = Bucket; i != INDEX_NONE; i = m_Elements[i].m_HashNext)
         {
-            Rehash(m_Capacity * 2);
+            if (m_Elements[i].Key == Key)
+            {
+                return false; // already exists
+            }
         }
 
-        int32 Index = ProbeInsertIndex(Key);
-        check(Index != INDEX_NONE);
-
-        if (m_pBuckets[Index].State == EBucketState::Occupied)
-        {
-            return false; // already exists
-        }
-
-        if (m_pBuckets[Index].State == EBucketState::Deleted)
-        {
-            m_DeletedCount--;
-        }
-
-        m_pBuckets[Index].~FBucket();
-
-        new (&m_pBuckets[Index]) FBucket();
-        m_pBuckets[Index].Key = Key;
-        m_pBuckets[Index].State = EBucketState::Occupied;
-
-        m_Count++;
+        Bucket = m_Elements.Emplace(Key, Bucket);
 
         return true;
     }
 
     bool Add(KeyType&& Key)
     {
-        AllocateIfEmpty();
+        ConditionalRehash(m_Elements.Num() + 1);
 
-        if (NeedsRehash())
+        int32& Bucket = m_pBuckets[BucketIndex(GetTypeHash(Key))];
+
+        for (int32 i = Bucket; i != INDEX_NONE; i = m_Elements[i].m_HashNext)
         {
-            Rehash(m_Capacity * 2);
+            if (m_Elements[i].Key == Key)
+            {
+                return false; // already exists
+            }
         }
 
-        int32 Index = ProbeInsertIndex(Key);
-        check(Index != INDEX_NONE);
-
-        if (m_pBuckets[Index].State == EBucketState::Occupied)
-        {
-            return false; // already exists
-        }
-
-        if (m_pBuckets[Index].State == EBucketState::Deleted)
-        {
-            m_DeletedCount--;
-        }
-
-        m_pBuckets[Index].~FBucket();
-
-        new (&m_pBuckets[Index]) FBucket();
-        m_pBuckets[Index].Key = MoveTemp(Key);
-        m_pBuckets[Index].State = EBucketState::Occupied;
-        m_Count++;
+        Bucket = m_Elements.Emplace(MoveTemp(Key), Bucket);
 
         return true;
     }
@@ -308,12 +214,7 @@ public:
 
     bool Contains(const KeyType& Key) const
     {
-        if (!m_pBuckets || m_Count == 0)
-        {
-            return false;
-        }
-
-        return ProbeIndex(Key) != INDEX_NONE;
+        return FindIndex(Key) != INDEX_NONE;
     }
 
     // -------------------------------------------------------------------------
@@ -322,193 +223,138 @@ public:
 
     bool Remove(const KeyType& Key)
     {
-        if (!m_pBuckets || m_Count == 0)
+        if (!m_pBuckets || m_Elements.IsEmpty())
         {
             return false;
         }
 
-        int32 Index = ProbeIndex(Key);
+        int32* pLink = &m_pBuckets[BucketIndex(GetTypeHash(Key))];
 
-        if (Index == INDEX_NONE)
+        while (*pLink != INDEX_NONE)
         {
-            return false;
+            const int32 Index = *pLink;
+
+            if (m_Elements[Index].Key == Key)
+            {
+                *pLink = m_Elements[Index].m_HashNext;
+                m_Elements.RemoveAt(Index);
+                return true;
+            }
+
+            pLink = &m_Elements[Index].m_HashNext;
         }
 
-        m_pBuckets[Index].~FBucket();
-
-        new (&m_pBuckets[Index]) FBucket();
-        m_pBuckets[Index].State = EBucketState::Deleted;
-        m_Count--;
-        m_DeletedCount++;
-
-        return true;
+        return false;
     }
 
     void Reset()
     {
-        if (!m_pBuckets)
-        {
-            return;
-        }
+        m_Elements.Reset();
 
-        for (int32 i = 0; i < m_Capacity; i++)
+        for (int32 i = 0; i < m_NumBuckets; i++)
         {
-            if (m_pBuckets[i].State != EBucketState::Empty)
-            {
-                m_pBuckets[i].~FBucket();
-                new (&m_pBuckets[i]) FBucket();
-            }
+            m_pBuckets[i] = INDEX_NONE;
         }
-
-        m_Count = 0;
-        m_DeletedCount = 0;
     }
 
     void Empty()
     {
+        m_Elements.Empty();
+
         if (m_pBuckets)
         {
-            for (int32 i = 0; i < m_Capacity; i++)
-            {
-                m_pBuckets[i].~FBucket();
-            }
-
             FMemory::Free(m_pBuckets);
             m_pBuckets = nullptr;
         }
 
-        m_Count = 0;
-        m_Capacity = 0;
-        m_DeletedCount = 0;
+        m_NumBuckets = 0;
     }
 
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
 
-    int32 Num() const 
-    { 
-        return m_Count; 
+    int32 Num() const
+    {
+        return m_Elements.Num();
     }
 
-    bool IsEmpty() const 
-    { 
-        return m_Count == 0; 
+    bool IsEmpty() const
+    {
+        return m_Elements.IsEmpty();
     }
 
     // -------------------------------------------------------------------------
-    // Iterator
+    // Iterator - forwards to the sparse array, yields KeyType&
     // -------------------------------------------------------------------------
 
     struct FIterator
     {
-        FBucket* m_pBucket;
-        FBucket* m_pEnd;
+        typename TSparseArray<FSetElement>::FIterator m_It;
 
-        FIterator(FBucket* pBucket, FBucket* pEnd) : m_pBucket(pBucket), m_pEnd(pEnd)
+        FIterator(typename TSparseArray<FSetElement>::FIterator It) : m_It(It)
         {
-            SkipToOccupied();
-        }
-
-        void SkipToOccupied()
-        {
-            while (m_pBucket != m_pEnd && m_pBucket->State != EBucketState::Occupied)
-            {
-                m_pBucket++;
-            }
         }
 
         FIterator& operator++()
         {
-            m_pBucket++;
-            SkipToOccupied();
+            ++m_It;
             return *this;
         }
 
         bool operator!=(const FIterator& Other) const
         {
-            return m_pBucket != Other.m_pBucket;
+            return m_It != Other.m_It;
         }
 
         KeyType& operator*() const
         {
-            return m_pBucket->Key;
+            return (*m_It).Key;
         }
     };
 
     struct FConstIterator
     {
-        const FBucket* m_pBucket;
-        const FBucket* m_pEnd;
+        typename TSparseArray<FSetElement>::FConstIterator m_It;
 
-        FConstIterator(const FBucket* pBucket, const FBucket* pEnd) : m_pBucket(pBucket), m_pEnd(pEnd)
+        FConstIterator(typename TSparseArray<FSetElement>::FConstIterator It) : m_It(It)
         {
-            SkipToOccupied();
-        }
-
-        void SkipToOccupied()
-        {
-            while (m_pBucket != m_pEnd && m_pBucket->State != EBucketState::Occupied)
-            {
-                m_pBucket++;
-            }
         }
 
         FConstIterator& operator++()
         {
-            m_pBucket++;
-            SkipToOccupied();
+            ++m_It;
             return *this;
         }
 
         bool operator!=(const FConstIterator& Other) const
         {
-            return m_pBucket != Other.m_pBucket;
+            return m_It != Other.m_It;
         }
 
         const KeyType& operator*() const
         {
-            return m_pBucket->Key;
+            return (*m_It).Key;
         }
     };
 
     FIterator begin()
     {
-        if (!m_pBuckets)
-        {
-            return FIterator(nullptr, nullptr);
-        }
-
-        return FIterator(m_pBuckets, m_pBuckets + m_Capacity);
+        return FIterator(m_Elements.begin());
     }
 
     FIterator end()
     {
-        if (!m_pBuckets)
-        {
-            return FIterator(nullptr, nullptr);
-        }
-
-        return FIterator(m_pBuckets + m_Capacity, m_pBuckets + m_Capacity);
+        return FIterator(m_Elements.end());
     }
 
     FConstIterator begin() const
     {
-        if (!m_pBuckets)
-        {
-            return FConstIterator(nullptr, nullptr);
-        }
-
-        return FConstIterator(m_pBuckets, m_pBuckets + m_Capacity);
+        return FConstIterator(m_Elements.begin());
     }
 
     FConstIterator end() const
     {
-        if (!m_pBuckets)
-        {
-            return FConstIterator(nullptr, nullptr);
-        }
-
-        return FConstIterator(m_pBuckets + m_Capacity, m_pBuckets + m_Capacity);
+        return FConstIterator(m_Elements.end());
     }
 };

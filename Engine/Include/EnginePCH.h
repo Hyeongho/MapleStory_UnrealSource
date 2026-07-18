@@ -36,8 +36,7 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #define INDEX_NONE   -1
 
-// check(expr)  — Debug 전용 hard assert. Release(NDEBUG)에서는 표현식 자체가
-//                평가되지 않으므로 부수효과 있는 호출을 넣으면 안 됨.
+// check(expr)  — Debug 전용 hard assert. Release(NDEBUG)에서는 표현식 자체가 평가되지 않으므로 부수효과 있는 호출을 넣으면 안 됨.
 // verify(expr) — 항상 평가. Debug에서는 실패 시 assert, Release에서는 평가만 수행.
 #define check(expr)  assert(expr)
 

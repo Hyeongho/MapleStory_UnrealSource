@@ -6,16 +6,6 @@
 #include "HashFunctions.h"
 #include "TSparseArray.h"
 
-//=============================================================================
-// TSet<KeyType>
-//
-// Unreal-style hash set: elements live in a TSparseArray (stable indices,
-// holes reused, no tombstones) and a separate power-of-two bucket array maps
-// hash -> first element index. Collisions chain through each element's
-// m_HashNext index. Removal unlinks from the chain and frees the sparse slot
-// for reuse - repeated add/remove churn never degrades probing.
-//=============================================================================
-
 template<typename KeyType>
 class TSet
 {
@@ -56,7 +46,6 @@ private:
         }
     }
 
-    // Relink every element into a fresh bucket array of NewNumBuckets slots.
     void Rehash(int32 NewNumBuckets)
     {
         if (m_pBuckets)
@@ -74,7 +63,6 @@ private:
         }
     }
 
-    // Grow the bucket array when the load factor would exceed 1.0
     void ConditionalRehash(int32 NumElements)
     {
         if (!m_pBuckets)
@@ -121,8 +109,6 @@ public:
 
     TSet(const TSet& Other) : m_Elements(Other.m_Elements), m_pBuckets(nullptr), m_NumBuckets(0)
     {
-        // Sparse indices are preserved by the structural copy, so the bucket
-        // array can be copied verbatim.
         if (Other.m_pBuckets)
         {
             AllocateBuckets(Other.m_NumBuckets);
@@ -261,7 +247,6 @@ public:
         return false;
     }
 
-    // Destroy all elements, keep allocations
     void Reset()
     {
         m_Elements.Reset();
@@ -272,7 +257,6 @@ public:
         }
     }
 
-    // Destroy all elements and free all memory
     void Empty()
     {
         m_Elements.Empty();

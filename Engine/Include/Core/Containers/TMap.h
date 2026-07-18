@@ -6,18 +6,6 @@
 #include "HashFunctions.h"
 #include "TSparseArray.h"
 
-//=============================================================================
-// TMap<KeyType, ValueType>
-//
-// Unreal-style hash map: pairs live in a TSparseArray (stable indices, holes
-// reused, no tombstones) and a separate power-of-two bucket array maps
-// hash -> first element index. Collisions chain through each element's
-// m_HashNext index. Removal unlinks from the chain and frees the sparse slot
-// for reuse - repeated add/remove churn never degrades probing.
-//
-// Range-for yields elements exposing .Key / .Value.
-//=============================================================================
-
 template<typename KeyType, typename ValueType>
 class TMap
 {
@@ -313,7 +301,6 @@ public:
         return false;
     }
 
-    // Destroy all elements, keep allocations
     void Reset()
     {
         m_Elements.Reset();
@@ -324,7 +311,6 @@ public:
         }
     }
 
-    // Destroy all elements and free all memory
     void Empty()
     {
         m_Elements.Empty();
