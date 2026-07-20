@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>MapleStory DX11 2D Engine — Portfolio</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 18mm 18mm;
+    @bottom-center {
+      content: "MapleStory DX11 2D Engine — Portfolio  ·  " counter(page) " / " counter(pages);
+      font-size: 8.5pt;
+      color: #8a8a99;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif;
+    color: #24242e;
+    font-size: 10.3pt;
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4 { font-family: 'Noto Sans KR', 'Segoe UI', sans-serif; color: #14141c; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    height: 253mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    page-break-after: always;
+  }
+  .cover .eyebrow {
+    color: #6a5cff;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 10.5pt;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .cover h1 {
+    font-size: 34pt;
+    line-height: 1.18;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.01em;
+  }
+  .cover .subtitle {
+    font-size: 13.5pt;
+    color: #4a4a5c;
+    margin-bottom: 34px;
+    max-width: 130mm;
+  }
+  .cover .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 28px;
+    max-width: 150mm;
+    margin-bottom: 30px;
+  }
+  .cover .meta-item .k {
+    font-size: 8.3pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9494a6;
+    margin-bottom: 3px;
+  }
+  .cover .meta-item .v {
+    font-size: 10.8pt;
+    color: #24242e;
+    font-weight: 600;
+  }
+  .cover .pill-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .pill {
+    display: inline-block;
+    background: #f1efff;
+    color: #5a4cf0;
+    border: 1px solid #ddd7ff;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 8.8pt;
+    font-weight: 600;
+  }
+  .cover-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6mm;
+    background: linear-gradient(90deg, #6a5cff, #a996ff, #6a5cff);
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 22px; }
+  .section-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 12px 0;
+    padding-bottom: 7px;
+    border-bottom: 2px solid #e4e1fb;
+  }
+  .section-title .num {
+    font-size: 9pt;
+    font-weight: 800;
+    color: #6a5cff;
+    background: #f1efff;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .section-title h2 { font-size: 15.5pt; margin: 0; }
+
+  p { margin: 0 0 9px 0; }
+  ul, ol { margin: 0 0 10px 0; padding-left: 19px; }
+  li { margin-bottom: 4px; }
+  strong { color: #14141c; }
+  code {
+    background: #f4f3fb;
+    border: 1px solid #e6e4f5;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 9pt;
+    color: #4a3ecf;
+  }
+  pre {
+    background: #1e1e2b;
+    color: #d8d6f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 8.4pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    margin: 8px 0 12px 0;
+  }
+  pre .c1 { color: #8f8ab5; } /* comment */
+  pre .kw { color: #ff8fb3; } /* keyword */
+  pre .fn { color: #8fd4ff; } /* function/type */
+
+  /* highlight grid */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 10px 0 4px 0;
+  }
+  .highlight-card {
+    background: #faf9ff;
+    border: 1px solid #e9e6fb;
+    border-left: 4px solid #6a5cff;
+    border-radius: 6px;
+    padding: 10px 13px;
+    page-break-inside: avoid;
+  }
+  .highlight-card .h { font-weight: 700; font-size: 10pt; margin-bottom: 3px; color: #201a4f; }
+  .highlight-card .b { font-size: 9.2pt; color: #4a4a5c; }
+
+  /* system table */
+  table.systems {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 4px 0;
+    font-size: 9.1pt;
+  }
+  table.systems th {
+    background: #f1efff;
+    color: #3b2fa8;
+    text-align: left;
+    padding: 6px 9px;
+    font-size: 8.6pt;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  table.systems td {
+    padding: 7px 9px;
+    border-bottom: 1px solid #ece9f8;
+    vertical-align: top;
+  }
+  table.systems tr:nth-child(even) td { background: #fbfaff; }
+  table.systems td.sys { font-weight: 700; color: #201a4f; white-space: nowrap; }
+
+  /* verdict table */
+  table.verdict { width: 100%; border-collapse: collapse; font-size: 9.1pt; margin: 6px 0; }
+  table.verdict th {
+    background: #201a4f; color: #fff; text-align: left; padding: 6px 9px; font-size: 8.6pt;
+  }
+  table.verdict tr { page-break-inside: avoid; }
+  table.verdict td { padding: 6px 9px; border-bottom: 1px solid #ece9f8; }
+  table.verdict tr:nth-child(even) td { background: #fbfaff; }
+  .badge { display:inline-block; border-radius:4px; padding:1px 7px; font-size:8.6pt; font-weight:700; }
+  .badge.same { background:#e4f7ea; color:#1b8a4a; }
+  .badge.simplified { background:#fff3d9; color:#a06a00; }
+  .badge.diff { background:#feeaea; color:#c23c3c; }
+
+  /* troubleshoot cards */
+  .bug-card {
+    border: 1px solid #ece9f8;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .bug-head {
+    background: #f6f5fd;
+    padding: 8px 13px;
+    font-weight: 700;
+    font-size: 10.2pt;
+    color: #201a4f;
+    border-bottom: 1px solid #ece9f8;
+  }
+  .bug-body { padding: 10px 13px; }
+  .bug-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 9.2pt; }
+  .bug-row .tag {
+    flex: none;
+    width: 62px;
+    font-weight: 700;
+    font-size: 8.3pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6a5cff;
+    padding-top: 1px;
+  }
+  .bug-row .txt { color: #33334a; }
+
+  /* roadmap */
+  .roadmap { list-style: none; padding-left: 0; margin: 8px 0; page-break-inside: avoid; }
+  .roadmap li {
+    position: relative;
+    padding-left: 22px;
+    margin-bottom: 7px;
+    font-size: 9.4pt;
+    page-break-inside: avoid;
+  }
+  .roadmap li.done::before {
+    content: "✓";
+    position: absolute; left: 0; top: 0;
+    color: #1b8a4a; font-weight: 800;
+  }
+  .roadmap li.next::before {
+    content: "▶";
+    position: absolute; left: 1px; top: 1px;
+    color: #6a5cff; font-size: 8pt;
+  }
+  .roadmap li.future::before {
+    content: "○";
+    position: absolute; left: 0; top: 0;
+    color: #c4c2d8;
+  }
+  .roadmap li.done { color: #55556a; }
+  .roadmap li.next { font-weight: 700; color: #201a4f; }
+  .roadmap li.future { color: #9494a6; }
+
+  .footer-note {
+    margin-top: 26px;
+    padding-top: 12px;
+    border-top: 1px solid #ece9f8;
+    font-size: 8.4pt;
+    color: #9494a6;
+  }
+
+  .stat-row { display:flex; gap:10px; margin: 10px 0 14px 0; }
+  .stat {
+    flex: 1;
+    background: #201a4f;
+    color: #fff;
+    border-radius: 8px;
+    padding: 11px 10px;
+    text-align: center;
+  }
+  .stat .n { font-size: 18pt; font-weight: 800; line-height: 1; }
+  .stat .l { font-size: 7.8pt; margin-top: 4px; color: #c9c4ff; text-transform: uppercase; letter-spacing: 0.03em; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-bar"></div>
+  <div class="eyebrow">Portfolio · Game Engine Programming</div>
+  <h1>MapleStory DX11 2D Engine<br>언리얼 아키텍처 재현 프로젝트</h1>
+  <div class="subtitle">
+    STL·예외·RTTI 없이 C++17로 직접 구현한 2D 게임 엔진.
+    언리얼 엔진의 실제 내부 자료구조와 설계 원리를 원리 단위로 재현하고,
+    Windows/Linux 교차 검증과 실전 디버깅 사례로 완성도를 증명한다.
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item"><div class="k">Target Game</div><div class="v">MapleStory 스타일 2D 플랫포머 RPG</div></div>
+    <div class="meta-item"><div class="k">Language / Standard</div><div class="v">C++17 (No STL / No Exceptions / No RTTI)</div></div>
+    <div class="meta-item"><div class="k">Current Status</div><div class="v">LAYER 1 코어 시스템 완료 (Phase 0–7.7 + 최적화 5종)</div></div>
+    <div class="meta-item"><div class="k">Next Milestone</div><div class="v">Phase 8 — DirectX11 Renderer</div></div>
+  </div>
+
+  <div class="pill-row">
+    <span class="pill">TArray / TSet / TMap</span>
+    <span class="pill">TSparseArray</span>
+    <span class="pill">FName Interning</span>
+    <span class="pill">Bin Allocator</span>
+    <span class="pill">Atomic RefCounting</span>
+    <span class="pill">UClass / Cast&lt;T&gt;</span>
+    <span class="pill">Gameplay Ability System</span>
+  </div>
+</div>
+
+<!-- ============ 1. 핵심 성과 요약 ============ -->
+<section>
+  <div class="section-title"><span class="num">1</span><h2>핵심 성과 요약</h2></div>
+
+  <div class="stat-row">
+    <div class="stat"><div class="n">86</div><div class="l">Unit Tests</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Core Systems Optimized</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">Debugged Real-World Bugs</div></div>
+    <div class="stat"><div class="n">3+3</div><div class="l">Build Configs (Win / Linux)</div></div>
+  </div>
+
+  <div class="highlight-grid">
+    <div class="highlight-card">
+      <div class="h">언리얼 실제 내부 구조 재현</div>
+      <div class="b">TSparseArray 기반 TSet/TMap 해시 체인, FName 인터닝 풀,
+      FRefCountBlock 컨트롤 블록까지 — 문서가 아닌 실제 UE5 소스 구조와
+      원리 단위로 대조 검증 완료.</div>
+    </div>
+    <div class="highlight-card">
+      <div class="h">이중 플랫폼 교차 검증</div>
+      <div class="b">Windows Debug/Release 필수 통과 + Linux g++ 3구성
+      (O0/O2/O2+NDEBUG) + valgrind memcheck. 컴파일러·힙 구현이 다른
+      두 환경에서 서로 다른 버그를 잡아낸 실사례 보유.</div>
+    </div>
+    <div class="highlight-card">
+      <div class="h">컴파일러 레벨 실전 디버깅</div>
+      <div class="b">MSVC Debug 인라인 코드생성 버그를 콜스택 부재와
+      크래시 불변성만으로 추론·확정. noinline 격리로 해결.</div>
+    </div>
+    <div class="highlight-card">
+      <div class="h">구성 의존적 메모리 버그 해결</div>
+      <div class="b">순환 참조 Release 전용 힙 손상을 std::shared_ptr와
+      동일한 암묵적 weak 참조 패턴으로 해결. 원인을 주소 계산으로 수치 확정.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. 구현 시스템 개요 ============ -->
+<section>
+  <div class="section-title"><span class="num">2</span><h2>구현 시스템 개요</h2></div>
+  <table class="systems">
+    <tr><th>시스템</th><th>핵심 설계</th></tr>
+    <tr><td class="sys">Memory</td><td>전역 GMalloc + IAllocator 교체형 구조 · FMallocBinned(16~512B Bin, 64KB 페이지 정렬 + 포인터 마스킹 역추적) · sized delete 대응</td></tr>
+    <tr><td class="sys">Containers</td><td>TArray(+TInlineAllocator&lt;N&gt;, EBO) · TSparseArray(안정 인덱스+프리 리스트) · TSet/TMap(해시 버킷 인덱스 체인, 톰스톤 없음)</td></tr>
+    <tr><td class="sys">String</td><td>FString(동적 wchar 버퍼) · FName+FNamePool(djb2 콘텐츠 해시 인터닝, 인라인 엔트리 저장, O(1) 비교)</td></tr>
+    <tr><td class="sys">SmartPointer</td><td>FRefCountBlock(Shared/Weak 카운트 이원화, 암묵적 weak 참조) · 원자적 증감(MSVC/GCC 분기) · TSharedPtr/TWeakPtr/TSharedRef</td></tr>
+    <tr><td class="sys">Object Model</td><td>UClass 상속 체인 + 함수-지역 정적 StaticClass() · Cast&lt;T&gt;/CastChecked/ExactCast (RTTI 없이 IsChildOf) · AActor 컴포넌트 시스템</td></tr>
+    <tr><td class="sys">Timer</td><td>FTimerManager — SetTimer(루프/1회)/Clear/Pause/Resume/NextFrame</td></tr>
+    <tr><td class="sys">Logging / Assert</td><td>UE_LOG 카테고리 시스템 · check(Debug 전용)/verify(항상 평가)/ensure(1회 발화) 3단 정책</td></tr>
+    <tr><td class="sys">Gameplay Ability System</td><td>FGameplayTag 계층 태그 · Instant/Duration/Infinite+Period 이펙트 · 태그 기반 쿨다운/차단 · Add→Multiply→Override 3패스 속성 재계산</td></tr>
+  </table>
+</section>
+
+<!-- ============ 3. 아키텍처 하이라이트 ============ -->
+<section>
+  <div class="section-title"><span class="num">3</span><h2>아키텍처 하이라이트</h2></div>
+
+  <h3 style="font-size:11.5pt; margin:0 0 5px 0;">TSet / TMap — 해시 버킷 인덱스 체인</h3>
+  <p>원소는 TSparseArray에 저장되어 삭제 후에도 인덱스가 안정적이고, pow2 버킷 배열은
+  해시별 첫 원소 인덱스만 보관한다. 충돌은 원소 내 <code>m_HashNext</code> 인덱스로
+  체인 연결. 삭제는 체인 unlink + 슬롯 반납으로 <strong>O(1), 톰스톤 없음</strong> —
+  Open Addressing 방식에서 발생하던 삭제 표식 누적·불필요한 Rehash 문제를 원천 해결했다.</p>
+  <pre>buckets[hash &amp; (N-1)] ──▶ [3] ──m_HashNext──▶ [0] ──▶ INDEX_NONE
+                             └ 같은 버킷의 원소들이 인덱스 체인으로 연결
+Rehash: 원소는 그대로, 버킷 배열만 새로 만들어 인덱스 재링크 (원소 이동 0회)</pre>
+
+  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">FMallocBinned — 포인터 마스킹 기반 O(1) 할당자</h3>
+  <p>16~512B 크기 클래스 Bin을 64KB 정렬 페이지에서 잘라 쓴다. 해제 시
+  <code>ptr &amp; ~(PAGE_SIZE-1)</code> 마스킹 한 번으로 소속 페이지 헤더를 역추적해
+  Bin을 알아내므로, <strong>블록별 헤더 오버헤드가 0바이트</strong>다.</p>
+  <pre>┌────────────┬──────┬──────┬──────┬─ ─ ─┐   64KB 정렬 페이지
+│ PageHeader │ 블록0 │ 블록1 │ 블록2 │ ... │   (Bin 크기로 분할)
+└────────────┴──────┴──────┴──────┴─ ─ ─┘
+Free(ptr):  ptr &amp; ~(65536-1)  →  페이지 헤더  →  Bin 인덱스  →  프리 리스트 반납</pre>
+
+  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">TSharedPtr — 암묵적 Weak 참조로 순환 참조 이중 해제 방지</h3>
+  <p>컨트롤 블록의 <code>WeakCount</code>를 1로 초기화해 "공유 소유자 그룹 전체"의
+  암묵적 weak 참조를 표현한다. 마지막 Shared 해제 시 Deleter가 실행되는 도중
+  멤버 TWeakPtr들이 자기 몫을 반납해도 그룹 몫 1이 블록을 지켜주며,
+  <strong>Deleter 완료 후에야 그룹 몫까지 반납되어 블록이 해제</strong>된다 —
+  std::shared_ptr와 동일한 패턴으로, 실제 겪은 Release 전용 이중 해제 버그를 해결했다.</p>
+</section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ============ 4. 언리얼 대조 검증 ============ -->
+<section>
+  <div class="section-title"><span class="num">4</span><h2>언리얼 실제 구조 대조 검증</h2></div>
+  <p>전 서브시스템을 UE5 실제 소스 구조와 원리 단위로 대조 검증했다.</p>
+  <table class="verdict">
+    <tr><th>서브시스템</th><th>판정</th><th>핵심 근거</th></tr>
+    <tr><td>TArray + TInlineAllocator</td><td><span class="badge same">동일</span></td><td>할당자 정책 파라미터 주입, 인라인→힙 스필 — ContainerAllocationPolicies와 동일 원리</td></tr>
+    <tr><td>TSparseArray</td><td><span class="badge same">동일</span></td><td>프리 리스트 인덱스 재사용 = UE FreeListLink 구조</td></tr>
+    <tr><td>TSet / TMap</td><td><span class="badge same">동일</span></td><td>원소 내 체인(HashNextId) + 버킷 배열 = UE Set.h 알고리즘</td></tr>
+    <tr><td>FName / FNamePool</td><td><span class="badge same">동일</span></td><td>인라인 엔트리 + 풀 + 인덱스 비교 = UE NameTypes 핵심</td></tr>
+    <tr><td>FRefCountBlock</td><td><span class="badge same">동일</span></td><td>UE FReferenceControllerBase(ThreadSafe)와 동일 설계</td></tr>
+    <tr><td>DECLARE_CLASS / Cast&lt;T&gt;</td><td><span class="badge same">동일</span></td><td>GENERATED_BODY 최소 골격 + IsChildOf 캐스트 체인</td></tr>
+    <tr><td>FMallocBinned</td><td><span class="badge simplified">축소</span></td><td>Bin 풀링·페이지 마스킹 일치, UE는 스레드 캐시 등 추가</td></tr>
+    <tr><td>Gameplay Ability System</td><td><span class="badge simplified">축소</span></td><td>개념 계층 전부 대응, 네트워크 예측 계층 미구현(싱글플레이 목표)</td></tr>
+    <tr><td>TMultiMap</td><td><span class="badge diff">차이</span></td><td>UE는 셋에 중복 키 저장, 본 프로젝트는 TMap&lt;K,TArray&lt;V&gt;&gt; 래퍼</td></tr>
+  </table>
+</section>
+
+<div style="page-break-before: always;"></div>
+
+<!-- ============ 5. 트러블슈팅 하이라이트 ============ -->
+<section>
+  <div class="section-title"><span class="num">5</span><h2>트러블슈팅 하이라이트</h2></div>
+
+  <div class="bug-card">
+    <div class="bug-head">① TSharedPtr 순환 참조 — Release 전용 힙 손상 (0xC0000374)</div>
+    <div class="bug-body">
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">Debug는 통과하나 Release에서 순환 참조 테스트가 힙 손상으로 크래시</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">파괴 중 Deleter 체인 안에서 TWeakPtr가 컨트롤 블록을 먼저 해제 → 이중 해제. Debug 힙의 0xDD 채움이 우연히 증상을 가려 Release에서만 노출</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">WeakCount를 1로 초기화하는 암묵적 weak 참조 패턴 도입(std::shared_ptr와 동일)</div></div>
+    </div>
+  </div>
+
+  <div class="bug-card">
+    <div class="bug-head">② MSVC Debug 인라인 코드생성 버그 (FName::ToString)</div>
+    <div class="bug-body">
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">값 반환 시 접근 위반. 함수 내부를 3회 재구성해도 크래시 위치·값이 완전히 동일</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">콜스택에 해당 함수 프레임이 한 번도 없음 → /Od에서도 초소형 함수가 인라인되어 소스 수정이 생성 코드에 반영 안 됨</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">함수를 .cpp로 분리 + noinline 지정 → 진짜 함수 호출 경계(x64 ABI) 강제로 즉시 해결</div></div>
+    </div>
+  </div>
+
+  <div class="bug-card">
+    <div class="bug-head">③ Release NDEBUG에서 check() 부수효과 증발 (0xC0000005)</div>
+    <div class="bug-body">
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">Release에서만 컨테이너 연산이 null 근처 주소 쓰기 위반</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">check() 안에 넣은 상태 변경 호출이 NDEBUG에서 표현식째 컴파일 제거 → 빈 컨테이너에 후속 연산 실행. 크래시 주소를 슬롯 오프셋 계산과 대조해 수치로 확정</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">상태 변경을 독립 문장으로 분리하는 규약화 + 검증 파이프라인에 Release 등가(NDEBUG) 구성 상시 포함</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. 검증 방법론 ============ -->
+<section>
+  <div class="section-title"><span class="num">6</span><h2>검증 방법론</h2></div>
+  <ul>
+    <li><strong>86개 단위 테스트</strong> — Phase마다 선작성, 회귀 겸용. 컨테이너 처닝(100키×10라운드), 순환 참조, 4~8스레드×수십만회 참조 카운트 스트레스 포함</li>
+    <li><strong>Windows Debug + Release 필수 통과</strong> — 구성 의존적 버그(위 트러블슈팅 ①③)를 놓치지 않기 위한 상시 검증</li>
+    <li><strong>Linux g++ 3구성</strong>(O0 / O2 / O2+NDEBUG) + <strong>valgrind memcheck</strong> — 다른 컴파일러·다른 힙 구현으로 이식성과 메모리 안전성 이중 확인</li>
+  </ul>
+</section>
+
+<!-- ============ 7. 로드맵 ============ -->
+<section>
+  <div class="section-title"><span class="num">7</span><h2>로드맵</h2></div>
+  <ul class="roadmap">
+    <li class="done">Phase 0–7.7 — Core: Memory / Templates / Containers / Math / TMap·TSet / String / Logging / SmartPointer / UObject / Timer / Gameplay Ability System</li>
+    <li class="done">Phase 7.5+ — Core 최적화 5종: FMallocBinned · TInlineAllocator · TSparseArray+해시체인 · FNamePool · TSharedPtr 원자화</li>
+    <li class="next">Phase 8 — Renderer (DirectX11): DXDevice / SwapChain / SpriteBatch / RenderQueue / FCamera2D, WZ Canvas→텍스처 병행</li>
+    <li class="future">Phase 9–15 — Animation · Physics(Foothold) · Audio · UI · Input · Resource · World</li>
+    <li class="future">LAYER 3 — 캐릭터 · 스킬(GAS 활용) · 몬스터 AI · 인벤토리 · 퀘스트 · Save/Load</li>
+  </ul>
+
+  <div class="footer-note">
+    MapleStory DX11 2D Engine · STL/예외/RTTI 없이 C++17로 직접 구현한 언리얼 아키텍처 재현 엔진 ·
+    상세 구현 원리는 ARCHITECTURE.md, 트러블슈팅 전체 기록은 PROJECT_SUMMARY.md 참고
+  </div>
+</section>
+
+</body>
+</html>
