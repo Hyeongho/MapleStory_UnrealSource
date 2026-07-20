@@ -279,131 +279,137 @@
 <div class="cover">
   <div class="cover-bar"></div>
   <div class="eyebrow">Portfolio · Game Engine Programming</div>
-  <h1>MapleStory DX11 2D Engine<br>언리얼 아키텍처 재현 프로젝트</h1>
+  <h1>MapleStory DX11 2D Engine<br>언리얼 엔진을 직접 뜯어서 만들어본 프로젝트</h1>
   <div class="subtitle">
-    STL·예외·RTTI 없이 C++17로 직접 구현한 2D 게임 엔진.
-    언리얼 엔진의 실제 내부 자료구조와 설계 원리를 원리 단위로 재현하고,
-    Windows/Linux 교차 검증과 실전 디버깅 사례로 완성도를 증명한다.
+    C++로 게임을 만들 때 당연하게 쓰는 STL, 예외 처리, RTTI 같은 편의 기능을
+    일부러 안 쓰고, 배열·해시맵·스마트 포인터 같은 기본기를 언리얼 엔진과
+    같은 원리로 하나하나 직접 만들어본 2D 게임 엔진입니다.
   </div>
 
   <div class="meta-grid">
-    <div class="meta-item"><div class="k">Target Game</div><div class="v">MapleStory 스타일 2D 플랫포머 RPG</div></div>
-    <div class="meta-item"><div class="k">Language / Standard</div><div class="v">C++17 (No STL / No Exceptions / No RTTI)</div></div>
-    <div class="meta-item"><div class="k">Current Status</div><div class="v">LAYER 1 코어 시스템 완료 (Phase 0–7.7 + 최적화 5종)</div></div>
-    <div class="meta-item"><div class="k">Next Milestone</div><div class="v">Phase 8 — DirectX11 Renderer</div></div>
+    <div class="meta-item"><div class="k">만들려는 게임</div><div class="v">메이플스토리 같은 2D 플랫포머 RPG</div></div>
+    <div class="meta-item"><div class="k">사용 언어</div><div class="v">C++17 (STL / 예외처리 / RTTI 안 씀)</div></div>
+    <div class="meta-item"><div class="k">지금까지 진행률</div><div class="v">엔진의 뼈대(기본기) 부분 완료</div></div>
+    <div class="meta-item"><div class="k">다음 할 일</div><div class="v">화면에 그림을 그리는 렌더러 만들기</div></div>
   </div>
 
   <div class="pill-row">
-    <span class="pill">TArray / TSet / TMap</span>
-    <span class="pill">TSparseArray</span>
-    <span class="pill">FName Interning</span>
-    <span class="pill">Bin Allocator</span>
-    <span class="pill">Atomic RefCounting</span>
-    <span class="pill">UClass / Cast&lt;T&gt;</span>
-    <span class="pill">Gameplay Ability System</span>
+    <span class="pill">배열 / 해시맵 직접 구현</span>
+    <span class="pill">이름을 번호로 바꿔 비교</span>
+    <span class="pill">직접 만든 메모리 관리자</span>
+    <span class="pill">스레드 안전 스마트 포인터</span>
+    <span class="pill">타입 판별 시스템</span>
+    <span class="pill">스킬/버프 시스템</span>
   </div>
 </div>
 
 <!-- ============ 1. 핵심 성과 요약 ============ -->
 <section>
-  <div class="section-title"><span class="num">1</span><h2>핵심 성과 요약</h2></div>
+  <div class="section-title"><span class="num">1</span><h2>한눈에 보는 이 프로젝트</h2></div>
 
   <div class="stat-row">
-    <div class="stat"><div class="n">86</div><div class="l">Unit Tests</div></div>
-    <div class="stat"><div class="n">5</div><div class="l">Core Systems Optimized</div></div>
-    <div class="stat"><div class="n">3</div><div class="l">Debugged Real-World Bugs</div></div>
-    <div class="stat"><div class="n">3+3</div><div class="l">Build Configs (Win / Linux)</div></div>
+    <div class="stat"><div class="n">86</div><div class="l">자동 테스트 개수</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">성능 개선 완료</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">직접 잡은 실전 버그</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">서로 다른 검증 환경</div></div>
   </div>
 
   <div class="highlight-grid">
     <div class="highlight-card">
-      <div class="h">언리얼 실제 내부 구조 재현</div>
-      <div class="b">TSparseArray 기반 TSet/TMap 해시 체인, FName 인터닝 풀,
-      FRefCountBlock 컨트롤 블록까지 — 문서가 아닌 실제 UE5 소스 구조와
-      원리 단위로 대조 검증 완료.</div>
+      <div class="h">언리얼이 실제로 쓰는 방식 그대로 만들었어요</div>
+      <div class="b">해시맵이나 이름 저장 방식, 스마트 포인터 내부 구조를 실제
+      언리얼 엔진 소스코드와 하나하나 비교해가며 똑같은 원리로 만들었는지
+      직접 확인했습니다.</div>
     </div>
     <div class="highlight-card">
-      <div class="h">이중 플랫폼 교차 검증</div>
-      <div class="b">Windows Debug/Release 필수 통과 + Linux g++ 3구성
-      (O0/O2/O2+NDEBUG) + valgrind memcheck. 컴파일러·힙 구현이 다른
-      두 환경에서 서로 다른 버그를 잡아낸 실사례 보유.</div>
+      <div class="h">윈도우와 리눅스, 두 군데서 다 확인했어요</div>
+      <div class="b">윈도우에서는 디버그·릴리즈 두 가지로, 리눅스에서는 다른
+      컴파일러로 세 가지 설정에 메모리 검사 도구까지 돌려서 검증했습니다.
+      한쪽에서는 안 잡히던 버그가 다른 쪽에서 잡힌 적도 있었어요.</div>
     </div>
     <div class="highlight-card">
-      <div class="h">컴파일러 레벨 실전 디버깅</div>
-      <div class="b">MSVC Debug 인라인 코드생성 버그를 콜스택 부재와
-      크래시 불변성만으로 추론·확정. noinline 격리로 해결.</div>
+      <div class="h">컴파일러가 만든 버그를 직접 찾아냈어요</div>
+      <div class="b">코드를 세 번이나 고쳐도 크래시가 똑같이 나서, 컴파일러가
+      제 수정 사항을 실제로는 반영하지 않고 있다는 걸 알아채고 원인을
+      끝까지 추적했습니다.</div>
     </div>
     <div class="highlight-card">
-      <div class="h">구성 의존적 메모리 버그 해결</div>
-      <div class="b">순환 참조 Release 전용 힙 손상을 std::shared_ptr와
-      동일한 암묵적 weak 참조 패턴으로 해결. 원인을 주소 계산으로 수치 확정.</div>
+      <div class="h">특정 상황에서만 터지는 메모리 버그를 고쳤어요</div>
+      <div class="b">디버그 모드에서는 멀쩡한데 릴리즈 모드에서만 터지는 버그를
+      원인까지 정확히 찾아서 고쳤습니다.</div>
     </div>
   </div>
 </section>
 
 <!-- ============ 2. 구현 시스템 개요 ============ -->
 <section>
-  <div class="section-title"><span class="num">2</span><h2>구현 시스템 개요</h2></div>
+  <div class="section-title"><span class="num">2</span><h2>지금까지 만든 것들</h2></div>
   <table class="systems">
-    <tr><th>시스템</th><th>핵심 설계</th></tr>
-    <tr><td class="sys">Memory</td><td>전역 GMalloc + IAllocator 교체형 구조 · FMallocBinned(16~512B Bin, 64KB 페이지 정렬 + 포인터 마스킹 역추적) · sized delete 대응</td></tr>
-    <tr><td class="sys">Containers</td><td>TArray(+TInlineAllocator&lt;N&gt;, EBO) · TSparseArray(안정 인덱스+프리 리스트) · TSet/TMap(해시 버킷 인덱스 체인, 톰스톤 없음)</td></tr>
-    <tr><td class="sys">String</td><td>FString(동적 wchar 버퍼) · FName+FNamePool(djb2 콘텐츠 해시 인터닝, 인라인 엔트리 저장, O(1) 비교)</td></tr>
-    <tr><td class="sys">SmartPointer</td><td>FRefCountBlock(Shared/Weak 카운트 이원화, 암묵적 weak 참조) · 원자적 증감(MSVC/GCC 분기) · TSharedPtr/TWeakPtr/TSharedRef</td></tr>
-    <tr><td class="sys">Object Model</td><td>UClass 상속 체인 + 함수-지역 정적 StaticClass() · Cast&lt;T&gt;/CastChecked/ExactCast (RTTI 없이 IsChildOf) · AActor 컴포넌트 시스템</td></tr>
-    <tr><td class="sys">Timer</td><td>FTimerManager — SetTimer(루프/1회)/Clear/Pause/Resume/NextFrame</td></tr>
-    <tr><td class="sys">Logging / Assert</td><td>UE_LOG 카테고리 시스템 · check(Debug 전용)/verify(항상 평가)/ensure(1회 발화) 3단 정책</td></tr>
-    <tr><td class="sys">Gameplay Ability System</td><td>FGameplayTag 계층 태그 · Instant/Duration/Infinite+Period 이펙트 · 태그 기반 쿨다운/차단 · Add→Multiply→Override 3패스 속성 재계산</td></tr>
+    <tr><th>분야</th><th>이게 뭐고 왜 만들었는지</th></tr>
+    <tr><td class="sys">메모리 관리</td><td>게임 전체가 메모리를 요청·반납하는 창구를 하나로 통일했고, 자주 쓰는 작은 크기는 서랍장처럼 미리 나눠둬서 빠르게 꺼내 쓰게 만들었습니다.</td></tr>
+    <tr><td class="sys">배열 / 해시맵</td><td>배열, 셋, 맵처럼 자주 쓰는 자료구조를 직접 만들었고, 특히 해시맵은 데이터를 지웠다 다시 채워도 성능이 안 떨어지게 설계했습니다.</td></tr>
+    <tr><td class="sys">문자열</td><td>문자열을 다루는 기본 타입과, "이름"처럼 자주 비교하는 문자열은 한 번만 저장해두고 이후엔 번호로만 비교하게 만들었습니다.</td></tr>
+    <tr><td class="sys">스마트 포인터</td><td>객체가 더 이상 안 쓰일 때 자동으로 메모리를 정리해주는 기능이고, 여러 스레드에서 동시에 써도 안전하게 만들었습니다.</td></tr>
+    <tr><td class="sys">오브젝트/타입 시스템</td><td>RTTI라는 표준 타입 판별 기능 없이도, 지금 이 객체가 어떤 클래스인지 확인하고 안전하게 형변환하는 시스템을 직접 만들었습니다.</td></tr>
+    <tr><td class="sys">타이머</td><td>몇 초 뒤에 한 번 실행하거나, 계속 반복 실행하는 타이머 시스템입니다.</td></tr>
+    <tr><td class="sys">로그 / 오류 검사</td><td>개발 중 코드가 잘못됐을 때 알려주는 세 가지 검사 도구와, 로그를 기록하는 시스템을 만들었습니다.</td></tr>
+    <tr><td class="sys">스킬 시스템</td><td>버프·디버프, 쿨다운, 도트 데미지(초당 지속 피해)처럼 게임 스킬에 필요한 기능들을 처리하는 시스템입니다.</td></tr>
   </table>
 </section>
 
 <!-- ============ 3. 아키텍처 하이라이트 ============ -->
 <section>
-  <div class="section-title"><span class="num">3</span><h2>아키텍처 하이라이트</h2></div>
+  <div class="section-title"><span class="num">3</span><h2>제일 자신 있는 3가지 구현</h2></div>
 
-  <h3 style="font-size:11.5pt; margin:0 0 5px 0;">TSet / TMap — 해시 버킷 인덱스 체인</h3>
-  <p>원소는 TSparseArray에 저장되어 삭제 후에도 인덱스가 안정적이고, pow2 버킷 배열은
-  해시별 첫 원소 인덱스만 보관한다. 충돌은 원소 내 <code>m_HashNext</code> 인덱스로
-  체인 연결. 삭제는 체인 unlink + 슬롯 반납으로 <strong>O(1), 톰스톤 없음</strong> —
-  Open Addressing 방식에서 발생하던 삭제 표식 누적·불필요한 Rehash 문제를 원천 해결했다.</p>
-  <pre>buckets[hash &amp; (N-1)] ──▶ [3] ──m_HashNext──▶ [0] ──▶ INDEX_NONE
-                             └ 같은 버킷의 원소들이 인덱스 체인으로 연결
-Rehash: 원소는 그대로, 버킷 배열만 새로 만들어 인덱스 재링크 (원소 이동 0회)</pre>
+  <h3 style="font-size:11.5pt; margin:0 0 5px 0;">① 해시맵 — 서랍에 물건 정리하듯 데이터를 저장해요</h3>
+  <p>해시맵은 데이터를 넣을 때 "몇 번 서랍에 넣을지"를 계산해서 그 서랍에 넣는
+  구조입니다. 같은 서랍에 여러 개가 들어가면 그것들을 사슬처럼 순서대로
+  연결해두고, 나중에 찾을 때 그 사슬만 따라가면 됩니다. 예전 방식은 데이터를
+  지울 때 완전히 못 지우고 "치웠음" 표시만 남겨야 했는데, 이 표시가 쌓이면
+  점점 느려졌습니다. 지금 방식은 지울 때 사슬 연결만 끊으면 끝이라서, 아무리
+  데이터를 넣었다 뺐다 반복해도 성능이 떨어지지 않습니다.</p>
+  <pre>3번 서랍 ──▶ [원소 A] ──▶ [원소 B] ──▶ (끝)
+             └ 같은 서랍에 들어간 원소들이 사슬처럼 줄줄이 연결됨
+지울 때: 사슬에서 그 원소만 쏙 빼면 끝 (뒤에 있던 원소들 다 안 밀림)</pre>
 
-  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">FMallocBinned — 포인터 마스킹 기반 O(1) 할당자</h3>
-  <p>16~512B 크기 클래스 Bin을 64KB 정렬 페이지에서 잘라 쓴다. 해제 시
-  <code>ptr &amp; ~(PAGE_SIZE-1)</code> 마스킹 한 번으로 소속 페이지 헤더를 역추적해
-  Bin을 알아내므로, <strong>블록별 헤더 오버헤드가 0바이트</strong>다.</p>
-  <pre>┌────────────┬──────┬──────┬──────┬─ ─ ─┐   64KB 정렬 페이지
-│ PageHeader │ 블록0 │ 블록1 │ 블록2 │ ... │   (Bin 크기로 분할)
-└────────────┴──────┴──────┴──────┴─ ─ ─┘
-Free(ptr):  ptr &amp; ~(65536-1)  →  페이지 헤더  →  Bin 인덱스  →  프리 리스트 반납</pre>
+  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">② 메모리 할당자 — 옷을 크기별로 서랍에 정리해두는 것</h3>
+  <p>작은 메모리를 요청할 때마다 매번 운영체제에 직접 물어보면 느립니다.
+  그래서 16바이트, 32바이트, 64바이트... 이런 식으로 크기별 서랍을 미리
+  만들어두고, 필요할 때 그 서랍에서 바로 꺼내 쓰게 만들었습니다. 반납할
+  때도 그 메모리의 주소만 보고 계산 한 번이면 "이게 몇 번 서랍에서 나온
+  건지" 바로 알아낼 수 있어서, 반납할 물건마다 꼬리표를 따로 붙여둘 필요가
+  없습니다.</p>
+  <pre>[큰 페이지 하나] = [정리 노트 | 서랍0 | 서랍1 | 서랍2 | ... ]
+반납할 때: 주소 계산 한 번 → 정리 노트를 찾음 → 몇 번 서랍인지 앎 → 그 서랍에 도로 넣음</pre>
 
-  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">TSharedPtr — 암묵적 Weak 참조로 순환 참조 이중 해제 방지</h3>
-  <p>컨트롤 블록의 <code>WeakCount</code>를 1로 초기화해 "공유 소유자 그룹 전체"의
-  암묵적 weak 참조를 표현한다. 마지막 Shared 해제 시 Deleter가 실행되는 도중
-  멤버 TWeakPtr들이 자기 몫을 반납해도 그룹 몫 1이 블록을 지켜주며,
-  <strong>Deleter 완료 후에야 그룹 몫까지 반납되어 블록이 해제</strong>된다 —
-  std::shared_ptr와 동일한 패턴으로, 실제 겪은 Release 전용 이중 해제 버그를 해결했다.</p>
+  <h3 style="font-size:11.5pt; margin:14px 0 5px 0;">③ 스마트 포인터 — 마지막으로 나가는 사람이 문을 잠급니다</h3>
+  <p>여러 객체가 서로를 참조하고 있을 때, 정리하는 순서를 잘못 잡으면 같은
+  메모리를 두 번 지우는 버그가 생길 수 있습니다. 실제로 이 버그를 겪었는데,
+  표준 라이브러리가 쓰는 방식과 똑같이 해결했습니다. 객체를 관리하는
+  "관리 장부"를 지울 때, 진짜 객체부터 먼저 지우고 장부는 그다음에
+  지우도록 순서를 나눴고, 객체를 지우는 도중에 다른 누군가(약한 참조)가
+  장부를 미리 없애버리지 못하게 자리를 하나 미리 예약해뒀습니다. 그래서
+  객체 정리가 완전히 끝날 때까지는 장부가 항상 안전하게 살아있습니다.</p>
 </section>
 
 <div style="page-break-before: always;"></div>
 
 <!-- ============ 4. 언리얼 대조 검증 ============ -->
 <section>
-  <div class="section-title"><span class="num">4</span><h2>언리얼 실제 구조 대조 검증</h2></div>
-  <p>전 서브시스템을 UE5 실제 소스 구조와 원리 단위로 대조 검증했다.</p>
+  <div class="section-title"><span class="num">4</span><h2>진짜 언리얼이랑 똑같이 만들었는지 하나하나 비교해봤어요</h2></div>
+  <p>제가 만든 걸로 끝내지 않고, 실제 언리얼 엔진 소스코드를 하나하나 열어서
+  같은 원리로 만들었는지 직접 대조해봤습니다. 결과는 아래와 같습니다.</p>
   <table class="verdict">
-    <tr><th>서브시스템</th><th>판정</th><th>핵심 근거</th></tr>
-    <tr><td>TArray + TInlineAllocator</td><td><span class="badge same">동일</span></td><td>할당자 정책 파라미터 주입, 인라인→힙 스필 — ContainerAllocationPolicies와 동일 원리</td></tr>
-    <tr><td>TSparseArray</td><td><span class="badge same">동일</span></td><td>프리 리스트 인덱스 재사용 = UE FreeListLink 구조</td></tr>
-    <tr><td>TSet / TMap</td><td><span class="badge same">동일</span></td><td>원소 내 체인(HashNextId) + 버킷 배열 = UE Set.h 알고리즘</td></tr>
-    <tr><td>FName / FNamePool</td><td><span class="badge same">동일</span></td><td>인라인 엔트리 + 풀 + 인덱스 비교 = UE NameTypes 핵심</td></tr>
-    <tr><td>FRefCountBlock</td><td><span class="badge same">동일</span></td><td>UE FReferenceControllerBase(ThreadSafe)와 동일 설계</td></tr>
-    <tr><td>DECLARE_CLASS / Cast&lt;T&gt;</td><td><span class="badge same">동일</span></td><td>GENERATED_BODY 최소 골격 + IsChildOf 캐스트 체인</td></tr>
-    <tr><td>FMallocBinned</td><td><span class="badge simplified">축소</span></td><td>Bin 풀링·페이지 마스킹 일치, UE는 스레드 캐시 등 추가</td></tr>
-    <tr><td>Gameplay Ability System</td><td><span class="badge simplified">축소</span></td><td>개념 계층 전부 대응, 네트워크 예측 계층 미구현(싱글플레이 목표)</td></tr>
-    <tr><td>TMultiMap</td><td><span class="badge diff">차이</span></td><td>UE는 셋에 중복 키 저장, 본 프로젝트는 TMap&lt;K,TArray&lt;V&gt;&gt; 래퍼</td></tr>
+    <tr><th>만든 것</th><th>결과</th><th>왜 그런지</th></tr>
+    <tr><td>배열(TArray)</td><td><span class="badge same">똑같음</span></td><td>언리얼도 작은 배열은 힙 할당 없이 자기 안에 담아두는 방식을 씁니다. 같은 원리로 만들었어요.</td></tr>
+    <tr><td>인덱스가 안 변하는 배열</td><td><span class="badge same">똑같음</span></td><td>지운 자리를 나중에 재사용하는 방식이 언리얼 내부 구조와 똑같아요.</td></tr>
+    <tr><td>해시맵(Set / Map)</td><td><span class="badge same">똑같음</span></td><td>사슬로 연결해서 데이터를 찾는 방식이 언리얼이 실제로 쓰는 방식과 같아요.</td></tr>
+    <tr><td>이름 저장 방식(FName)</td><td><span class="badge same">똑같음</span></td><td>이름을 한 번만 저장하고 번호로 비교하는 방식이 언리얼의 핵심 원리와 같아요.</td></tr>
+    <tr><td>스마트 포인터 내부 구조</td><td><span class="badge same">똑같음</span></td><td>객체를 관리하는 장부의 구조가 언리얼의 실제 구조와 같아요.</td></tr>
+    <tr><td>타입 판별 시스템</td><td><span class="badge same">똑같음</span></td><td>클래스가 뭔지 판별하는 방식이 언리얼이 자동으로 만들어주는 코드의 최소 버전과 같아요.</td></tr>
+    <tr><td>메모리 할당자</td><td><span class="badge simplified">비슷함</span></td><td>핵심 아이디어는 같지만, 언리얼은 스레드별로 훨씬 더 정교하게 처리해요.</td></tr>
+    <tr><td>스킬 시스템(GAS)</td><td><span class="badge simplified">비슷함</span></td><td>개념은 다 똑같이 구현했지만, 온라인 대전용 네트워크 예측 기능은 아직 없어요(지금은 싱글플레이가 목표라서요).</td></tr>
+    <tr><td>여러 값 저장하는 맵</td><td><span class="badge diff">다르게 함</span></td><td>언리얼과는 내부 구현 방식이 다른데, 겉으로 동작하는 결과는 똑같아요.</td></tr>
   </table>
 </section>
 
@@ -411,60 +417,60 @@ Free(ptr):  ptr &amp; ~(65536-1)  →  페이지 헤더  →  Bin 인덱스  →
 
 <!-- ============ 5. 트러블슈팅 하이라이트 ============ -->
 <section>
-  <div class="section-title"><span class="num">5</span><h2>트러블슈팅 하이라이트</h2></div>
+  <div class="section-title"><span class="num">5</span><h2>가장 고생했던 버그 3가지</h2></div>
 
   <div class="bug-card">
-    <div class="bug-head">① TSharedPtr 순환 참조 — Release 전용 힙 손상 (0xC0000374)</div>
+    <div class="bug-head">① 서로 참조하는 두 객체를 정리할 때 같은 메모리를 두 번 지운 버그</div>
     <div class="bug-body">
-      <div class="bug-row"><div class="tag">증상</div><div class="txt">Debug는 통과하나 Release에서 순환 참조 테스트가 힙 손상으로 크래시</div></div>
-      <div class="bug-row"><div class="tag">원인</div><div class="txt">파괴 중 Deleter 체인 안에서 TWeakPtr가 컨트롤 블록을 먼저 해제 → 이중 해제. Debug 힙의 0xDD 채움이 우연히 증상을 가려 Release에서만 노출</div></div>
-      <div class="bug-row"><div class="tag">해결</div><div class="txt">WeakCount를 1로 초기화하는 암묵적 weak 참조 패턴 도입(std::shared_ptr와 동일)</div></div>
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">디버그 모드에서는 멀쩡한데, 릴리즈 모드에서만 크래시가 났어요.</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">두 객체가 서로를 참조하고 있다가 정리될 때, 관리 장부를 너무 일찍 지워버려서 같은 메모리를 두 번 지우고 있었어요. 디버그 모드는 지운 메모리에 특정 값을 채워두는 습관이 있어서 우연히 문제가 가려졌던 거고, 릴리즈 모드는 그 습관이 없어서 바로 드러난 거였어요.</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">표준 라이브러리가 쓰는 방식 그대로, 자리를 하나 미리 예약해두는 방법으로 순서를 바로잡아서 고쳤어요.</div></div>
     </div>
   </div>
 
   <div class="bug-card">
-    <div class="bug-head">② MSVC Debug 인라인 코드생성 버그 (FName::ToString)</div>
+    <div class="bug-head">② 컴파일러가 제 수정 사항을 반영 안 하고 있었던 버그</div>
     <div class="bug-body">
-      <div class="bug-row"><div class="tag">증상</div><div class="txt">값 반환 시 접근 위반. 함수 내부를 3회 재구성해도 크래시 위치·값이 완전히 동일</div></div>
-      <div class="bug-row"><div class="tag">원인</div><div class="txt">콜스택에 해당 함수 프레임이 한 번도 없음 → /Od에서도 초소형 함수가 인라인되어 소스 수정이 생성 코드에 반영 안 됨</div></div>
-      <div class="bug-row"><div class="tag">해결</div><div class="txt">함수를 .cpp로 분리 + noinline 지정 → 진짜 함수 호출 경계(x64 ABI) 강제로 즉시 해결</div></div>
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">값을 반환하는 아주 짧은 함수 하나에서 크래시가 났는데, 코드를 세 번이나 다르게 고쳐도 크래시가 완전히 똑같이 났어요.</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">고친 코드가 실제로 실행되고 있지 않다는 뜻이었어요. 컴파일러가 이 짧은 함수를 통째로 다른 코드 안에 끼워 넣어버려서, 함수 안을 아무리 고쳐도 반영이 안 되고 있었던 거예요.</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">그 함수를 다른 파일로 옮기고 "절대 끼워 넣지 마"라는 옵션을 붙여서, 진짜 별도의 함수 호출로 강제했더니 바로 해결됐어요.</div></div>
     </div>
   </div>
 
   <div class="bug-card">
-    <div class="bug-head">③ Release NDEBUG에서 check() 부수효과 증발 (0xC0000005)</div>
+    <div class="bug-head">③ 검사용 코드 안에 진짜 동작을 같이 넣어버린 버그</div>
     <div class="bug-body">
-      <div class="bug-row"><div class="tag">증상</div><div class="txt">Release에서만 컨테이너 연산이 null 근처 주소 쓰기 위반</div></div>
-      <div class="bug-row"><div class="tag">원인</div><div class="txt">check() 안에 넣은 상태 변경 호출이 NDEBUG에서 표현식째 컴파일 제거 → 빈 컨테이너에 후속 연산 실행. 크래시 주소를 슬롯 오프셋 계산과 대조해 수치로 확정</div></div>
-      <div class="bug-row"><div class="tag">해결</div><div class="txt">상태 변경을 독립 문장으로 분리하는 규약화 + 검증 파이프라인에 Release 등가(NDEBUG) 구성 상시 포함</div></div>
+      <div class="bug-row"><div class="tag">증상</div><div class="txt">릴리즈 모드에서만 빈 배열에 접근하다가 크래시가 났어요.</div></div>
+      <div class="bug-row"><div class="tag">원인</div><div class="txt">검사용 코드(check) 안에 "배열에 값을 추가하는" 실제 동작까지 같이 넣어버렸는데, 릴리즈 모드에서는 이 검사용 코드 자체가 통째로 사라지는 규칙이 있어서 추가하는 동작도 같이 사라져버렸어요. 그래서 배열이 텅 빈 채로 다음 코드가 실행된 거였어요.</div></div>
+      <div class="bug-row"><div class="tag">해결</div><div class="txt">동작하는 코드와 검사하는 코드를 무조건 분리하기로 규칙을 정했고, 이후로는 릴리즈 모드와 똑같은 조건으로도 항상 미리 테스트하게 만들었어요.</div></div>
     </div>
   </div>
 </section>
 
 <!-- ============ 6. 검증 방법론 ============ -->
 <section>
-  <div class="section-title"><span class="num">6</span><h2>검증 방법론</h2></div>
+  <div class="section-title"><span class="num">6</span><h2>어떻게 검증했는지</h2></div>
   <ul>
-    <li><strong>86개 단위 테스트</strong> — Phase마다 선작성, 회귀 겸용. 컨테이너 처닝(100키×10라운드), 순환 참조, 4~8스레드×수십만회 참조 카운트 스트레스 포함</li>
-    <li><strong>Windows Debug + Release 필수 통과</strong> — 구성 의존적 버그(위 트러블슈팅 ①③)를 놓치지 않기 위한 상시 검증</li>
-    <li><strong>Linux g++ 3구성</strong>(O0 / O2 / O2+NDEBUG) + <strong>valgrind memcheck</strong> — 다른 컴파일러·다른 힙 구현으로 이식성과 메모리 안전성 이중 확인</li>
+    <li><strong>테스트 86개를 만들어서 매번 확인했어요</strong> — 각 기능을 만들 때마다 테스트를 미리 써놓고, 이 테스트를 전부 통과해야만 다음 단계로 넘어가는 규칙을 지켰어요. 데이터를 넣었다 뺐다 반복하는 테스트, 여러 스레드가 동시에 접근하는 테스트도 포함돼요.</li>
+    <li><strong>윈도우에서 디버그·릴리즈 두 가지 다 확인했어요</strong> — 위에서 말씀드린 것처럼 릴리즈 모드에서만 나는 버그가 있었기 때문에, 이후로는 항상 두 가지 모드를 다 확인하게 됐어요.</li>
+    <li><strong>리눅스에서도 다른 컴파일러로 한 번 더 확인했어요</strong> — 윈도우 컴파일러와는 다른 컴파일러(g++), 그리고 메모리 검사 도구(valgrind)로 다시 확인해서, 한쪽에서 못 잡는 문제를 다른 쪽에서 잡을 수 있게 했어요.</li>
   </ul>
 </section>
 
 <!-- ============ 7. 로드맵 ============ -->
 <section>
-  <div class="section-title"><span class="num">7</span><h2>로드맵</h2></div>
+  <div class="section-title"><span class="num">7</span><h2>앞으로 할 일</h2></div>
   <ul class="roadmap">
-    <li class="done">Phase 0–7.7 — Core: Memory / Templates / Containers / Math / TMap·TSet / String / Logging / SmartPointer / UObject / Timer / Gameplay Ability System</li>
-    <li class="done">Phase 7.5+ — Core 최적화 5종: FMallocBinned · TInlineAllocator · TSparseArray+해시체인 · FNamePool · TSharedPtr 원자화</li>
-    <li class="next">Phase 8 — Renderer (DirectX11): DXDevice / SwapChain / SpriteBatch / RenderQueue / FCamera2D, WZ Canvas→텍스처 병행</li>
-    <li class="future">Phase 9–15 — Animation · Physics(Foothold) · Audio · UI · Input · Resource · World</li>
-    <li class="future">LAYER 3 — 캐릭터 · 스킬(GAS 활용) · 몬스터 AI · 인벤토리 · 퀘스트 · Save/Load</li>
+    <li class="done">엔진의 기본기 — 메모리 관리, 배열/해시맵, 문자열, 스마트 포인터, 오브젝트 시스템, 타이머, 스킬 시스템까지 다 만들었어요</li>
+    <li class="done">성능 개선 작업 5가지도 다 끝냈어요 — 메모리 할당자, 인라인 배열, 해시맵 구조, 이름 저장 방식, 스마트 포인터 스레드 안전화</li>
+    <li class="next">다음은 화면에 그림을 그리는 렌더러예요 — 캐릭터, 배경, 카메라 같은 걸 실제로 화면에 보여주는 작업입니다 (DirectX11 사용)</li>
+    <li class="future">그다음은 애니메이션, 물리(충돌 판정), 사운드, UI, 조작, 리소스 로딩, 맵 로딩이에요</li>
+    <li class="future">마지막은 진짜 게임플레이예요 — 캐릭터, 스킬, 몬스터 AI, 인벤토리, 퀘스트, 저장 기능</li>
   </ul>
 
   <div class="footer-note">
-    MapleStory DX11 2D Engine · STL/예외/RTTI 없이 C++17로 직접 구현한 언리얼 아키텍처 재현 엔진 ·
-    상세 구현 원리는 ARCHITECTURE.md, 트러블슈팅 전체 기록은 PROJECT_SUMMARY.md 참고
+    MapleStory DX11 2D Engine · STL·예외처리·RTTI 없이 C++17로 언리얼 엔진의 구조를 직접 재현한 프로젝트 ·
+    더 자세한 구현 원리는 ARCHITECTURE.md, 문제 해결 과정 전체 기록은 PROJECT_SUMMARY.md 참고
   </div>
 </section>
 
