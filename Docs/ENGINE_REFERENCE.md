@@ -40,13 +40,14 @@ Phase 7.7(+ Phase 7.5+ 최적화)까지 지금까지 구현된 모든 서브시�
 
 ---
 
+
 ## Memory
 
-### IAllocator — abstract allocator interface
+### IAllocator — 추상 얼로케이터 인터페이스
 
-**Purpose:** Defines the minimal virtual contract (`Malloc`/`Realloc`/`Free`) that every concrete allocator (`FMallocAnsi`, `FMallocBinned`) must implement, so the rest of the engine can be decoupled from the concrete allocation strategy behind a single global pointer.
+**목적:** 모든 구체 얼로케이터(`FMallocAnsi`, `FMallocBinned`)가 반드시 구현해야 하는 최소한의 가상 계약(`Malloc`/`Realloc`/`Free`)을 정의한다. 이를 통해 엔진의 나머지 부분은 단일 전역 포인터 뒤에 숨겨진 구체적인 할당 전략과 분리될 수 있다.
 
-**Code** (`Engine/Include/Core/Memory/IAllocator.h`):
+**코드** (`Engine/Include/Core/Memory/IAllocator.h`):
 ```cpp
 struct IAllocator
 {
@@ -57,23 +58,23 @@ struct IAllocator
 };
 ```
 
-**Runtime behavior:** This is a pure abstract base — it has no `.cpp` and does nothing at runtime by itself. It exists purely as a vtable contract. Any call through an `IAllocator*` dispatches virtually to whichever concrete allocator (`FMallocAnsi` or `FMallocBinned`) is currently bound (see `FMemory`/`GMalloc` below). The virtual destructor ensures a derived allocator is destroyed correctly if ever deleted through a base pointer.
+**런타임 동작:** 이 구조체는 순수 추상 베이스로, `.cpp` 파일이 없으며 그 자체로는 런타임에 아무 동작도 하지 않는다. 오직 vtable 계약으로서만 존재한다. `IAllocator*`를 통한 모든 호출은 현재 바인딩된 구체 얼로케이터(`FMallocAnsi` 또는 `FMallocBinned`, 아래 `FMemory`/`GMalloc` 참고)로 가상 디스패치된다. 가상 소멸자는 베이스 포인터를 통해 삭제되더라도 파생 얼로케이터가 올바르게 소멸되도록 보장한다.
 
-**Public API surface:**
-| Method | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `virtual void* Malloc(size_t size, uint32 alignment)` | Allocate `size` bytes aligned to `alignment` |
-| `virtual void* Realloc(void* ptr, size_t newSize, uint32 alignment)` | Resize/reallocate a previous allocation |
-| `virtual void Free(void* ptr)` | Release a previous allocation |
-| `virtual ~IAllocator()` | Default virtual dtor |
+| `virtual void* Malloc(size_t size, uint32 alignment)` | `alignment`에 맞춰 정렬된 `size` 바이트를 할당 |
+| `virtual void* Realloc(void* ptr, size_t newSize, uint32 alignment)` | 기존 할당의 크기 조정/재할당 |
+| `virtual void Free(void* ptr)` | 기존 할당 해제 |
+| `virtual ~IAllocator()` | 기본 가상 소멸자 |
 
 ---
 
-### FMallocAnsi — thin `_aligned_malloc` wrapper
+### FMallocAnsi — 얇은 `_aligned_malloc` 래퍼
 
-**Purpose:** A minimal `IAllocator` implementation that simply forwards to the CRT's aligned allocation functions; used as the simplest possible allocator (no bucketing/pooling logic of its own).
+**목적:** CRT의 정렬 할당 함수를 그대로 전달하는 최소한의 `IAllocator` 구현체다. 버킷/풀링 로직이 전혀 없는, 가능한 가장 단순한 얼로케이터로 사용된다.
 
-**Code** (`Engine/Include/Core/Memory/FMallocAnsi.h` and `.cpp`):
+**코드** (`Engine/Include/Core/Memory/FMallocAnsi.h` 및 `.cpp`):
 ```cpp
 class FMallocAnsi : public IAllocator
 {
@@ -100,14 +101,14 @@ void FMallocAnsi::Free(void* ptr)
 }
 ```
 
-**Step-by-step runtime behavior:**
-1. `Malloc(size, alignment)` calls straight through to the MSVC CRT `_aligned_malloc`, which internally over-allocates and stores a small header before the returned pointer so it can locate the true block start on free — this bookkeeping is entirely inside the CRT, invisible to this class.
-2. `Realloc` similarly forwards to `_aligned_realloc`, which the CRT may implement by growing in place or by allocating new + copying + freeing old, again transparently.
-3. `Free` forwards to `_aligned_free`, which uses the CRT's internal header to locate and release the true allocation.
-4. There is no bin/pool/tracking logic — every call is a 1:1 passthrough. This makes `FMallocAnsi` effectively the "unoptimized" baseline allocator that `FMallocBinned` replaced (per `CLAUDE.md`'s Phase 7.5+ optimization notes: "현재: `_aligned_malloc` 래핑... 목표: 크기 클래스 버킷 방식").
+**단계별 런타임 동작:**
+1. `Malloc(size, alignment)`은 MSVC CRT의 `_aligned_malloc`으로 그대로 위임된다. 이 함수는 내부적으로 실제 필요한 크기보다 더 많이 할당하고, 반환된 포인터 앞에 작은 헤더를 저장해 두어 나중에 해제할 때 실제 블록 시작 위치를 찾을 수 있게 한다 — 이 기록 관리는 전적으로 CRT 내부에서 이루어지며 이 클래스에게는 보이지 않는다.
+2. `Realloc`도 마찬가지로 `_aligned_realloc`으로 위임되는데, CRT는 이를 제자리에서 확장하거나 새로 할당 후 복사하고 기존 블록을 해제하는 방식으로 구현할 수 있으며, 이 역시 투명하게 처리된다.
+3. `Free`는 `_aligned_free`로 위임되며, 이는 CRT 내부 헤더를 이용해 실제 할당 위치를 찾아 해제한다.
+4. bin/pool/추적 로직은 전혀 없다 — 모든 호출은 1:1 통과다. 이 때문에 `FMallocAnsi`는 사실상 `FMallocBinned`가 대체한 "최적화되지 않은" 기본 얼로케이터에 해당한다(`CLAUDE.md`의 Phase 7.5+ 최적화 항목 참고: "현재: `_aligned_malloc` 래핑... 목표: 크기 클래스 버킷 방식").
 
-**Public API surface:**
-| Method | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
 | `Malloc(size, alignment)` | `_aligned_malloc(size, alignment)` |
 | `Realloc(ptr, newSize, alignment)` | `_aligned_realloc(ptr, newSize, alignment)` |
@@ -115,11 +116,11 @@ void FMallocAnsi::Free(void* ptr)
 
 ---
 
-### FMallocBinned — size-class bin allocator with 64KB pages
+### FMallocBinned — 64KB 페이지 기반 크기 클래스 Bin 얼로케이터
 
-**Purpose:** A bucketed/binned allocator that services small allocations (≤512 bytes, ≤16-byte alignment) from free-lists carved out of 64KB-aligned pages, and falls back to a page-aligned "large allocation" path for anything else — eliminating per-allocation CRT overhead and external fragmentation for small objects.
+**목적:** 64KB 정렬 페이지에서 잘라낸 프리 리스트로 소형 할당(≤512바이트, ≤16바이트 정렬)을 처리하고, 그 외의 경우에는 페이지 정렬된 "대형 할당" 경로로 폴백하는 버킷/Bin 방식 얼로케이터다. 이를 통해 소형 객체에 대한 할당 단위 CRT 오버헤드와 외부 단편화를 제거한다.
 
-**Code** (`Engine/Include/Core/Memory/FMallocBinned.h`):
+**코드** (`Engine/Include/Core/Memory/FMallocBinned.h`):
 ```cpp
 static const int32 NUM_BINS = 6;                 // 16, 32, 64, 128, 256, 512
 static const int32 MAX_SMALL_SIZE = 512;
@@ -140,7 +141,7 @@ struct FPageHeader
 static const size_t HEADER_SIZE = 32;
 ```
 
-Bin table initialization (`Engine/Include/Core/Memory/FMallocBinned.cpp`):
+Bin 테이블 초기화 (`Engine/Include/Core/Memory/FMallocBinned.cpp`):
 ```cpp
 FMallocBinned::FMallocBinned() : m_pAllPages(nullptr)
 {
@@ -154,7 +155,7 @@ FMallocBinned::FMallocBinned() : m_pAllPages(nullptr)
 }
 ```
 
-Page → header recovery via pointer masking:
+포인터 마스킹을 통한 페이지 → 헤더 복원:
 ```cpp
 FMallocBinned::FPageHeader* FMallocBinned::PageOf(void* ptr)
 {
@@ -164,7 +165,7 @@ FMallocBinned::FPageHeader* FMallocBinned::PageOf(void* ptr)
 }
 ```
 
-Growing a bin (page carving):
+Bin 확장 (페이지 절단):
 ```cpp
 void FMallocBinned::GrowBin(int32 binIndex)
 {
@@ -205,7 +206,7 @@ void* FMallocBinned::Malloc(size_t size, uint32 alignment)
 }
 ```
 
-`Free` (pointer-masking to find bin/page, no per-pointer size lookup needed for small blocks):
+`Free` (bin/페이지를 찾기 위한 포인터 마스킹, 소형 블록에는 포인터별 크기 조회가 필요 없음):
 ```cpp
 void FMallocBinned::Free(void* ptr)
 {
@@ -224,54 +225,54 @@ void FMallocBinned::Free(void* ptr)
 }
 ```
 
-**Step-by-step: `Malloc(size, alignment)`**
-1. If `size == 0`, it is bumped to `1` (so a zero-size request still returns a valid, freeable pointer).
-2. **Small-path check:** if `size <= 512` and `alignment <= 16`, `SizeToBin(size)` linearly scans `m_BinBlockSize[0..5]` (16, 32, 64, 128, 256, 512) and returns the first index whose block size is `>= size`; otherwise returns `LARGE_BIN`.
-3. If a valid bin is found: if the bin's free-list (`m_FreeLists[bin]`) is empty, `GrowBin(bin)` is called to carve a fresh page (see below).
-4. The head node of the free-list (`FFreeBlock* pBlock`) is popped off (`m_FreeLists[bin] = pBlock->m_pNext`) and its address is returned directly as the user pointer — an O(1) pop, no header search per-allocation.
-5. If size/alignment don't fit a bin, control falls through to `AllocateLarge`.
+**단계별: `Malloc(size, alignment)`**
+1. `size == 0`이면 `1`로 올림된다(크기가 0인 요청도 유효하고 해제 가능한 포인터를 반환하도록 하기 위함).
+2. **소형 경로 판정:** `size <= 512`이고 `alignment <= 16`이면 `SizeToBin(size)`가 `m_BinBlockSize[0..5]`(16, 32, 64, 128, 256, 512)를 선형으로 스캔하여 블록 크기가 `size` 이상인 첫 번째 인덱스를 반환한다. 그렇지 않으면 `LARGE_BIN`을 반환한다.
+3. 유효한 bin이 발견되면: 해당 bin의 프리 리스트(`m_FreeLists[bin]`)가 비어 있을 경우 `GrowBin(bin)`을 호출해 새 페이지를 잘라낸다(아래 참고).
+4. 프리 리스트의 head 노드(`FFreeBlock* pBlock`)를 팝하고(`m_FreeLists[bin] = pBlock->m_pNext`), 그 주소를 그대로 사용자 포인터로 반환한다 — 할당당 헤더 검색 없이 O(1) 팝이다.
+5. 크기/정렬이 어떤 bin에도 맞지 않으면 `AllocateLarge`로 넘어간다.
 
-**Step-by-step: `GrowBin(binIndex)` (page carving)**
-1. Allocates one full `PAGE_SIZE` (64KB) block via `_aligned_malloc(PAGE_SIZE, PAGE_SIZE)`, guaranteeing the page's base address is itself 64KB-aligned (checked via `check((addr & (PAGE_SIZE-1)) == 0)`).
-2. The first `HEADER_SIZE` (32) bytes of the page become an `FPageHeader`: magic number `PAGE_MAGIC`, the owning `m_BinIndex`, `m_AllocSize = 0` (unused for small bins), and it's linked into the intrusive `m_pAllPages` list (prepended).
-3. The remaining `PAGE_SIZE - HEADER_SIZE` bytes are treated as a raw array of `blockSize`-sized slots (`blockCount = usable / blockSize`).
-4. Each slot is walked and pushed onto `m_FreeLists[binIndex]` as an `FFreeBlock` node, building the free-list back-to-front (last slot in memory ends up at the tail of the list since each new node is pushed to the front). After this, the bin has a full page's worth of free blocks.
+**단계별: `GrowBin(binIndex)` (페이지 절단)**
+1. `_aligned_malloc(PAGE_SIZE, PAGE_SIZE)`를 통해 한 페이지 전체(`PAGE_SIZE`, 64KB) 블록을 할당하며, 페이지의 기준 주소 자체가 64KB 정렬되도록 보장한다(`check((addr & (PAGE_SIZE-1)) == 0)`로 검증).
+2. 페이지의 처음 `HEADER_SIZE`(32) 바이트는 `FPageHeader`가 된다: 매직 넘버 `PAGE_MAGIC`, 소유 `m_BinIndex`, `m_AllocSize = 0`(소형 bin에서는 미사용)이 설정되며, 인트루시브 `m_pAllPages` 리스트에 연결된다(앞쪽에 삽입).
+3. 나머지 `PAGE_SIZE - HEADER_SIZE` 바이트는 `blockSize` 크기 슬롯의 원시 배열로 취급된다(`blockCount = usable / blockSize`).
+4. 각 슬롯을 순회하며 `FFreeBlock` 노드로서 `m_FreeLists[binIndex]`에 밀어 넣어 프리 리스트를 뒤에서 앞으로 구성한다(각 새 노드가 앞쪽에 삽입되므로 메모리상 마지막 슬롯이 리스트의 꼬리에 놓이게 된다). 이 과정 후 해당 bin은 한 페이지 분량의 프리 블록을 가지게 된다.
 
-**Step-by-step: `Free(ptr)` (pointer-masking)**
-1. `PageOf(ptr)` masks off the low `PAGE_SIZE-1` bits of the pointer (`addr & ~(PAGE_SIZE-1)`) to jump directly to the page's base address — this works because every page (small-bin or large) is allocated 64KB-aligned, so *any* pointer inside it shares the same masked base as the `FPageHeader` sitting at offset 0. This is how the allocator recovers "which bin does this belong to" without a separate lookup table.
-2. The header's `m_Magic` is checked against `PAGE_MAGIC` (corruption/foreign-pointer guard), and `m_BinIndex` is validated as either `LARGE_BIN` or a valid bin index.
-3. If `LARGE_BIN`: the page header is unlinked from the singly-linked `m_pAllPages` list by cursor-walking to find the matching node, then the whole page is released via `_aligned_free`.
-4. Otherwise (small bin): the block is simply pushed back onto `m_FreeLists[bin]` (`pBlock->m_pNext = m_FreeLists[bin]; m_FreeLists[bin] = pBlock`) — no memory is returned to the OS; the page stays owned by the allocator for reuse. Note pages are never returned to the small-bin free pool cooperatively across bins, and there's no bin-empty-page release logic — pages live until the allocator itself is destroyed.
+**단계별: `Free(ptr)` (포인터 마스킹)**
+1. `PageOf(ptr)`는 포인터의 하위 `PAGE_SIZE-1` 비트를 마스킹하여(`addr & ~(PAGE_SIZE-1)`) 페이지의 기준 주소로 바로 이동한다 — 이는 모든 페이지(소형 bin이든 대형이든)가 64KB 정렬로 할당되기 때문에 가능하며, 페이지 내부의 *어떤* 포인터든 오프셋 0에 위치한 `FPageHeader`와 같은 마스킹된 기준 주소를 공유한다. 이것이 별도의 조회 테이블 없이 "이 포인터가 어느 bin에 속하는지" 복원하는 방식이다.
+2. 헤더의 `m_Magic`을 `PAGE_MAGIC`과 비교해 검증하고(손상/외부 포인터 가드), `m_BinIndex`가 `LARGE_BIN`이거나 유효한 bin 인덱스인지 검증한다.
+3. `LARGE_BIN`인 경우: 단일 연결 리스트인 `m_pAllPages`를 커서로 순회하며 일치하는 노드를 찾아 페이지 헤더를 연결 해제한 뒤, 페이지 전체를 `_aligned_free`로 해제한다.
+4. 그렇지 않은 경우(소형 bin): 블록을 단순히 `m_FreeLists[bin]`에 다시 밀어 넣는다(`pBlock->m_pNext = m_FreeLists[bin]; m_FreeLists[bin] = pBlock`) — 메모리는 OS로 반환되지 않으며, 페이지는 재사용을 위해 얼로케이터가 계속 소유한다. 참고로 페이지가 bin 간에 협조적으로 소형-bin 프리 풀로 반환되는 일은 없으며, bin이 비었을 때 페이지를 해제하는 로직도 없다 — 페이지는 얼로케이터 자체가 소멸될 때까지 살아있는다.
 
-**Step-by-step: `AllocateLarge(size, alignment)` (large fallback)**
-1. `alignment` is clamped up to at least `BIN_MAX_ALIGN` (16), and `check`ed to be `< PAGE_SIZE`.
-2. Required bytes = `HEADER_SIZE + alignment + size` (header, plus worst-case alignment slack, plus payload), then rounded up to the next multiple of `PAGE_SIZE` (`totalSize`).
-3. `_aligned_malloc(totalSize, PAGE_SIZE)` allocates a 64KB-page-aligned block sized to a whole number of pages.
-4. An `FPageHeader` is written at the front with `m_BinIndex = LARGE_BIN` and `m_AllocSize = size` (the exact user-requested size, needed later for `Realloc`'s copy-size calculation since large blocks don't have a fixed bin size). The page is linked into `m_pAllPages`.
-5. The payload pointer is computed as `pRaw + HEADER_SIZE`, then rounded up to the requested `alignment` boundary, and that aligned address is returned. This wastes up to `alignment - 1` bytes of padding between the header and the payload.
+**단계별: `AllocateLarge(size, alignment)` (대형 폴백)**
+1. `alignment`는 최소 `BIN_MAX_ALIGN`(16)까지 올림 조정되며, `PAGE_SIZE`보다 작은지 `check`로 검증된다.
+2. 필요한 바이트 수는 `HEADER_SIZE + alignment + size`(헤더, 최악의 경우 정렬 여유분, 페이로드)로 계산된 후 `PAGE_SIZE`의 다음 배수로 올림된다(`totalSize`).
+3. `_aligned_malloc(totalSize, PAGE_SIZE)`가 페이지 수만큼의 크기로 64KB 페이지 정렬된 블록을 할당한다.
+4. 앞부분에 `FPageHeader`가 기록되며 `m_BinIndex = LARGE_BIN`, `m_AllocSize = size`(사용자가 요청한 정확한 크기이며, 대형 블록은 고정 bin 크기가 없으므로 나중에 `Realloc`의 복사 크기 계산에 필요)로 설정된다. 이 페이지는 `m_pAllPages`에 연결된다.
+5. 페이로드 포인터는 `pRaw + HEADER_SIZE`로 계산된 뒤 요청된 `alignment` 경계로 올림되며, 그 정렬된 주소가 반환된다. 이는 헤더와 페이로드 사이에 최대 `alignment - 1` 바이트의 패딩을 낭비한다.
 
-**Step-by-step: `Realloc(ptr, newSize, alignment)`**
-1. `ptr == nullptr` → delegates entirely to `Malloc(newSize, alignment)`.
-2. `newSize == 0` → frees `ptr` and returns `nullptr`.
-3. Otherwise: locates the page header via `PageOf(ptr)`, validates the magic, and determines `oldSize` — for `LARGE_BIN` it's the stored `m_AllocSize`; for a small bin it's `m_BinBlockSize[binIndex]` (the bin's fixed slot size, not the original requested size — small bins don't track exact request sizes).
-4. Always allocates a brand-new block via `Malloc(newSize, alignment)` (there is no in-place growth), copies `min(oldSize, newSize)` bytes via `FMemory::Memcpy`, frees the old block, and returns the new pointer. This is a copy-based realloc with no shrink/grow-in-place optimization, even within the same bin.
+**단계별: `Realloc(ptr, newSize, alignment)`**
+1. `ptr == nullptr` → 전체를 `Malloc(newSize, alignment)`으로 위임한다.
+2. `newSize == 0` → `ptr`을 해제하고 `nullptr`을 반환한다.
+3. 그 외의 경우: `PageOf(ptr)`로 페이지 헤더를 찾고 매직 넘버를 검증한 뒤 `oldSize`를 결정한다 — `LARGE_BIN`이면 저장된 `m_AllocSize`이고, 소형 bin이면 `m_BinBlockSize[binIndex]`(원래 요청 크기가 아니라 해당 bin의 고정 슬롯 크기다 — 소형 bin은 정확한 요청 크기를 추적하지 않는다)이다.
+4. 항상 `Malloc(newSize, alignment)`을 통해 완전히 새로운 블록을 할당하고(제자리 확장은 없다), `FMemory::Memcpy`로 `min(oldSize, newSize)` 바이트를 복사한 뒤 기존 블록을 해제하고 새 포인터를 반환한다. 이는 같은 bin 내에서조차 축소/확장을 제자리에서 최적화하지 않는, 복사 기반 realloc이다.
 
-**Public API surface:**
-| Member | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `Malloc(size, alignment)` | Bin-based small alloc or large-page fallback |
-| `Realloc(ptr, newSize, alignment)` | Always copy-based (new alloc + memcpy + free) |
-| `Free(ptr)` | Pointer-masks to page header, frees large or returns block to bin free-list |
-| `NUM_BINS`, `MAX_SMALL_SIZE`, `BIN_MAX_ALIGN`, `PAGE_SIZE`, `PAGE_MAGIC`, `LARGE_BIN` | Public constants describing bin/page geometry |
-| `SizeToBin`, `GrowBin`, `AllocateLarge`, `PageOf` *(private)* | Internal bin lookup, page carving, large-path, header recovery |
+| `Malloc(size, alignment)` | Bin 기반 소형 할당 또는 대형 페이지 폴백 |
+| `Realloc(ptr, newSize, alignment)` | 항상 복사 기반(새 할당 + memcpy + 해제) |
+| `Free(ptr)` | 포인터를 마스킹하여 페이지 헤더를 찾고, 대형 블록은 해제하거나 블록을 bin 프리 리스트로 반환 |
+| `NUM_BINS`, `MAX_SMALL_SIZE`, `BIN_MAX_ALIGN`, `PAGE_SIZE`, `PAGE_MAGIC`, `LARGE_BIN` | bin/페이지 구조를 나타내는 공개 상수 |
+| `SizeToBin`, `GrowBin`, `AllocateLarge`, `PageOf` *(비공개)* | 내부 bin 조회, 페이지 절단, 대형 경로, 헤더 복원 |
 
 ---
 
-### FMemory — global allocator entry points
+### FMemory — 전역 얼로케이터 진입점
 
-**Purpose:** A static facade over the process-wide `GMalloc` pointer, providing the engine-wide allocation API (and raw memory ops) that all other systems call instead of touching `IAllocator`/CRT directly.
+**목적:** 프로세스 전역 `GMalloc` 포인터 위에 만들어진 정적 파사드로, 다른 모든 시스템이 `IAllocator`/CRT를 직접 건드리는 대신 호출하는 엔진 전역 할당 API(및 원시 메모리 연산)를 제공한다.
 
-**Code** (`Engine/Include/Core/Memory/FMemory.h`):
+**코드** (`Engine/Include/Core/Memory/FMemory.h`):
 ```cpp
 extern IAllocator* GMalloc;
 
@@ -304,29 +305,29 @@ void* FMemory::Malloc(size_t size, uint32 alignment)
 }
 ```
 
-**Step-by-step runtime behavior:**
-1. `InitMemory()` must be called once at engine startup. It constructs a **function-local static** `FMallocBinned` (so it's lazily constructed on first call and lives for the program's duration) and points the global `GMalloc` at it. This is the single place in the codebase that decides the concrete allocator strategy — swapping to `FMallocAnsi` would only require changing this one function.
-2. `Malloc`/`Realloc`/`Free` are thin static wrappers: each does `check(GMalloc)` (hard-asserts the allocator was initialized) and then virtually dispatches to `GMalloc->Malloc/Realloc/Free`. This is the polymorphism seam — every caller in the engine goes through `IAllocator`'s vtable via this single global pointer.
-3. `Memcpy`/`Memset`/`Memmove` are direct passthroughs to the CRT `memcpy`/`memset`/`memmove` (not allocator-related, just centralizing raw memory ops in one class per the "no direct CRT calls scattered around" convention).
-4. `Memzero(dest, count)` is `memset(dest, 0, count)` — a convenience wrapper.
+**단계별 런타임 동작:**
+1. `InitMemory()`는 엔진 시작 시 한 번 호출되어야 한다. 이 함수는 **함수 지역 정적(static)** `FMallocBinned`를 생성하고(따라서 첫 호출 시 지연 생성되며 프로그램이 종료될 때까지 유지된다) 전역 `GMalloc`이 이를 가리키도록 설정한다. 이곳이 코드베이스에서 구체적인 얼로케이터 전략을 결정하는 유일한 지점이다 — `FMallocAnsi`로 교체하려면 오직 이 함수 하나만 바꾸면 된다.
+2. `Malloc`/`Realloc`/`Free`는 얇은 정적 래퍼다: 각각 `check(GMalloc)`(얼로케이터가 초기화되었는지 하드 어설트)을 수행한 뒤 `GMalloc->Malloc/Realloc/Free`로 가상 디스패치한다. 이것이 다형성의 접합점이다 — 엔진 내 모든 호출자는 이 단일 전역 포인터를 통해 `IAllocator`의 vtable을 거치게 된다.
+3. `Memcpy`/`Memset`/`Memmove`는 CRT의 `memcpy`/`memset`/`memmove`로 직접 전달된다(얼로케이터와는 무관하며, "CRT를 여기저기 직접 호출하지 않는다"는 관례에 따라 원시 메모리 연산을 한 클래스에 모아둔 것이다).
+4. `Memzero(dest, count)`는 `memset(dest, 0, count)`다 — 편의를 위한 래퍼다.
 
-**Public API surface:**
-| Member | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `GMalloc` (global `extern IAllocator*`) | The active allocator instance, set by `InitMemory()` |
-| `InitMemory()` | Constructs the static `FMallocBinned` and binds `GMalloc` |
-| `Malloc(size, alignment=16)` | Dispatches to `GMalloc->Malloc` |
-| `Realloc(ptr, newSize, alignment=16)` | Dispatches to `GMalloc->Realloc` |
-| `Free(ptr)` | Dispatches to `GMalloc->Free` |
-| `Memcpy/Memset/Memmove/Memzero` | Thin CRT `mem*` wrappers |
+| `GMalloc` (전역 `extern IAllocator*`) | `InitMemory()`가 설정하는 현재 활성 얼로케이터 인스턴스 |
+| `InitMemory()` | 정적 `FMallocBinned`를 생성하고 `GMalloc`을 바인딩 |
+| `Malloc(size, alignment=16)` | `GMalloc->Malloc`으로 디스패치 |
+| `Realloc(ptr, newSize, alignment=16)` | `GMalloc->Realloc`으로 디스패치 |
+| `Free(ptr)` | `GMalloc->Free`로 디스패치 |
+| `Memcpy/Memset/Memmove/Memzero` | 얇은 CRT `mem*` 래퍼 |
 
 ---
 
-### MemoryOverride — global `new`/`delete` routing
+### MemoryOverride — 전역 `new`/`delete` 라우팅
 
-**Purpose:** Overrides the global `operator new`/`operator delete` (scalar, array, and sized-delete forms) so that *every* engine-wide `new`/`delete` call transparently routes through `FMemory`/`GMalloc`, and (in Debug) through `FMemoryTracker`.
+**목적:** 전역 `operator new`/`operator delete`(스칼라, 배열, sized-delete 형태 모두)를 오버라이드하여 엔진 전역의 *모든* `new`/`delete` 호출이 투명하게 `FMemory`/`GMalloc`을 거치고, (Debug 빌드에서는) `FMemoryTracker`를 거치도록 한다.
 
-**Code** (`Engine/Include/Core/Memory/MemoryOverride.cpp`):
+**코드** (`Engine/Include/Core/Memory/MemoryOverride.cpp`):
 ```cpp
 IAllocator* GMalloc = nullptr;
 
@@ -354,30 +355,30 @@ void operator delete(void* ptr, size_t) noexcept
 	FMemory::Free(ptr);
 }
 ```
-(Array forms `operator new[]`/`operator delete[]` mirror the scalar ones exactly.)
+(배열 형태 `operator new[]`/`operator delete[]`는 스칼라 버전과 정확히 동일한 구조다.)
 
-**Step-by-step runtime behavior:**
-1. This `.cpp` is also where the actual storage for the `extern IAllocator* GMalloc` declared in `FMemory.h` is defined (`IAllocator* GMalloc = nullptr;`) — it starts null until `FMemory::InitMemory()` runs.
-2. Any `new T(...)` in the engine resolves to this overridden `operator new(size_t)` (since RTTI/exceptions are disabled and no custom placement-new is used for a plain `new`). In `_DEBUG` builds it first calls `FMemoryTracker::OnAlloc(size)` to bump the tracker's allocation counters, then calls `FMemory::Malloc(size)` (using `FMemory`'s default 16-byte alignment) which ultimately dispatches to `GMalloc->Malloc`.
-3. `delete ptr` resolves to `operator delete(void*)`, which (Debug) calls `FMemoryTracker::OnFree()` then `FMemory::Free(ptr)`.
-4. The two **sized-delete** overloads (`operator delete(void*, size_t)` / `operator delete[](void*, size_t)`) are provided because C++14+ compilers may prefer the sized-delete overload when it's available (part of the mandatory global operator-delete overload set) — both are implemented identically to the unsized versions, just ignoring the extra `size_t` parameter, since `FMallocBinned::Free` recovers all needed size/bin info itself via pointer masking rather than relying on the size passed by the compiler.
-5. Because this happens *before* `FMemory::InitMemory()` runs for any static/global object constructed before `main`, any such early `new` would dereference a null `GMalloc` and hit the `check(GMalloc)` assert in `FMemory::Malloc` — i.e., `InitMemory()` must run before any heap-allocating global/static construction that isn't itself statically initialized.
+**단계별 런타임 동작:**
+1. 이 `.cpp` 파일은 `FMemory.h`에서 `extern`으로 선언된 `IAllocator* GMalloc`의 실제 저장 공간이 정의되는 곳이기도 하다(`IAllocator* GMalloc = nullptr;`) — `FMemory::InitMemory()`가 실행되기 전까지는 null 상태로 시작한다.
+2. 엔진 내 모든 `new T(...)`는 이 오버라이드된 `operator new(size_t)`로 귀결된다(RTTI/예외가 비활성화되어 있고 일반 `new`에 커스텀 placement-new가 사용되지 않기 때문이다). `_DEBUG` 빌드에서는 먼저 `FMemoryTracker::OnAlloc(size)`를 호출해 트래커의 할당 카운터를 증가시킨 뒤, `FMemory::Malloc(size)`(`FMemory`의 기본 16바이트 정렬 사용)를 호출하며, 이는 최종적으로 `GMalloc->Malloc`으로 디스패치된다.
+3. `delete ptr`은 `operator delete(void*)`로 귀결되며, (Debug 빌드에서는) `FMemoryTracker::OnFree()`를 호출한 뒤 `FMemory::Free(ptr)`를 호출한다.
+4. 두 개의 **sized-delete** 오버로드(`operator delete(void*, size_t)` / `operator delete[](void*, size_t)`)가 제공되는 이유는, C++14 이상 컴파일러가 sized-delete 오버로드가 존재할 경우 이를 선호할 수 있기 때문이다(전역 operator-delete 오버로드 집합의 필수 구성 요소). 두 버전 모두 unsized 버전과 동일하게 구현되어 있으며, 추가로 전달되는 `size_t` 매개변수는 무시한다. `FMallocBinned::Free`가 컴파일러가 전달하는 크기에 의존하지 않고 포인터 마스킹을 통해 필요한 크기/bin 정보를 스스로 복원하기 때문이다.
+5. 이 오버라이드는 `main` 이전에 생성되는 정적/전역 객체에 대해서는 `FMemory::InitMemory()`가 실행되기 *전에* 일어나므로, 그런 이른 시점의 `new` 호출은 null인 `GMalloc`을 역참조하여 `FMemory::Malloc`의 `check(GMalloc)` 어설트에 걸리게 된다 — 즉, 정적으로 초기화되지 않는 힙 할당 전역/정적 객체 생성보다 `InitMemory()`가 먼저 실행되어야 한다.
 
-**Public API surface:**
-| Symbol | Purpose |
+**공개 API 목록:**
+| 심볼 | 설명 |
 |---|---|
-| `IAllocator* GMalloc` | Definition (storage) of the global allocator pointer |
-| `operator new(size_t)` / `operator new[](size_t)` | Routes to `FMemoryTracker::OnAlloc` (Debug) + `FMemory::Malloc` |
-| `operator delete(void*)` / `operator delete[](void*)` | Routes to `FMemoryTracker::OnFree` (Debug) + `FMemory::Free` |
-| `operator delete(void*, size_t)` / `operator delete[](void*, size_t)` | Sized-delete overloads, identical behavior, `size_t` unused |
+| `IAllocator* GMalloc` | 전역 얼로케이터 포인터의 정의(저장 공간) |
+| `operator new(size_t)` / `operator new[](size_t)` | `FMemoryTracker::OnAlloc`(Debug) + `FMemory::Malloc`으로 라우팅 |
+| `operator delete(void*)` / `operator delete[](void*)` | `FMemoryTracker::OnFree`(Debug) + `FMemory::Free`로 라우팅 |
+| `operator delete(void*, size_t)` / `operator delete[](void*, size_t)` | sized-delete 오버로드, 동일한 동작, `size_t`는 미사용 |
 
 ---
 
-### FPoolAllocator — fixed-block-size pool
+### FPoolAllocator — 고정 블록 크기 풀
 
-**Purpose:** A fixed-size-block allocator over one contiguous buffer, intended (per `CLAUDE.md`) for bulk homogeneous allocations like monsters or particles, using an intrusive singly-linked free-list embedded in the unused blocks themselves.
+**목적:** 하나의 연속 버퍼 위에서 동작하는 고정 크기 블록 얼로케이터로, `CLAUDE.md`에 따르면 몬스터나 파티클처럼 대량의 동종 객체를 할당하는 용도로 사용된다. 사용되지 않는 블록 내부에 직접 임베드된 인트루시브 단일 연결 프리 리스트를 사용한다.
 
-**Code** (`Engine/Include/Core/Memory/FPoolAllocator.h`):
+**코드** (`Engine/Include/Core/Memory/FPoolAllocator.h`):
 ```cpp
 class FPoolAllocator
 {
@@ -432,28 +433,28 @@ void FPoolAllocator::Release(void* ptr)
 }
 ```
 
-**Step-by-step runtime behavior:**
-1. `Init(blockSize, blockCount)`: clamps `m_BlockSize` up to at least `sizeof(void*)` (so a free block can always hold a next-pointer), then allocates one contiguous buffer of `blockSize * blockCount` bytes via `FMemory::Malloc` (16-byte aligned).
-2. It then walks the buffer block-by-block, writing into the *first `sizeof(void*)` bytes of each block* the address of the next block, forming a forward-linked free-list from block 0 through block `N-2`; the last block's link is set to `nullptr` (list terminator). `m_pFreeList` is set to point at block 0 (the head of this list).
-3. `Acquire()`: `check`s the free-list isn't empty (pool exhaustion is a hard assert, not a graceful failure — matching the "no exceptions" engine philosophy), pops the head block off the list (reads the block's embedded next-pointer to advance `m_pFreeList`), and returns that block's address to the caller. O(1), no scanning.
-4. `Release(ptr)`: pushes the returned block back onto the head of the free-list by writing the current `m_pFreeList` into the first `sizeof(void*)` bytes of `ptr`, then making `ptr` the new head. O(1). This is destructive to whatever data was in the block — callers must ensure the object's destructor has already run (or that overwriting the object's first pointer-width bytes is safe) before calling `Release`.
-5. `Destroy()`: frees the whole backing buffer via `FMemory::Free(m_pMemory)` and zeroes out the bookkeeping fields. Note this does **not** call destructors on any live objects still "acquired" — it's purely a raw-memory pool, with no ownership/lifetime tracking of what's stored in each block.
+**단계별 런타임 동작:**
+1. `Init(blockSize, blockCount)`: `m_BlockSize`를 최소 `sizeof(void*)`까지 올림 조정한다(프리 블록이 항상 다음 포인터를 담을 수 있도록 하기 위함). 그런 다음 `FMemory::Malloc`(16바이트 정렬)을 통해 `blockSize * blockCount` 바이트 크기의 연속 버퍼 하나를 할당한다.
+2. 이후 버퍼를 블록 단위로 순회하며 *각 블록의 첫 `sizeof(void*)` 바이트*에 다음 블록의 주소를 기록하여, 블록 0부터 블록 `N-2`까지 이어지는 순방향 연결 프리 리스트를 구성한다. 마지막 블록의 링크는 `nullptr`(리스트 종료자)로 설정된다. `m_pFreeList`는 블록 0(이 리스트의 head)을 가리키도록 설정된다.
+3. `Acquire()`: 프리 리스트가 비어 있지 않은지 `check`한다(풀 고갈은 우아한 실패가 아니라 하드 어설트로 처리된다 — "예외 없음" 엔진 철학과 일치한다). head 블록을 리스트에서 팝하고(블록에 임베드된 다음 포인터를 읽어 `m_pFreeList`를 전진시킨다), 해당 블록의 주소를 호출자에게 반환한다. O(1), 스캔 없음.
+4. `Release(ptr)`: 현재 `m_pFreeList`를 `ptr`의 첫 `sizeof(void*)` 바이트에 기록한 뒤 `ptr`을 새로운 head로 만듦으로써, 반환된 블록을 프리 리스트의 head로 다시 밀어 넣는다. O(1). 이는 블록에 있던 기존 데이터를 파괴하므로, 호출자는 `Release`를 호출하기 전에 객체의 소멸자가 이미 실행되었는지(또는 객체의 첫 포인터 폭만큼 바이트를 덮어써도 안전한지) 반드시 확인해야 한다.
+5. `Destroy()`: `FMemory::Free(m_pMemory)`를 통해 전체 백킹 버퍼를 해제하고 기록 필드를 0으로 초기화한다. 참고로 이 함수는 여전히 "획득된" 상태로 남아 있는 살아있는 객체의 소멸자를 **호출하지 않는다** — 이는 순수한 원시 메모리 풀이며, 각 블록에 저장된 것의 소유권/수명을 추적하지 않는다.
 
-**Public API surface:**
-| Method | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `Init(blockSize, blockCount)` | Allocates the backing buffer and builds the intrusive free-list |
-| `Acquire()` | Pops and returns one free block (asserts if pool exhausted) |
-| `Release(void* ptr)` | Pushes a block back onto the free-list |
-| `Destroy()` | Frees the backing buffer, resets state |
+| `Init(blockSize, blockCount)` | 백킹 버퍼를 할당하고 인트루시브 프리 리스트를 구성 |
+| `Acquire()` | 프리 블록 하나를 팝하여 반환(풀 고갈 시 어설트) |
+| `Release(void* ptr)` | 블록을 프리 리스트로 다시 밀어 넣음 |
+| `Destroy()` | 백킹 버퍼를 해제하고 상태를 초기화 |
 
 ---
 
-### FStackAllocator — frame/linear (bump) allocator
+### FStackAllocator — 프레임/선형(bump) 얼로케이터
 
-**Purpose:** A linear "bump-pointer" allocator over one preallocated buffer intended for per-frame temporary allocations that are all discarded together via a single `Reset()` (no per-allocation `Free`).
+**목적:** 사전 할당된 하나의 버퍼 위에서 동작하는 선형 "bump-pointer" 얼로케이터로, 프레임 단위 임시 할당을 위한 것이며 단일 `Reset()` 호출로 모든 할당이 한꺼번에 폐기된다(할당별 `Free` 없음).
 
-**Code** (`Engine/Include/Core/Memory/FStackAllocator.h`):
+**코드** (`Engine/Include/Core/Memory/FStackAllocator.h`):
 ```cpp
 class FStackAllocator
 {
@@ -494,29 +495,29 @@ void FStackAllocator::Reset()
 }
 ```
 
-**Step-by-step runtime behavior:**
-1. `Init(capacity)` allocates one buffer of `capacity` bytes (16-byte aligned) via `FMemory::Malloc` and sets the bump-cursor `m_Offset` to `0`.
-2. `Alloc(size, alignment)`: rounds the current `m_Offset` up to the requested `alignment` boundary using the standard `(offset + align - 1) & ~(align - 1)` bit-mask trick (requires `alignment` be a power of two, unchecked). It `check`s that the aligned offset plus `size` doesn't exceed `m_Capacity` (hard-assert, no graceful growth — this is a fixed-capacity linear allocator). It then returns `m_pBuffer + aligned` and advances `m_Offset` to `aligned + size`. There is no per-allocation free — objects allocated this way are expected to have trivial/no destructors that need calling, or the caller manages destruction separately, since only a raw bump-pointer is tracked.
-3. `Reset()` simply sets `m_Offset` back to `0`, instantly "freeing" everything allocated since the last reset (or since `Init`) by discarding the cursor — no memory is actually returned to the OS or zeroed; the next `Alloc` calls will just overwrite the old contents. This is the intended per-frame idiom: `Reset()` once per frame, `Alloc()` many times during the frame.
-4. `Destroy()` frees the backing buffer and zeroes the bookkeeping fields.
+**단계별 런타임 동작:**
+1. `Init(capacity)`은 `FMemory::Malloc`을 통해 `capacity` 바이트(16바이트 정렬) 크기의 버퍼 하나를 할당하고 bump 커서 `m_Offset`을 `0`으로 설정한다.
+2. `Alloc(size, alignment)`: 표준적인 `(offset + align - 1) & ~(align - 1)` 비트마스크 트릭을 사용하여 현재 `m_Offset`을 요청된 `alignment` 경계로 올림한다(`alignment`가 2의 거듭제곱이어야 하며, 이는 검증되지 않는다). 정렬된 오프셋에 `size`를 더한 값이 `m_Capacity`를 넘지 않는지 `check`한다(하드 어설트이며 우아한 확장은 없다 — 이는 고정 용량 선형 얼로케이터다). 그런 다음 `m_pBuffer + aligned`를 반환하고 `m_Offset`을 `aligned + size`로 전진시킨다. 할당별 해제는 존재하지 않는다 — 이 방식으로 할당된 객체는 호출을 필요로 하는 사소한/없는 소멸자를 가지고 있거나, 호출자가 별도로 소멸을 관리한다고 가정된다. 오직 원시 bump 포인터만 추적되기 때문이다.
+3. `Reset()`은 단순히 `m_Offset`을 다시 `0`으로 되돌려, 마지막 리셋(또는 `Init`) 이후 할당된 모든 것을 커서 폐기만으로 즉시 "해제"한다 — 실제로 메모리가 OS에 반환되거나 0으로 초기화되지는 않으며, 다음 `Alloc` 호출들은 그저 기존 내용을 덮어쓸 뿐이다. 이것이 의도된 프레임 단위 관용구다: 프레임마다 한 번 `Reset()`, 프레임 도중 여러 번 `Alloc()`.
+4. `Destroy()`는 백킹 버퍼를 해제하고 기록 필드를 0으로 초기화한다.
 
-Note: the `.cpp` file's inline comments are encoded as garbled/mojibake text in the source (likely UTF-8 Korean comments misread as another codepage) — this doesn't affect compiled behavior, just documentation readability in that file.
+참고: `.cpp` 파일의 인라인 주석은 소스에서 깨진/모지바케(mojibake) 텍스트로 인코딩되어 있다(다른 코드페이지로 잘못 읽힌 UTF-8 한글 주석으로 추정된다) — 이는 컴파일된 동작에는 영향을 주지 않으며, 해당 파일의 문서 가독성에만 영향을 준다.
 
-**Public API surface:**
-| Method | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `Init(capacity)` | Allocates the backing buffer, resets cursor to 0 |
-| `Alloc(size, alignment=16)` | Bump-allocates `size` bytes at the next aligned offset (asserts on overflow) |
-| `Reset()` | Rewinds the cursor to 0, discarding all allocations since last reset |
-| `Destroy()` | Frees the backing buffer |
+| `Init(capacity)` | 백킹 버퍼를 할당하고 커서를 0으로 초기화 |
+| `Alloc(size, alignment=16)` | 다음 정렬된 오프셋에 `size` 바이트를 bump 할당(오버플로 시 어설트) |
+| `Reset()` | 커서를 0으로 되돌려 마지막 리셋 이후의 모든 할당을 폐기 |
+| `Destroy()` | 백킹 버퍼를 해제 |
 
 ---
 
-### FMemoryTracker — debug-only leak/allocation tracking
+### FMemoryTracker — 디버그 전용 릭/할당 추적
 
-**Purpose:** A `_DEBUG`-only global allocation/free counter hooked into the overridden `operator new`/`delete` to detect leaks (mismatched alloc/free counts) at shutdown; compiled out entirely in non-debug builds.
+**목적:** 오버라이드된 `operator new`/`delete`에 훅으로 연결된 `_DEBUG` 전용 전역 할당/해제 카운터로, 종료 시점에 릭(할당/해제 카운트 불일치)을 감지한다. non-debug 빌드에서는 완전히 컴파일에서 제외된다.
 
-**Code** (`Engine/Include/Core/Memory/FMemoryTracker.h`):
+**코드** (`Engine/Include/Core/Memory/FMemoryTracker.h`):
 ```cpp
 #ifdef _DEBUG
 class FMemoryTracker
@@ -554,32 +555,29 @@ void FMemoryTracker::ReportLeaks()
 }
 ```
 
-**Step-by-step runtime behavior:**
-1. The whole class (declaration and definition) is wrapped in `#ifdef _DEBUG` — in Release builds it doesn't exist at all, and the calls to it in `MemoryOverride.cpp` are compiled out by the same `#ifdef` guard there, so there is zero tracking overhead in Release.
-2. `OnAlloc(size)` is called from every overridden global `operator new`/`new[]` before the actual `FMemory::Malloc` call; it increments `m_AllocCount` and adds `size` to `m_TotalAllocBytes`.
-3. `OnFree()` is called from every overridden `operator delete`/`delete[]` (all four overloads, sized and unsized) before the actual `FMemory::Free` call; it increments `m_FreeCount`. Note it does **not** know the freed size (the sized-delete's `size_t` parameter is discarded even here), so `m_TotalAllocBytes` only ever tracks cumulative bytes allocated, not net/current bytes.
-4. `ReportLeaks()` is intended to be called at shutdown. It computes `leaked = m_AllocCount - m_FreeCount`. If positive, it formats a leak-warning message (counts and total allocated bytes) into a `wchar_t` buffer via `swprintf_s`, then emits it twice: once via `OutputDebugStringW` (visible in a debugger's Output window) and once via `wprintf` (visible on stdout/console). If `leaked <= 0`, it prints a "No leaks detected" message via `wprintf` only.
-5. Important caveat: this only tracks **counts**, not individual pointers/call-sites — it cannot report *which* allocation leaked, only whether the alloc/free counts are imbalanced and how many bytes were allocated in total over the process lifetime.
+**단계별 런타임 동작:**
+1. 클래스 전체(선언과 정의 모두)가 `#ifdef _DEBUG`로 감싸져 있다 — Release 빌드에서는 이 클래스가 아예 존재하지 않으며, `MemoryOverride.cpp`에서 이를 호출하는 코드 역시 같은 `#ifdef` 가드에 의해 컴파일에서 제외된다. 따라서 Release 빌드에는 추적 오버헤드가 전혀 없다.
+2. `OnAlloc(size)`는 오버라이드된 모든 전역 `operator new`/`new[]`에서 실제 `FMemory::Malloc` 호출 전에 호출되며, `m_AllocCount`를 증가시키고 `m_TotalAllocBytes`에 `size`를 더한다.
+3. `OnFree()`는 오버라이드된 모든 `operator delete`/`delete[]`(sized/unsized 포함 네 가지 오버로드 전부)에서 실제 `FMemory::Free` 호출 전에 호출되며, `m_FreeCount`를 증가시킨다. 참고로 이 함수는 해제된 크기를 알지 못한다(sized-delete의 `size_t` 매개변수는 여기서도 버려진다). 따라서 `m_TotalAllocBytes`는 오직 누적 할당 바이트만 추적할 뿐, 순/현재 바이트 수는 추적하지 않는다.
+4. `ReportLeaks()`는 종료 시점에 호출되도록 의도되었다. `leaked = m_AllocCount - m_FreeCount`를 계산한다. 양수라면 릭 경고 메시지(카운트와 총 할당 바이트)를 `swprintf_s`를 통해 `wchar_t` 버퍼에 포맷한 뒤 두 번 출력한다: 한 번은 `OutputDebugStringW`(디버거의 출력 창에서 확인 가능)로, 한 번은 `wprintf`(표준 출력/콘솔에서 확인 가능)로. `leaked <= 0`이면 `wprintf`만으로 "릭 없음" 메시지를 출력한다.
+5. 중요한 주의사항: 이 클래스는 오직 **카운트**만 추적할 뿐 개별 포인터/호출 지점은 추적하지 않는다 — 따라서 *어떤* 할당이 릭되었는지는 보고할 수 없고, 오직 할당/해제 카운트가 불균형한지, 그리고 프로세스 수명 동안 총 몇 바이트가 할당되었는지만 알 수 있다.
 
-**Public API surface (Debug builds only):**
-| Method | Purpose |
+**공개 API 목록 (Debug 빌드 전용):**
+| 멤버 | 설명 |
 |---|---|
-| `OnAlloc(size)` | Increments `m_AllocCount`, adds to `m_TotalAllocBytes` |
-| `OnFree()` | Increments `m_FreeCount` |
-| `ReportLeaks()` | Compares alloc/free counts and prints a leak report to debugger output + stdout |
-
----
-
+| `OnAlloc(size)` | `m_AllocCount`를 증가시키고 `m_TotalAllocBytes`에 더함 |
+| `OnFree()` | `m_FreeCount`를 증가시킴 |
+| `ReportLeaks()` | 할당/해제 카운트를 비교하여 디버거 출력 + 표준 출력으로 릭 보고서를 출력 |
 
 ---
 
 ## Templates
 
-### TypeTraits.h — compiler-intrinsic-based type trait library
+### TypeTraits.h — 컴파일러 인트린식 기반 타입 트레이트 라이브러리
 
-**Purpose:** A hand-rolled, STL-free set of compile-time type traits (integral-constant wrapper, same-type check, reference/CV stripping, pointer detection, POD/trivial/enum/class checks via compiler intrinsics, `TEnableIf`/`TConditional` SFINAE helpers, `TDecay`, and a `TIsBaseOf` implemented from scratch via SFINAE overload resolution).
+**목적:** 직접 손으로 작성한, STL을 사용하지 않는 컴파일 타임 타입 트레이트 모음이다(정수 상수 래퍼, 동일 타입 검사, 참조/CV 제거, 포인터 판별, 컴파일러 인트린식을 통한 POD/trivial/enum/class 검사, `TEnableIf`/`TConditional` SFINAE 헬퍼, `TDecay`, 그리고 SFINAE 오버로드 해석으로 처음부터 구현한 `TIsBaseOf`).
 
-**Code** (`Engine/Include/Core/Templates/TypeTraits.h`):
+**코드** (`Engine/Include/Core/Templates/TypeTraits.h`):
 ```cpp
 template<typename T, T Val>
 struct TIntegralConstant
@@ -629,37 +627,37 @@ template<typename Base, typename Derived>
 struct TIsBaseOf : TIntegralConstant<bool, UObjectPrivate::TIsBaseOfHelper<Base, Derived>::Value> {};
 ```
 
-**Step-by-step: what happens at compile time when this code is used**
-1. `TIntegralConstant<T, Val>` is the foundation: it wraps a compile-time constant of type `T` as a `static constexpr` member `Value`, and provides an implicit `constexpr operator ValueType()`, so any `TIntegralConstant`-derived trait can be used directly as a boolean in `if constexpr` or `static_assert` contexts. `FTrueType`/`FFalseType` are the boolean specializations that virtually every other trait below inherits from.
-2. `TIsSame<A, B>` uses partial specialization: the primary template inherits `FFalseType`; the specialization `TIsSame<T, T>` (only matches when both template args are identical) inherits `FTrueType`. The compiler picks the more specialized match when `A == B`.
-3. `TIsPointer<T>` similarly defaults to `FFalseType`, with partial specializations for `T*` and `T* const` matching and yielding `FTrueType` — this is pure pattern-matching over the type, no runtime code generated.
-4. `TIsPOD`, `TIsTriviallyCopyable`, `TIsEnum`, `TIsClass` all delegate directly to MSVC/Clang **compiler builtins** (`__is_pod`, `__is_trivially_copyable`, `__is_enum`, `__is_class`) — these traits cannot be implemented in portable C++ without such intrinsics, so the library leans on the compiler here rather than reimplementing them from scratch. These feed into things like `TArray`'s POD branch optimization mentioned in `CLAUDE.md` (`if constexpr` dispatch on `TIsPOD<T>::Value` to skip constructor/destructor calls for trivial types).
-5. `TEnableIf<Condition, T>`: the primary template has **no** `Type` member at all when `Condition` is false; only the `TEnableIf<true, T>` specialization defines `::Type`. Used in a function's return type or template parameter, referencing `TEnableIf<false, X>::Type` triggers SFINAE (substitution failure is not an error) — the overload silently drops out of the overload set instead of hard-erroring, which is how conditional-overload dispatch is achieved without `if constexpr` at the declaration level.
-6. `TConditional<Cond, TrueT, FalseT>`: compile-time ternary — the primary template picks `FalseT`, the `<true, ...>` partial specialization picks `TrueT`. This is exactly what `TAnd`/`TOr` (in `AndOrNot.h`) use internally to select between continuing the recursion or short-circuiting.
-7. `TDecay<T>` composes `TRemoveReference<T>::Type` and then `TRemoveCV<...>::Type`, replicating `std::decay`'s reference/cv-stripping behavior (though notably *not* replicating `std::decay`'s array-to-pointer/function-to-pointer decay, since there's no such specialization shown here — only the CV/reference part is implemented).
-8. `TIsBaseOf<Base, Derived>` is the most involved: it's implemented via classic **SFINAE overload resolution**, no compiler intrinsic. `TIsBaseOfHelper::Test` is overloaded: one overload accepts `const Base*` exactly (returns `char`, size 1), the other is a C-style varargs catch-all `Test(...)` (returns a reference to `char[2]`, size 2). When called with a `const Derived*` (via `static_cast<const Derived*>(nullptr)`), the compiler prefers the `const Base*` overload **only if** `Derived*` is implicitly convertible to `Base*` (i.e., `Derived` publicly/unambiguously derives from `Base`, or `Base == Derived`); otherwise only the varargs catch-all can bind. `sizeof(Test(...))` is then `1` (true) or `2` (false), computed entirely at compile time with no function actually called at runtime — `Value` is a `constexpr bool` derived from that `sizeof` comparison. This lives in a `UObjectPrivate` namespace, hinting it was purpose-built to support the engine's RTTI-free `Cast<T>()`/`UClass` system (Phase 7 per `CLAUDE.md`) where compile-time base/derived relationships need verifying without `dynamic_cast`.
+**단계별: 이 코드가 사용될 때 컴파일 타임에 일어나는 일**
+1. `TIntegralConstant<T, Val>`이 기반이 된다: 타입 `T`의 컴파일 타임 상수를 `static constexpr` 멤버 `Value`로 감싸고, 암시적 `constexpr operator ValueType()`을 제공하여 이를 상속하는 모든 트레이트가 `if constexpr`나 `static_assert` 문맥에서 곧바로 불리언처럼 사용될 수 있게 한다. `FTrueType`/`FFalseType`은 이 불리언 특수화이며, 아래의 거의 모든 트레이트가 여기서 상속받는다.
+2. `TIsSame<A, B>`는 부분 특수화를 사용한다: 기본 템플릿은 `FFalseType`을 상속하고, 특수화된 `TIsSame<T, T>`(양쪽 템플릿 인자가 정확히 동일할 때만 매칭)는 `FTrueType`을 상속한다. `A == B`일 때 컴파일러는 더 특수화된 쪽을 선택한다.
+3. `TIsPointer<T>`도 마찬가지로 기본값은 `FFalseType`이며, `T*`와 `T* const`에 대한 부분 특수화가 매칭되어 `FTrueType`을 산출한다 — 이는 런타임 코드 생성 없이 순수하게 타입에 대한 패턴 매칭이다.
+4. `TIsPOD`, `TIsTriviallyCopyable`, `TIsEnum`, `TIsClass`는 모두 MSVC/Clang **컴파일러 빌트인**(`__is_pod`, `__is_trivially_copyable`, `__is_enum`, `__is_class`)에 직접 위임한다 — 이런 트레이트는 이런 인트린식 없이는 이식 가능한 C++로 구현할 수 없으므로, 라이브러리는 이를 처음부터 재구현하는 대신 컴파일러에 의존한다. 이는 `CLAUDE.md`에서 언급된 `TArray`의 POD 분기 최적화(자명한(trivial) 타입에 대해 생성자/소멸자 호출을 건너뛰기 위해 `TIsPOD<T>::Value`에 대해 `if constexpr`로 분기)와 같은 곳에 사용된다.
+5. `TEnableIf<Condition, T>`: `Condition`이 false일 때 기본 템플릿에는 `Type` 멤버가 **전혀** 없다. `Type::Type`이 정의되는 것은 오직 `TEnableIf<true, T>` 특수화뿐이다. 함수의 반환 타입이나 템플릿 매개변수에서 `TEnableIf<false, X>::Type`을 참조하면 SFINAE(치환 실패는 오류가 아니다)가 발동한다 — 해당 오버로드는 하드 에러 없이 조용히 오버로드 집합에서 빠지며, 이것이 선언 레벨에서 `if constexpr` 없이 조건부 오버로드 디스패치를 달성하는 방식이다.
+6. `TConditional<Cond, TrueT, FalseT>`: 컴파일 타임 삼항 연산자다 — 기본 템플릿은 `FalseT`를 선택하고, `<true, ...>` 부분 특수화는 `TrueT`를 선택한다. 이는 `AndOrNot.h`의 `TAnd`/`TOr`이 내부적으로 재귀를 계속할지 short-circuit할지 선택하는 데 정확히 그대로 사용하는 메커니즘이다.
+7. `TDecay<T>`는 `TRemoveReference<T>::Type`을 구한 뒤 `TRemoveCV<...>::Type`을 적용하는 식으로 구성되며, `std::decay`의 참조/CV 제거 동작을 그대로 재현한다(다만 `std::decay`의 배열-to-포인터/함수-to-포인터 감쇠는 재현하지 않는다는 점에 유의해야 한다 — 여기에는 그런 특수화가 보이지 않으며 CV/참조 제거 부분만 구현되어 있다).
+8. `TIsBaseOf<Base, Derived>`는 가장 복잡한 부분이다: 컴파일러 인트린식이 아니라 전통적인 **SFINAE 오버로드 해석**으로 구현되어 있다. `TIsBaseOfHelper::Test`는 오버로드되어 있다: 하나는 `const Base*`를 정확히 받는 오버로드(`char`를 반환, 크기 1)이고, 다른 하나는 C-스타일 가변인자 캐치올 `Test(...)`(`char[2]`에 대한 참조를 반환, 크기 2)이다. `const Derived*`(즉 `static_cast<const Derived*>(nullptr)`)로 호출될 때, `Derived*`가 `Base*`로 암시적 변환 가능한 경우에만(즉 `Derived`가 `Base`를 public/명확하게 상속하거나 `Base == Derived`인 경우) 컴파일러는 `const Base*` 오버로드를 선호한다. 그렇지 않으면 가변인자 캐치올만 바인딩될 수 있다. `sizeof(Test(...))`는 그 결과 `1`(true) 또는 `2`(false)가 되며, 이는 런타임에 함수가 실제로 호출되지 않고 전적으로 컴파일 타임에 계산된다 — `Value`는 이 `sizeof` 비교에서 도출되는 `constexpr bool`이다. 이 코드가 `UObjectPrivate` 네임스페이스 안에 있다는 점은, 이것이 엔진의 RTTI 없는 `Cast<T>()`/`UClass` 시스템(`CLAUDE.md`의 Phase 7)을 지원하기 위해 만들어졌음을 시사한다. 이 시스템에서는 `dynamic_cast` 없이 컴파일 타임에 base/derived 관계를 검증해야 한다.
 
-**Public API surface:**
-| Trait | Meaning |
+**공개 API 목록:**
+| 트레이트 | 의미 |
 |---|---|
-| `TIntegralConstant<T,Val>` / `FTrueType` / `FFalseType` | Compile-time constant wrapper base |
-| `TIsSame<A,B>` | `true` iff `A` and `B` are the exact same type |
-| `TRemoveReference<T>`, `TRemoveConst<T>`, `TRemoveVolatile<T>`, `TRemoveCV<T>` | Strip `&`/`&&`, `const`, `volatile` |
-| `TIsPointer<T>`, `TRemovePointer<T>` | Detect / strip a pointer type |
-| `TIsLValueReference<T>`, `TIsRValueReference<T>` | Detect `&` vs `&&` |
-| `TIsPOD<T>`, `TIsTriviallyCopyable<T>`, `TIsEnum<T>`, `TIsClass<T>` | Compiler-intrinsic-backed trivial/enum/class checks |
-| `TEnableIf<Cond,T=void>` | SFINAE gate; `::Type` exists only if `Cond` is true |
-| `TConditional<Cond,TrueT,FalseT>` | Compile-time ternary type selection |
-| `TDecay<T>` | Reference + CV stripped type |
-| `TIsBaseOf<Base,Derived>` | SFINAE-based base/derived relationship check |
+| `TIntegralConstant<T,Val>` / `FTrueType` / `FFalseType` | 컴파일 타임 상수 래퍼 베이스 |
+| `TIsSame<A,B>` | `A`와 `B`가 정확히 같은 타입일 때 `true` |
+| `TRemoveReference<T>`, `TRemoveConst<T>`, `TRemoveVolatile<T>`, `TRemoveCV<T>` | `&`/`&&`, `const`, `volatile` 제거 |
+| `TIsPointer<T>`, `TRemovePointer<T>` | 포인터 타입 판별/제거 |
+| `TIsLValueReference<T>`, `TIsRValueReference<T>` | `&` vs `&&` 판별 |
+| `TIsPOD<T>`, `TIsTriviallyCopyable<T>`, `TIsEnum<T>`, `TIsClass<T>` | 컴파일러 인트린식 기반의 trivial/enum/class 검사 |
+| `TEnableIf<Cond,T=void>` | SFINAE 게이트; `Cond`가 true일 때만 `::Type`이 존재 |
+| `TConditional<Cond,TrueT,FalseT>` | 컴파일 타임 삼항 타입 선택 |
+| `TDecay<T>` | 참조 + CV가 제거된 타입 |
+| `TIsBaseOf<Base,Derived>` | SFINAE 기반 base/derived 관계 검사 |
 
 ---
 
 ### Utility.h — MoveTemp / Forward / Swap
 
-**Purpose:** STL-free replacements for `std::move`, `std::forward`, and `std::swap`, built directly on the `TRemoveReference` trait above.
+**목적:** `std::move`, `std::forward`, `std::swap`을 대체하는 STL 없는 구현으로, 위의 `TRemoveReference` 트레이트 위에 직접 만들어져 있다.
 
-**Code** (`Engine/Include/Core/Templates/Utility.h`):
+**코드** (`Engine/Include/Core/Templates/Utility.h`):
 ```cpp
 template<typename T>
 inline typename TRemoveReference<T>::Type&& MoveTemp(T&& Obj) noexcept
@@ -688,25 +686,25 @@ inline void Swap(T& A, T& B) noexcept
 }
 ```
 
-**Step-by-step runtime/compile-time behavior:**
-1. `MoveTemp(T&& Obj)`: `T` is deduced via a forwarding/universal reference, so it can bind to lvalues (`T` deduced as `U&`) or rvalues (`T` deduced as `U`). Regardless of what binds, the body unconditionally `static_cast`s to `TRemoveReference<T>::Type&&` — an rvalue reference to the unqualified `T`. This strips lvalue-ness unconditionally, exactly matching `std::move`'s semantics: it doesn't itself move anything, it just produces an rvalue-typed expression that subsequent move-constructors/move-assignment operators will bind to.
-2. `Forward<T>(Obj)` has two overloads, mirroring `std::forward`'s lvalue/rvalue overload pair: the first takes `TRemoveReference<T>::Type&` (binds an lvalue), the second takes `TRemoveReference<T>::Type&&` (binds an rvalue), and both cast to `T&&`. When used inside a forwarding-reference function template as `Forward<T>(arg)`, if the caller passed an lvalue, `T` is deduced as `U&`, so `T&&` collapses (reference collapsing) to `U&` — an lvalue is forwarded as an lvalue. If the caller passed an rvalue, `T` is deduced as `U`, so `T&&` is `U&&` — forwarded as an rvalue. This is the standard perfect-forwarding idiom, reimplemented without `<utility>`.
-3. `Swap(T& A, T& B)`: does the textbook three-move swap — moves `A` into a temporary `Tmp` (invokes `T`'s move constructor via `MoveTemp`), move-assigns `B` into `A`, then move-assigns `Tmp` into `B`. It relies on `T` having a move constructor and move-assignment operator (or falls back to copy semantics if those aren't user-provided/available, per normal C++ overload resolution) — there's no `TIsTriviallyCopyable`-based memcpy fast path here (unlike what `TArray`'s POD optimization does elsewhere per `CLAUDE.md`).
+**단계별 런타임/컴파일 타임 동작:**
+1. `MoveTemp(T&& Obj)`: `T`는 포워딩/유니버설 참조를 통해 추론되므로 lvalue(`T`가 `U&`로 추론)나 rvalue(`T`가 `U`로 추론) 모두에 바인딩될 수 있다. 어느 쪽이 바인딩되든 본문은 무조건 `TRemoveReference<T>::Type&&`(정규화된 `T`에 대한 rvalue 참조)로 `static_cast`한다. 이는 무조건적으로 lvalue성을 제거하며, `std::move`의 의미와 정확히 일치한다: 이 함수 자체는 아무것도 이동시키지 않으며, 단지 이후의 이동 생성자/이동 대입 연산자가 바인딩할 rvalue 타입 표현식을 생성할 뿐이다.
+2. `Forward<T>(Obj)`는 `std::forward`의 lvalue/rvalue 오버로드 쌍을 그대로 반영하는 두 개의 오버로드를 가진다: 첫 번째는 `TRemoveReference<T>::Type&`(lvalue 바인딩)를 받고, 두 번째는 `TRemoveReference<T>::Type&&`(rvalue 바인딩)를 받으며, 둘 다 `T&&`로 캐스트한다. 포워딩 참조 함수 템플릿 내부에서 `Forward<T>(arg)`로 사용될 때, 호출자가 lvalue를 전달했다면 `T`는 `U&`로 추론되므로 `T&&`는 참조 붕괴(reference collapsing)에 의해 `U&`로 축소된다 — lvalue는 lvalue로 전달된다. 호출자가 rvalue를 전달했다면 `T`는 `U`로 추론되므로 `T&&`는 `U&&`가 된다 — rvalue로 전달된다. 이것이 `<utility>` 없이 재구현된 표준 완벽 전달(perfect-forwarding) 관용구다.
+3. `Swap(T& A, T& B)`: 교과서적인 세 번의 이동으로 이루어진 스왑이다 — `A`를 임시 변수 `Tmp`로 이동시키고(`MoveTemp`를 통해 `T`의 이동 생성자 호출), `B`를 `A`로 이동 대입한 뒤, `Tmp`를 `B`로 이동 대입한다. 이 함수는 `T`가 이동 생성자와 이동 대입 연산자를 가지고 있음에 의존한다(사용자가 제공하지 않았거나 사용할 수 없는 경우에는 일반적인 C++ 오버로드 해석 규칙에 따라 복사 시맨틱으로 폴백한다) — `CLAUDE.md`에 언급된 `TArray`의 POD 최적화처럼 `TIsTriviallyCopyable` 기반의 memcpy 고속 경로는 여기에는 존재하지 않는다.
 
-**Public API surface:**
-| Function | Purpose |
+**공개 API 목록:**
+| 함수 | 설명 |
 |---|---|
-| `MoveTemp(T&& Obj)` | Casts to an rvalue reference (replaces `std::move`) |
-| `Forward<T>(Obj)` (2 overloads) | Perfect-forwarding cast (replaces `std::forward`) |
-| `Swap(T& A, T& B)` | Three-move swap of two objects |
+| `MoveTemp(T&& Obj)` | rvalue 참조로 캐스트(`std::move` 대체) |
+| `Forward<T>(Obj)` (오버로드 2개) | 완벽 전달 캐스트(`std::forward` 대체) |
+| `Swap(T& A, T& B)` | 두 객체를 세 번의 이동으로 교환 |
 
 ---
 
-### AndOrNot.h — variadic compile-time boolean combinators
+### AndOrNot.h — 가변 인자 컴파일 타임 불리언 조합자
 
-**Purpose:** Variadic-template compile-time logical AND/OR/NOT over a pack of trait types (each exposing a `::Value`), built via recursive `TConditional` short-circuiting — a common piece of trait-composition plumbing (e.g., combining several `TIsX<T>::Value` checks into a single condition for `TEnableIf`).
+**목적:** 각각 `::Value`를 노출하는 트레이트 타입 팩에 대한 가변 템플릿 기반 컴파일 타임 논리 AND/OR/NOT이며, 재귀적인 `TConditional` short-circuit을 통해 구현된다 — 여러 개의 `TIsX<T>::Value` 검사를 `TEnableIf`용 단일 조건으로 결합하는 등, 트레이트 조합에서 흔히 쓰이는 배관 코드다.
 
-**Code** (`Engine/Include/Core/Templates/AndOrNot.h`):
+**코드** (`Engine/Include/Core/Templates/AndOrNot.h`):
 ```cpp
 // TAnd: all true → true (empty pack = true, short-circuits)
 template<typename... Types> struct TAnd;
@@ -729,28 +727,28 @@ template<typename T>
 struct TNot : TIntegralConstant<bool, !T::Value> {};
 ```
 
-**Step-by-step: what happens when `TAnd<A, B, C>::Value` is evaluated**
-1. `TAnd<A, B, C>` matches the variadic partial specialization with `First = A`, `Rest = {B, C}`. It inherits from `TConditional<A::Value, TAnd<B, C>, FFalseType>::Type`.
-2. If `A::Value` is `false`, `TConditional` selects `FalseT = FFalseType`, so `TAnd<A,B,C>` directly inherits `FFalseType` — critically, **`TAnd<B, C>` is never instantiated** in this branch (it only appears as an uninstantiated template argument to `TConditional`, and `TConditional`'s primary/specialization only ever names `Type` as one of its two arguments without instantiating the other for evaluation... note: both branches *are* named as template arguments so the compiler must at least form the type `TAnd<Rest...>`, but its base-class-list/body is only instantiated when actually inherited from). This gives genuine short-circuit *evaluation* of `::Value` (the recursion stops being *evaluated* further, since `TAnd<B,C>` is only ever used as an unevaluated template argument once `A::Value` is false, and its own `Value` need not be computed).
-3. If `A::Value` is `true`, `TConditional` selects `TrueT = TAnd<Rest...>`, so `TAnd<A,B,C>` inherits from `TAnd<B,C>`, recursing — this repeats until either a `false` is hit (short-circuit to `FFalseType`) or the pack is exhausted, hitting the `TAnd<>` base case which is `FTrueType` (vacuously true for an empty pack, standard convention for AND).
-4. `TOr<A,B,C...>` is the mirror image: on `First::Value == true` it immediately inherits `FTrueType` (short-circuit true), otherwise recurses into `TOr<Rest...>`; the empty-pack base case `TOr<>` is `FFalseType` (vacuously false for OR).
-5. `TNot<T>` is much simpler — no recursion, just `TIntegralConstant<bool, !T::Value>`, directly negating whatever trait `T` was passed.
-6. In all three, the result trait (`TAnd<...>`, `TOr<...>`, `TNot<T>`) is itself usable anywhere a `TIntegralConstant`-derived type is expected (e.g., as the `Condition` in `TEnableIf<TAnd<TIsPOD<T>, TNot<TIsPointer<T>>>::Value, X>`), since it transitively inherits the `constexpr operator ValueType()` from `TIntegralConstant`.
+**단계별: `TAnd<A, B, C>::Value`가 평가될 때 일어나는 일**
+1. `TAnd<A, B, C>`는 `First = A`, `Rest = {B, C}`인 가변 인자 부분 특수화와 매칭된다. 이는 `TConditional<A::Value, TAnd<B, C>, FFalseType>::Type`을 상속한다.
+2. `A::Value`가 `false`이면 `TConditional`은 `FalseT = FFalseType`을 선택하고, 따라서 `TAnd<A,B,C>`는 `FFalseType`을 직접 상속한다 — 결정적으로 이 분기에서는 **`TAnd<B, C>`가 결코 인스턴스화되지 않는다**(이는 오직 `TConditional`의 인스턴스화되지 않은 템플릿 인자로만 등장하며, `TConditional`의 기본/특수화 템플릿은 `Type`으로 두 인자 중 하나만 이름을 붙일 뿐 나머지 하나를 평가를 위해 인스턴스화하지는 않는다... 참고: 두 분기 모두 템플릿 인자로 이름이 붙으므로 컴파일러는 최소한 `TAnd<Rest...>`라는 타입은 형성해야 하지만, 그 베이스 클래스 목록/본문은 실제로 상속될 때만 인스턴스화된다). 이는 `::Value`에 대한 진정한 short-circuit *평가*를 제공한다(`A::Value`가 false가 되는 순간 `TAnd<B,C>`는 오직 평가되지 않는 템플릿 인자로만 사용될 뿐이므로 재귀가 더 이상 *평가*되지 않으며, 그 자신의 `Value`를 계산할 필요도 없다).
+3. `A::Value`가 `true`이면 `TConditional`은 `TrueT = TAnd<Rest...>`를 선택하고, 따라서 `TAnd<A,B,C>`는 `TAnd<B,C>`를 상속하며 재귀한다 — 이는 `false`를 만나(`FFalseType`으로 short-circuit) 종료되거나, 팩이 소진되어 `TAnd<>` 기본 케이스에 도달할 때까지(빈 팩에 대해 `FTrueType`, AND의 표준 관례상 공허하게 참) 반복된다.
+4. `TOr<A,B,C...>`는 정반대의 거울상이다: `First::Value == true`이면 즉시 `FTrueType`을 상속하고(short-circuit true), 그렇지 않으면 `TOr<Rest...>`로 재귀한다. 빈 팩 기본 케이스인 `TOr<>`는 `FFalseType`이다(OR에 대해 공허하게 거짓).
+5. `TNot<T>`은 훨씬 단순하다 — 재귀 없이 그저 `TIntegralConstant<bool, !T::Value>`이며, 전달된 트레이트 `T`를 직접 부정한다.
+6. 이 세 가지 모두에서 결과 트레이트(`TAnd<...>`, `TOr<...>`, `TNot<T>`)는 `TIntegralConstant`가 요구되는 어디서든 그대로 사용될 수 있다(예: `TEnableIf<TAnd<TIsPOD<T>, TNot<TIsPointer<T>>>::Value, X>`의 `Condition`으로), 왜냐하면 `TIntegralConstant`의 `constexpr operator ValueType()`을 전이적으로 상속하기 때문이다.
 
-**Public API surface:**
-| Trait | Meaning |
+**공개 API 목록:**
+| 트레이트 | 의미 |
 |---|---|
-| `TAnd<Types...>` | `true` iff every `Types::Value` is `true`; empty pack → `true` |
-| `TOr<Types...>` | `true` iff any `Types::Value` is `true`; empty pack → `false` |
+| `TAnd<Types...>` | 모든 `Types::Value`가 `true`일 때 `true`; 빈 팩 → `true` |
+| `TOr<Types...>` | 어느 하나라도 `Types::Value`가 `true`이면 `true`; 빈 팩 → `false` |
 | `TNot<T>` | `!T::Value` |
 
 ---
 
-### TResult.h — `Ok`/`Err` result type for exception-free error propagation
+### TResult.h — 예외 없는 에러 전파를 위한 `Ok`/`Err` 결과 타입
 
-**Purpose:** A `std::expected`/`Result`-style value-or-error wrapper used as the engine's exception-free error propagation strategy (per `CLAUDE.md`'s Phase 5.5: "예외 없는 에러 전파 전략 (`TResult<T,E>` 패턴)"), defaulting its error type to the engine-wide `EEngineError` enum.
+**목적:** `std::expected`/`Result` 스타일의 값-또는-에러 래퍼로, 엔진의 예외 없는 에러 전파 전략으로 사용된다(`CLAUDE.md`의 Phase 5.5: "예외 없는 에러 전파 전략 (`TResult<T,E>` 패턴)" 참고). 기본 에러 타입은 엔진 전역 `EEngineError` 열거형이다.
 
-**Code** (`Engine/Include/Core/Templates/TResult.h`):
+**코드** (`Engine/Include/Core/Templates/TResult.h`):
 ```cpp
 enum class EEngineError : uint8
 {
@@ -806,41 +804,42 @@ public:
 };
 ```
 
-**Step-by-step runtime behavior:**
-1. The default constructor `TResult()` is `private` — the only way to construct a `TResult<T,E>` from outside the class is through the two static factory functions `Ok(...)` and `Fail(...)`. This forces every result to be explicitly tagged as success or failure at creation, rather than left in an ambiguous default state.
-2. `Ok(const T& Value)` builds a default-constructed `TResult` (which zero/default-inits `m_Value`, default-inits `m_Error`, and sets `m_bOk = false`), then copies `Value` into `m_Value` and flips `m_bOk = true` before returning it by value (relying on the compiler's copy/move elision or the implicit move constructor for the return).
-3. `Ok(T&& Value)` is the move-optimized overload: same as above but uses `static_cast<T&&>(Value)` (a raw cast equivalent to `MoveTemp`, not actually calling the engine's `MoveTemp` helper here) to move-assign into `m_Value` instead of copying.
-4. `Fail(E Error = E{})` builds a default `TResult`, sets `m_Error` to the given error (or a default-constructed `E{}`, which for `EEngineError` is `None = 0` since it's the first enumerator — note this means `Fail()` with no argument produces an error result whose `GetError()` returns `EEngineError::None`, which is semantically odd but is exactly what the code does), and leaves `m_bOk` as `false` (already set by the private default ctor). Note `m_Value` is never touched here — it remains whatever the default `T()` constructor produced.
-5. `IsOk()`/`IsErr()` are trivial boolean accessors reading `m_bOk`.
-6. `GetValue()` (both const and non-const overloads) `check(m_bOk)` — a **hard assert** — before returning a reference to `m_Value`. Calling `GetValue()` on a `Fail`-constructed result triggers `assert(m_bOk)` (per `EnginePCH.h`'s `#define check(expr) assert(expr)`), aborting in debug builds; in a build where `assert` is compiled out (e.g., `NDEBUG`), this would silently return the default-constructed `m_Value` with no protection — the header doesn't special-case that.
-7. `GetError()` inversely `check(!m_bOk)`s before returning `m_Error` by value — calling it on an `Ok` result also hard-asserts.
-8. There is no `.cpp` file for `TResult.h` — it is a fully header-only template class (as it must be, being a template), consistent with the project's general rule that templates live entirely in headers even though the project's stated convention is normally "header + .cpp pair" for classes.
+**단계별 런타임 동작:**
+1. 기본 생성자 `TResult()`는 `private`이다 — 외부에서 `TResult<T,E>`를 생성할 수 있는 유일한 방법은 두 개의 정적 팩토리 함수 `Ok(...)`와 `Fail(...)`를 통하는 것뿐이다. 이는 모든 결과가 애매한 기본 상태로 남겨지지 않고 생성 시점에 성공/실패로 명시적으로 태그되도록 강제한다.
+2. `Ok(const T& Value)`는 기본 생성된 `TResult`를 만든 뒤(`m_Value`를 0/기본값으로 초기화하고, `m_Error`도 기본 초기화하며, `m_bOk = false`로 설정), `Value`를 `m_Value`로 복사하고 `m_bOk = true`로 뒤집은 다음 값으로 반환한다(컴파일러의 복사/이동 생략 또는 반환 시 암시적 이동 생성자에 의존).
+3. `Ok(T&& Value)`는 이동 최적화된 오버로드다: 위와 동일하지만 `Value`를 `m_Value`로 복사하는 대신 `static_cast<T&&>(Value)`(엔진의 `MoveTemp` 헬퍼를 실제로 호출하지는 않는, `MoveTemp`와 동등한 원시 캐스트)를 사용해 이동 대입한다.
+4. `Fail(E Error = E{})`는 기본 `TResult`를 만들고, `m_Error`를 주어진 에러 값(또는 기본 생성된 `E{}`, `EEngineError`의 경우 첫 번째 열거자이므로 `None = 0`이다 — 즉 인자 없이 호출한 `Fail()`은 `GetError()`가 `EEngineError::None`을 반환하는 에러 결과를 만든다는 뜻이며, 이는 의미상 다소 어색하지만 실제 코드가 정확히 그렇게 동작한다)으로 설정하고, `m_bOk`은 (private 기본 생성자에 의해 이미 설정된) `false`로 남겨둔다. 참고로 `m_Value`는 여기서 전혀 건드려지지 않으며, 기본 `T()` 생성자가 만든 값 그대로 유지된다.
+5. `IsOk()`/`IsErr()`는 `m_bOk`를 읽는 단순한 불리언 접근자다.
+6. `GetValue()`(const와 non-const 오버로드 모두)는 `m_Value`에 대한 참조를 반환하기 전에 `check(m_bOk)`(**하드 어설트**)를 수행한다. `Fail`로 생성된 결과에 대해 `GetValue()`를 호출하면 `assert(m_bOk)`가 발동하여(`EnginePCH.h`의 `#define check(expr) assert(expr)`에 따라) Debug 빌드에서 중단된다. `assert`가 컴파일에서 제외되는 빌드(예: `NDEBUG`)에서는 아무 보호 없이 조용히 기본 생성된 `m_Value`를 반환하게 되며, 헤더는 이 경우를 특별히 처리하지 않는다.
+7. `GetError()`는 반대로 `m_Error`를 값으로 반환하기 전에 `check(!m_bOk)`를 수행한다 — `Ok` 결과에 대해 이를 호출해도 하드 어설트가 발동한다.
+8. `TResult.h`에는 `.cpp` 파일이 없다 — 이는(템플릿이므로 반드시 그래야 하듯) 완전히 헤더 전용 템플릿 클래스이며, 프로젝트가 보통 클래스에 대해 명시한 "헤더 + .cpp 쌍" 관례와는 다르지만 템플릿은 항상 헤더에 전부 있어야 한다는 프로젝트의 일반 규칙과는 일치한다.
 
-**Public API surface:**
-| Member | Purpose |
+**공개 API 목록:**
+| 멤버 | 설명 |
 |---|---|
-| `EEngineError` (`None`, `FileNotFound`, `OutOfMemory`, `InvalidArgument`, `Unknown`) | Default error enum used as `TResult`'s second template parameter |
-| `TResult<T, E=EEngineError>::Ok(const T&)` / `Ok(T&&)` | Construct a success result (copy or move) |
-| `TResult<T, E>::Fail(E Error = E{})` | Construct a failure result carrying an error code |
-| `IsOk()` / `IsErr()` | Query success/failure state |
-| `GetValue()` (const/non-const) | Access the success value; `check(m_bOk)`-asserts if called on a failure |
-| `GetError()` | Access the error code; `check(!m_bOk)`-asserts if called on a success |
+| `EEngineError` (`None`, `FileNotFound`, `OutOfMemory`, `InvalidArgument`, `Unknown`) | `TResult`의 두 번째 템플릿 매개변수로 사용되는 기본 에러 열거형 |
+| `TResult<T, E=EEngineError>::Ok(const T&)` / `Ok(T&&)` | 성공 결과를 생성(복사 또는 이동) |
+| `TResult<T, E>::Fail(E Error = E{})` | 에러 코드를 담은 실패 결과를 생성 |
+| `IsOk()` / `IsErr()` | 성공/실패 상태 조회 |
+| `GetValue()` (const/non-const) | 성공 값에 접근; 실패에 대해 호출 시 `check(m_bOk)` 어설트 |
+| `GetError()` | 에러 코드에 접근; 성공에 대해 호출 시 `check(!m_bOk)` 어설트 |
 
 ---
 
-**Note on source encoding:** `TypeTraits.h` and `FStackAllocator.cpp` contain comments that render as mojibake (e.g., `// ��� Ÿ�� ---`) in the raw source — these appear to be Korean-language comments saved/read with a mismatched text encoding. This does not affect compiled behavior; it's purely a documentation/readability artifact in those two files, called out here rather than guessed at or "corrected."
+**소스 인코딩에 대한 참고:** `TypeTraits.h`와 `FStackAllocator.cpp`에는 원본 소스에서 모지바케(예: `// ��� Ÿ�� ---`)로 렌더링되는 주석이 포함되어 있다 — 이는 텍스트 인코딩이 맞지 않는 상태로 저장/읽힌 한글 주석으로 보인다. 이는 컴파일된 동작에는 영향을 주지 않으며, 순전히 이 두 파일의 문서/가독성 문제일 뿐이라 여기서 추측해서 "수정"하지 않고 그대로 언급해 둔다.
+
 ---
 
 ## TArray / TArrayView
 
-#### Purpose
-`TArray<T, AllocatorType>` is a STL-free, Unreal-style dynamic array supporting both always-heap (`TDefaultAllocator`) and small-buffer/inline (`TInlineAllocator<N>`) storage policies; `TArrayView<T>` is a non-owning, read-only slice over any contiguous `T` buffer (raw pointer+size or a `TArray`).
+#### 목적
+`TArray<T, AllocatorType>`는 STL을 사용하지 않는 언리얼 스타일 동적 배열로, 항상 힙에 할당하는 방식(`TDefaultAllocator`)과 스몰 버퍼/인라인 방식(`TInlineAllocator<N>`) 저장 정책을 모두 지원한다. `TArrayView<T>`는 임의의 연속된 `T` 버퍼(원시 포인터+크기 또는 `TArray`) 위에 얹히는 비소유(non-owning) 읽기 전용 슬라이스다.
 
-Both live in `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TArray.h` and `TArrayView.h`.
+두 타입 모두 `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TArray.h`와 `TArrayView.h`에 위치한다.
 
-#### Real code excerpts
+#### 실제 코드 발췌
 
-Allocator policies and the EBO trick for `N == 0`:
+`N == 0`일 때의 EBO(Empty Base Optimization) 트릭이 적용된 얼로케이터 정책:
 
 ```cpp
 struct TDefaultAllocator
@@ -872,9 +871,9 @@ struct TArrayInlineStorage<T, 0>
 template<typename T, typename AllocatorType = TDefaultAllocator>
 class TArray : private TArrayInlineStorage<T, AllocatorType::InlineCapacity>
 ```
-`TArray` privately inherits `TArrayInlineStorage<T, InlineCapacity>`; when `InlineCapacity == 0` this is the specialized empty struct with no data members, so the Empty Base Optimization (EBO) means `TDefaultAllocator`-based arrays pay zero extra size for the (unused) inline buffer.
+`TArray`는 `TArrayInlineStorage<T, InlineCapacity>`를 private 상속한다. `InlineCapacity == 0`일 때는 데이터 멤버가 하나도 없는 특수화된 빈 구조체가 사용되므로, EBO(Empty Base Optimization) 덕분에 `TDefaultAllocator` 기반 배열은 (사용하지도 않는) 인라인 버퍼 때문에 추가 크기를 전혀 지불하지 않는다.
 
-Growth policy (`Add`) with the trivially-copyable branch:
+trivially-copyable 분기가 포함된 성장 정책(`Add`):
 
 ```cpp
 int32 Add(const T& Element)
@@ -906,7 +905,7 @@ void EnsureCapacity(int32 Required)
 }
 ```
 
-`RemoveAt` (order-preserving, O(n)) vs `RemoveAtSwap` (O(1)):
+순서를 보존하는 O(n)의 `RemoveAt`과 O(1)의 `RemoveAtSwap`:
 
 ```cpp
 void RemoveAt(int32 Index)
@@ -949,7 +948,7 @@ void RemoveAtSwap(int32 Index)
 }
 ```
 
-`Sort` (introsort: insertion sort ≤16 elements, otherwise median-of-3 Lomuto quicksort) vs `StableSort` (top-down merge sort):
+`Sort`(introsort: 16개 이하는 삽입 정렬, 그 이상은 median-of-3 로무토 퀵정렬)와 `StableSort`(top-down 병합 정렬):
 
 ```cpp
 template<typename Pred>
@@ -990,9 +989,9 @@ void StableSortImpl(int32 Low, int32 High, Pred InPred)
 	MergeImpl(Low, Mid, High, InPred);
 }
 ```
-`MergeImpl` allocates two temporary `FMemory::Malloc` buffers (`Left`, `Right`), copies/moves the two halves into them, merges back element-by-element (branching on `TIsTriviallyCopyable<T>` for `Memcpy` vs `MoveTemp`), then destroys and frees the temporaries.
+`MergeImpl`은 임시 버퍼(`Left`, `Right`) 두 개를 `FMemory::Malloc`으로 할당하고, 두 절반을 그 버퍼로 복사/이동시킨 뒤(`TIsTriviallyCopyable<T>`에 따라 `Memcpy`와 `MoveTemp` 중 분기) 원소 단위로 다시 병합하고, 마지막으로 임시 버퍼의 원소를 소멸시키고 해제한다.
 
-`TArrayView` construction from `TArray`:
+`TArray`로부터의 `TArrayView` 생성:
 
 ```cpp
 template<typename AllocatorType>
@@ -1002,54 +1001,54 @@ TArrayView(const TArray<T, AllocatorType>& InArray) noexcept
 }
 ```
 
-#### Step-by-step runtime behavior
+#### 단계별 런타임 동작
 
-**Allocator policy.** `TArray` derives from `TArrayInlineStorage<T, AllocatorType::InlineCapacity>`. With `TDefaultAllocator`, `InlineCapacity == 0`, the specialized empty storage type has no members, and thanks to EBO the base subobject contributes no extra bytes — the array behaves exactly like a classic heap-only dynamic array (`m_pData` starts `nullptr`, `m_Capacity` starts `0`). With `TInlineAllocator<N>`, the base class embeds an `alignas(T) uint8 m_InlineBytes[sizeof(T)*N]` buffer directly inside the `TArray` object; `InitInlineBaseline()` points `m_pData` at that buffer and sets `m_Capacity = InlineCapacity` so a freshly constructed array is immediately "full-capacity" without touching the heap.
+**얼로케이터 정책.** `TArray`는 `TArrayInlineStorage<T, AllocatorType::InlineCapacity>`를 상속한다. `TDefaultAllocator`를 쓰면 `InlineCapacity == 0`이 되어 특수화된 빈 저장소 타입에는 멤버가 하나도 없고, EBO 덕분에 이 베이스 서브객체는 추가 바이트를 전혀 소비하지 않는다 — 이 배열은 전통적인 힙 전용 동적 배열과 완전히 동일하게 동작한다(`m_pData`는 `nullptr`로, `m_Capacity`는 `0`으로 시작). `TInlineAllocator<N>`을 쓰면 베이스 클래스가 `alignas(T) uint8 m_InlineBytes[sizeof(T)*N]` 버퍼를 `TArray` 객체 내부에 직접 임베드한다. `InitInlineBaseline()`은 `m_pData`가 이 버퍼를 가리키도록 설정하고 `m_Capacity = InlineCapacity`로 초기화하므로, 갓 생성된 배열은 힙을 전혀 건드리지 않고도 즉시 "최대 용량" 상태가 된다.
 
-**Small-buffer transitions.** `IsInline()` compares `m_pData == StorageType::GetInline()` to tell whether the array is currently living in the inline buffer or on the heap. `GrowTo()` always allocates a brand-new heap block via `FMemory::Malloc`, relocates existing elements into it with `RelocateElements`, then calls `FreeRaw()` (which only actually frees when `!IsInline()`, so the inline buffer itself is never `FMemory::Free`d) — this is how an inline array "spills" to the heap once it exceeds `N` elements. `Shrink()` can move data back into the inline buffer (`MoveToInline()`) if `m_Size <= InlineCapacity` after shrinking. `MoveFrom` for move-construction/assignment either transfers the heap pointer (steal) when `Other` is on the heap, or element-wise relocates when `Other` is inline (since a stack buffer's address can't be "stolen").
+**스몰 버퍼 전환.** `IsInline()`은 `m_pData == StorageType::GetInline()`을 비교해서 배열이 현재 인라인 버퍼에 살고 있는지, 힙에 있는지를 판별한다. `GrowTo()`는 항상 `FMemory::Malloc`으로 완전히 새로운 힙 블록을 할당하고, 기존 원소를 `RelocateElements`로 그쪽에 재배치한 다음 `FreeRaw()`를 호출한다(이 함수는 `!IsInline()`일 때만 실제로 해제를 수행하므로, 인라인 버퍼 자체가 `FMemory::Free`로 해제되는 일은 결코 없다) — 이것이 인라인 배열이 `N`개 원소를 초과했을 때 힙으로 "넘쳐 나가는(spill)" 방식이다. `Shrink()`는 축소 후 `m_Size <= InlineCapacity`가 되면 데이터를 다시 인라인 버퍼로 옮길 수 있다(`MoveToInline()`). 이동 생성/대입에 쓰이는 `MoveFrom`은 `Other`가 힙에 있을 때는 힙 포인터를 그대로 가로채고(steal), `Other`가 인라인 상태일 때는(스택 버퍼의 주소는 "가로챌" 수 없으므로) 원소 단위로 재배치한다.
 
-**Growth (2x).** `EnsureCapacity(Required)` does nothing if `m_Capacity >= Required`; otherwise it starts a new capacity at 4 (from empty) or doubles the current capacity (`m_Capacity * 2`), doubling again in a loop until it's `>= Required`, then calls `GrowTo`. `GrowTo` is a straightforward "allocate new, relocate old, free old" sequence.
+**성장(2배씩).** `EnsureCapacity(Required)`는 `m_Capacity >= Required`이면 아무 것도 하지 않는다. 그렇지 않으면 새 용량을 4에서 시작(빈 배열일 경우)하거나 현재 용량을 2배로 늘리며(`m_Capacity * 2`), `>= Required`가 될 때까지 루프를 돌며 계속 2배씩 늘린 뒤 `GrowTo`를 호출한다. `GrowTo`는 "새로 할당 → 기존 원소 재배치 → 기존 버퍼 해제" 순서로 이루어지는 단순한 절차다.
 
-**Trivial vs non-trivial branch (`if constexpr TIsTriviallyCopyable<T>`).** Nearly every mutating operation (`Add`, `RemoveAt`, `RemoveAtSwap`, `RemoveAll`, `RelocateElements`, `CopyElementsFrom`, `DestroyElements`, `MergeImpl`) branches at compile time: trivially-copyable types use `FMemory::Memcpy`/`Memmove` (raw bytes, no constructor/destructor calls, no branch cost at runtime since it's resolved at compile time), while non-trivial types go through placement-new (`new (ptr) T(...)`) plus explicit `~T()` calls and `MoveTemp`. This means POD types (e.g. `int32`, `FVector2D`) get memcpy-speed array operations while class types with user-defined constructors/destructors get correct construction/destruction semantics.
+**trivial/non-trivial 분기(`if constexpr TIsTriviallyCopyable<T>`).** 거의 모든 변경 연산(`Add`, `RemoveAt`, `RemoveAtSwap`, `RemoveAll`, `RelocateElements`, `CopyElementsFrom`, `DestroyElements`, `MergeImpl`)은 컴파일 타임에 분기한다: trivially-copyable 타입은 `FMemory::Memcpy`/`Memmove`(생성자·소멸자 호출 없는 원시 바이트 복사이며, 컴파일 타임에 이미 분기가 확정되므로 런타임 분기 비용이 없다)를 사용하고, 비trivial 타입은 placement-new(`new (ptr) T(...)`)와 명시적 `~T()` 호출, `MoveTemp`를 거친다. 즉 POD 타입(예: `int32`, `FVector2D`)은 memcpy 수준의 속도로 배열 연산을 수행하는 반면, 사용자 정의 생성자·소멸자를 가진 클래스 타입은 올바른 생성·소멸 의미론을 보장받는다.
 
-**RemoveAt vs RemoveAtSwap.** `RemoveAt` destroys the element at `Index`, then shifts every following element down by one slot (`Memmove` for trivial types, or a per-element move+destroy loop otherwise), preserving relative order — cost is O(n - Index). `RemoveAtSwap` destroys the element at `Index`, then (if it isn't already the last element) overwrites it with the last live element (`Memcpy`/move) and shrinks `m_Size` by one — O(1) but destroys ordering.
+**RemoveAt vs RemoveAtSwap.** `RemoveAt`은 `Index` 위치의 원소를 소멸시킨 뒤, 뒤따르는 모든 원소를 한 칸씩 앞으로 당긴다(trivial 타입은 `Memmove`, 그 외에는 원소별 이동+소멸 루프). 상대적 순서를 보존하며 비용은 O(n - Index)다. `RemoveAtSwap`은 `Index` 위치의 원소를 소멸시킨 뒤(그 원소가 마지막 원소가 아니라면) 마지막 살아있는 원소로 덮어쓰고(`Memcpy`/이동) `m_Size`를 하나 줄인다 — O(1)이지만 순서는 깨진다.
 
-**Sort / StableSort.** `Sort()` is unstable introsort-lite: for ranges of 16 or fewer elements it falls back to a plain insertion sort; larger ranges pick a median-of-three pivot (`Low`, `Mid`, `High`), move it to `High`, run a Lomuto partition, then recurse on both sides — no true "insort" depth-limited introsort with heapsort fallback is present, just insertion-sort + quicksort. `StableSort()` is a textbook top-down merge sort: recursively sort `[Low, Mid]` and `[Mid+1, High]`, then `MergeImpl` allocates two scratch buffers via `FMemory::Malloc`, copies both halves in, merges back comparing `!InPred(Right[j], Left[i])` to prefer the left run on ties (stability), and frees the scratch buffers.
+**Sort / StableSort.** `Sort()`는 불안정(unstable) 정렬인 introsort 방식으로, 16개 이하 구간에서는 단순 삽입 정렬로 처리하고, 더 큰 구간에서는 median-of-three(`Low`, `Mid`, `High`) 방식으로 피벗을 선택해 `High` 위치로 옮긴 뒤 로무토(Lomuto) 파티션을 수행하고 양쪽을 재귀 호출한다 — 힙정렬 폴백을 갖춘 진짜 깊이 제한형 introsort는 아니며, 단순히 삽입 정렬 + 퀵정렬 조합이다. `StableSort()`는 교과서적인 top-down 병합 정렬이다: `[Low, Mid]`와 `[Mid+1, High]`를 각각 재귀적으로 정렬한 뒤, `MergeImpl`이 `FMemory::Malloc`으로 스크래치 버퍼 두 개를 할당하고 양쪽 절반을 그리로 복사한 다음, 동률일 때 왼쪽 런(run)을 우선시하도록(`!InPred(Right[j], Left[i])` 비교, 안정성 보장) 다시 병합하고 스크래치 버퍼를 해제한다.
 
-**TArrayView.** Purely non-owning: it stores `const T* m_pData` and `int32 m_Size`, with no allocation/deallocation logic anywhere. It can be implicitly built from any `TArray<T, AllocatorType>` (templated on the allocator so it works with both default and inline arrays) or from a raw `(data, size)` pair, and supports `Slice()` to produce sub-views with bounds checks (`check`).
+**TArrayView.** 완전히 비소유(non-owning) 타입이다: `const T* m_pData`와 `int32 m_Size`만 저장하며 할당·해제 로직이 전혀 없다. 임의의 `TArray<T, AllocatorType>`(얼로케이터에 대해 템플릿화되어 있어 기본/인라인 배열 모두에서 동작)로부터, 혹은 원시 `(data, size)` 쌍으로부터 암묵적으로 생성될 수 있으며, 경계 검사(`check`)를 동반하는 서브뷰 생성을 위한 `Slice()`를 지원한다.
 
-#### Public API surface
+#### 공개 API 목록
 
-| Type | Member | Behavior |
+| 타입 | 멤버 | 동작 |
 |---|---|---|
-| TArray | `Add(const T&)/Add(T&&)` | append, grow if needed |
-| TArray | `Emplace(Args&&...)` | in-place construct at end |
-| TArray | `RemoveAt(Index)` | O(n), order-preserving |
-| TArray | `RemoveAtSwap(Index)` | O(1), swap-with-last |
-| TArray | `Remove(const T&)` / `RemoveAll(const T&)` | remove first / all matches |
-| TArray | `Find`/`Contains` | linear search |
-| TArray | `Sort()`/`Sort(Pred)` | unstable introsort-ish |
-| TArray | `StableSort()`/`StableSort(Pred)` | merge sort |
-| TArray | `Reserve`/`Shrink`/`Reset`/`Empty` | capacity management |
-| TArray | `operator[]`, `Last`, `GetData` | element access |
-| TArray | `Num`, `Max`, `IsEmpty`, `IsValidIndex` | state |
-| TArray | `begin`/`end` | range-for |
-| TArrayView | `Slice`, `operator[]`, `GetData` | slicing/access |
-| TArrayView | `Find`, `Contains`, `Num`, `IsEmpty`, `IsValidIndex` | query |
-| TArrayView | `begin`/`end` | range-for |
+| TArray | `Add(const T&)/Add(T&&)` | 추가, 필요 시 성장 |
+| TArray | `Emplace(Args&&...)` | 끝에 제자리 생성 |
+| TArray | `RemoveAt(Index)` | O(n), 순서 보존 |
+| TArray | `RemoveAtSwap(Index)` | O(1), 마지막 원소와 스왑 |
+| TArray | `Remove(const T&)` / `RemoveAll(const T&)` | 첫 번째 일치 / 모든 일치 원소 제거 |
+| TArray | `Find`/`Contains` | 선형 탐색 |
+| TArray | `Sort()`/`Sort(Pred)` | 불안정 introsort 계열 |
+| TArray | `StableSort()`/`StableSort(Pred)` | 병합 정렬 |
+| TArray | `Reserve`/`Shrink`/`Reset`/`Empty` | 용량 관리 |
+| TArray | `operator[]`, `Last`, `GetData` | 원소 접근 |
+| TArray | `Num`, `Max`, `IsEmpty`, `IsValidIndex` | 상태 조회 |
+| TArray | `begin`/`end` | 범위 기반 for |
+| TArrayView | `Slice`, `operator[]`, `GetData` | 슬라이싱/접근 |
+| TArrayView | `Find`, `Contains`, `Num`, `IsEmpty`, `IsValidIndex` | 조회 |
+| TArrayView | `begin`/`end` | 범위 기반 for |
 
 ---
 
 ## TSparseArray
 
-#### Purpose
-`TSparseArray<T>` is the free-list-backed, index-stable, holey array that underlies both `TSet` and `TMap` — elements keep a fixed index for their lifetime, and freed slots are recycled via an intrusive singly-linked free list instead of being compacted.
+#### 목적
+`TSparseArray<T>`는 프리 리스트(free-list) 기반의, 인덱스가 안정적으로 유지되는 구멍 뚫린(holey) 배열로 `TSet`과 `TMap`을 모두 뒷받침한다 — 각 원소는 생존 기간 동안 고정된 인덱스를 유지하며, 해제된 슬롯은 압축(compaction)되는 대신 침습적(intrusive) 단일 연결 프리 리스트를 통해 재활용된다.
 
-File: `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TSparseArray.h`
+파일: `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TSparseArray.h`
 
-#### Real code excerpts
+#### 실제 코드 발췌
 
-The slot layout:
+슬롯 레이아웃:
 
 ```cpp
 struct FSlot
@@ -1066,7 +1065,7 @@ int32 m_NumAllocated;     // live element count
 int32 m_FirstFree;        // free list head inside [0, HighWater), INDEX_NONE if empty
 ```
 
-`Emplace` (free-list reuse or append) and `RemoveAt` (push onto free list):
+`Emplace`(프리 리스트 재사용 또는 추가)와 `RemoveAt`(프리 리스트로 반환):
 
 ```cpp
 template<typename... Args>
@@ -1108,7 +1107,7 @@ void RemoveAt(int32 Index)
 }
 ```
 
-`Grow` (relocation into a larger buffer):
+`Grow`(더 큰 버퍼로의 재배치):
 
 ```cpp
 void Grow(int32 NewCapacity)
@@ -1142,7 +1141,7 @@ void Grow(int32 NewCapacity)
 }
 ```
 
-`CopyFrom` (structural copy, preserving indices):
+`CopyFrom`(인덱스를 보존하는 구조적 복사):
 
 ```cpp
 void CopyFrom(const TSparseArray& Other)
@@ -1169,7 +1168,7 @@ void CopyFrom(const TSparseArray& Other)
 }
 ```
 
-Iterator that skips holes:
+구멍을 건너뛰는 이터레이터:
 
 ```cpp
 void SkipToAllocated()
@@ -1181,47 +1180,47 @@ void SkipToAllocated()
 }
 ```
 
-#### Step-by-step runtime behavior
+#### 단계별 런타임 동작
 
-**FSlot layout.** Each `FSlot` reserves raw, aligned storage for one `T` (`alignas(T) uint8 m_Storage[sizeof(T)]`), plus `int32 m_NextFree` and `bool m_bAllocated`. The `T` is never constructed until the slot is allocated (`Emplace`), and it's explicitly destroyed (`~T()`) on `RemoveAt`/`Reset`/`Empty` — the raw byte buffer means an unallocated slot costs no live `T` lifetime.
+**FSlot 레이아웃.** 각 `FSlot`은 `T` 하나를 위한 원시 정렬 저장 공간(`alignas(T) uint8 m_Storage[sizeof(T)]`)과 `int32 m_NextFree`, `bool m_bAllocated`를 함께 갖는다. `T`는 슬롯이 할당될 때(`Emplace`)까지는 결코 생성되지 않으며, `RemoveAt`/`Reset`/`Empty` 시점에 명시적으로 소멸된다(`~T()`) — 원시 바이트 버퍼 구조 덕분에 할당되지 않은 슬롯은 살아있는 `T`의 생명주기를 전혀 비용으로 지불하지 않는다.
 
-**Free-list-based Emplace.** `Emplace` first checks `m_FirstFree`. If it's not `INDEX_NONE`, there's a previously-removed slot available: it pops the head of the free list (`Index = m_FirstFree; m_FirstFree = m_pSlots[Index].m_NextFree`) and reuses that slot's storage — no allocation or relocation needed, and existing indices elsewhere are undisturbed. If the free list is empty, it falls back to appending: growing the backing buffer (doubling, or starting at 4) if `m_HighWater == m_Capacity`, then taking `Index = m_HighWater++`. Either way it placement-news the new `T` into `m_pSlots[Index].m_Storage`, marks `m_bAllocated = true`, and increments `m_NumAllocated`.
+**프리 리스트 기반 Emplace.** `Emplace`는 먼저 `m_FirstFree`를 확인한다. `INDEX_NONE`이 아니면 이전에 제거된 슬롯이 존재한다는 뜻이므로, 프리 리스트의 헤드를 꺼내고(`Index = m_FirstFree; m_FirstFree = m_pSlots[Index].m_NextFree`) 그 슬롯의 저장 공간을 재사용한다 — 할당이나 재배치가 전혀 필요 없고, 다른 곳의 기존 인덱스들도 전혀 영향을 받지 않는다. 프리 리스트가 비어 있으면 뒤쪽에 추가하는 방식으로 대체된다: `m_HighWater == m_Capacity`이면 버퍼를 성장(2배씩, 혹은 4부터 시작)시킨 뒤 `Index = m_HighWater++`를 취한다. 두 경우 모두 새 `T`를 `m_pSlots[Index].m_Storage`에 placement-new로 생성하고, `m_bAllocated = true`로 표시하며, `m_NumAllocated`를 증가시킨다.
 
-**RemoveAt.** Destroys the live object in place (`GetPtr(Index)->~T()`), flips `m_bAllocated = false`, and pushes the now-free slot onto the head of the free list (`m_pSlots[Index].m_NextFree = m_FirstFree; m_FirstFree = Index`). This is O(1) and leaves a "hole" at `Index` — the index itself is never reused by anything else until a future `Emplace` pulls it back off the free list. `m_HighWater` (the high-water mark of ever-used slots) is untouched by removal.
+**RemoveAt.** 살아있는 객체를 제자리에서 소멸시키고(`GetPtr(Index)->~T()`), `m_bAllocated = false`로 뒤집은 뒤, 이제 비워진 슬롯을 프리 리스트의 헤드로 밀어넣는다(`m_pSlots[Index].m_NextFree = m_FirstFree; m_FirstFree = Index`). 이 연산은 O(1)이며 `Index` 위치에 "구멍"을 남긴다 — 이 인덱스는 이후 `Emplace`가 프리 리스트에서 그것을 다시 꺼내기 전까지는 그 무엇에도 재사용되지 않는다. `m_HighWater`(지금까지 한 번이라도 사용된 슬롯의 최고 수위)는 제거 연산으로 인해 변경되지 않는다.
 
-**Grow relocation.** `Grow(NewCapacity)` allocates a brand-new `FSlot` array via `FMemory::Malloc`, then walks `[0, m_HighWater)` copying `m_bAllocated`/`m_NextFree` metadata for every slot (allocated or not — this preserves the free-list linkage across the whole `[0, m_HighWater)` range, not just live elements) and relocating the live `T`s (`Memcpy` for trivially-copyable types, or move-construct + destroy otherwise). The old buffer is then freed and the pointer/`m_Capacity` are swapped in. Because free/allocated bookkeeping is copied for the full `HighWater` range, the free list remains valid and every live element retains its original index after growth.
+**Grow 재배치.** `Grow(NewCapacity)`는 `FMemory::Malloc`으로 완전히 새로운 `FSlot` 배열을 할당한 뒤, `[0, m_HighWater)` 범위 전체를 순회하며 (할당 여부와 무관하게) 모든 슬롯의 `m_bAllocated`/`m_NextFree` 메타데이터를 복사하고(이는 살아있는 원소뿐 아니라 `[0, m_HighWater)` 범위 전체에 걸친 프리 리스트 연결 관계를 보존하기 위함이다) 살아있는 `T`들을 재배치한다(trivially-copyable 타입은 `Memcpy`, 그 외에는 이동 생성 + 소멸). 이후 기존 버퍼는 해제되고 포인터/`m_Capacity`가 새 값으로 교체된다. 전체 `HighWater` 범위에 대해 할당/미할당 장부가 그대로 복사되므로, 성장 이후에도 프리 리스트는 유효하게 유지되고 살아있는 모든 원소는 원래의 인덱스를 그대로 유지한다.
 
-**CopyFrom (structural copy).** Used by the copy constructor and copy-assignment: it `Grow`s to `Other.m_HighWater` capacity, then for every slot index in `[0, Other.m_HighWater)` copies the `m_bAllocated`/`m_NextFree` metadata verbatim and, if allocated, copy-constructs the `T` from `Other`. Finally it copies `m_HighWater`, `m_NumAllocated`, and `m_FirstFree` directly. This is why the header comment in `TMap`/`TSet` notes "sparse indices are preserved by the structural copy" — every element in the copy lands at the exact same index it had in `Other`, which lets `TSet`/`TMap` simply `Memcpy` their bucket arrays after copying `m_Elements` rather than re-hashing.
+**CopyFrom(구조적 복사).** 복사 생성자와 복사 대입 연산자에서 사용된다: `Other.m_HighWater` 용량만큼 `Grow`한 뒤, `[0, Other.m_HighWater)` 범위의 모든 슬롯 인덱스에 대해 `m_bAllocated`/`m_NextFree` 메타데이터를 그대로 복사하고, 할당된 슬롯이라면 `Other`로부터 `T`를 복사 생성한다. 마지막으로 `m_HighWater`, `m_NumAllocated`, `m_FirstFree`를 직접 복사한다. `TMap`/`TSet`의 헤더 주석에서 "sparse 인덱스는 구조적 복사에 의해 보존된다"고 언급하는 이유가 바로 이것이다 — 복사본의 모든 원소는 `Other`에서 가졌던 것과 정확히 동일한 인덱스에 위치하게 되며, 이 덕분에 `TSet`/`TMap`은 `m_Elements`를 복사한 뒤 버킷 배열을 재해싱하지 않고 단순히 `Memcpy`할 수 있다.
 
-**Iteration.** `FIterator`/`FConstIterator` wrap a `(TSparseArray*, int32 m_Index)` pair. On construction and after every `operator++`, `SkipToAllocated()` advances `m_Index` past any slots where `m_bAllocated` is false, so dereferencing (`operator*`, which calls `(*m_pArray)[m_Index]`) always lands on a live element. `begin()` starts at index 0 (skipping leading holes), `end()` is `FIterator(this, m_HighWater)`. `GetIndex()` exposes the current sparse index — this is exactly what `TSet::Rehash`/`TMap::Rehash` use to relink the hash-bucket chains without touching element storage.
+**이터레이션.** `FIterator`/`FConstIterator`는 `(TSparseArray*, int32 m_Index)` 쌍을 감싼다. 생성 시점과 매 `operator++` 이후마다 `SkipToAllocated()`가 `m_Index`를 `m_bAllocated`가 false인 슬롯들 너머로 전진시키므로, 역참조(`operator*`, 내부적으로 `(*m_pArray)[m_Index]`를 호출)는 항상 살아있는 원소에 도달한다. `begin()`은 인덱스 0에서 시작하며(앞쪽의 구멍은 건너뜀), `end()`는 `FIterator(this, m_HighWater)`다. `GetIndex()`는 현재의 sparse 인덱스를 노출하는데, 이는 `TSet::Rehash`/`TMap::Rehash`가 원소 저장소를 건드리지 않고 해시 버킷 체인을 다시 연결할 때 정확히 사용하는 값이다.
 
-#### Public API surface
+#### 공개 API 목록
 
-| Member | Behavior |
+| 멤버 | 동작 |
 |---|---|
-| `Emplace(Args&&...)` / `Add(const T&)` / `Add(T&&)` | insert, reuse free slot or append |
-| `RemoveAt(Index)` | O(1) destroy + return to free list |
-| `IsAllocated(Index)` | bounds + `m_bAllocated` check |
-| `operator[](Index)` | element access (checked) |
+| `Emplace(Args&&...)` / `Add(const T&)` / `Add(T&&)` | 삽입, 프리 슬롯 재사용 또는 뒤에 추가 |
+| `RemoveAt(Index)` | O(1) 소멸 후 프리 리스트로 반환 |
+| `IsAllocated(Index)` | 경계 + `m_bAllocated` 검사 |
+| `operator[](Index)` | 원소 접근(검사 포함) |
 | `Num()` | `m_NumAllocated` |
-| `GetMaxIndex()` | `m_HighWater` (iterate `[0, GetMaxIndex())` with `IsAllocated`) |
+| `GetMaxIndex()` | `m_HighWater`(`IsAllocated`와 함께 `[0, GetMaxIndex())` 순회) |
 | `IsEmpty()` | `m_NumAllocated == 0` |
-| `Reset()` | destroy all elements, keep buffer |
-| `Empty()` | destroy all + free buffer |
-| `begin()/end()` (`FIterator`/`FConstIterator`) | hole-skipping iteration, `GetIndex()` |
+| `Reset()` | 모든 원소 소멸, 버퍼는 유지 |
+| `Empty()` | 모든 원소 소멸 + 버퍼 해제 |
+| `begin()/end()` (`FIterator`/`FConstIterator`) | 구멍을 건너뛰는 이터레이션, `GetIndex()` |
 
 ---
 
 ## TSet / TMap / TMultiMap
 
-#### Purpose
-`TSet<KeyType>` and `TMap<KeyType, ValueType>` are separate-chaining hash containers built on top of `TSparseArray` for element storage plus a power-of-two bucket array of intrusive chain heads; `TMultiMap<KeyType, ValueType>` layers a one-to-many key/value API on top of `TMap<KeyType, TArray<ValueType>>`.
+#### 목적
+`TSet<KeyType>`과 `TMap<KeyType, ValueType>`은 원소 저장을 위한 `TSparseArray` 위에 2의 거듭제곱 크기 버킷 배열(intrusive chain head 방식)을 얹은 분리 연결(separate chaining) 해시 컨테이너다. `TMultiMap<KeyType, ValueType>`은 `TMap<KeyType, TArray<ValueType>>` 위에 하나의 키에 여러 값을 매핑하는 API를 한 겹 씌운 구조다.
 
-Files: `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TSet.h`, `TMap.h`, `TMultiMap.h`.
+파일: `/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/TSet.h`, `TMap.h`, `TMultiMap.h`.
 
-#### Real code excerpts
+#### 실제 코드 발췌
 
-`FSetElement` / `FMapElement` with the intrusive chain link:
+intrusive 체인 링크를 가진 `FSetElement` / `FMapElement`:
 
 ```cpp
 // TSet.h
@@ -1260,7 +1259,7 @@ int32* m_pBuckets;
 int32 m_NumBuckets;
 ```
 
-Bucket indexing via mask (power-of-two bucket count):
+마스크를 이용한 버킷 인덱싱 (버킷 개수가 2의 거듭제곱임을 이용):
 
 ```cpp
 static const int32 INITIAL_BUCKETS = 16;
@@ -1271,7 +1270,7 @@ int32 BucketIndex(uint32 Hash) const
 }
 ```
 
-`ConditionalRehash` and `Rehash` (relink without moving elements):
+`ConditionalRehash`와 `Rehash` (원소를 이동시키지 않고 재연결만 수행):
 
 ```cpp
 void Rehash(int32 NewNumBuckets)
@@ -1305,7 +1304,7 @@ void ConditionalRehash(int32 NumElements)
 }
 ```
 
-`TSet::Add` (insert, chaining onto the bucket head):
+`TSet::Add` (버킷 헤드에 체이닝하며 삽입):
 
 ```cpp
 bool Add(const KeyType& Key)
@@ -1325,7 +1324,7 @@ bool Add(const KeyType& Key)
 }
 ```
 
-`TMap::Add` / `FindOrAdd` (update-in-place vs insert):
+`TMap::Add` / `FindOrAdd` (제자리 갱신 vs 신규 삽입):
 
 ```cpp
 void Add(const KeyType& Key, const ValueType& Value)
@@ -1359,7 +1358,7 @@ ValueType& FindOrAdd(const KeyType& Key)
 }
 ```
 
-Remove (unlink from chain, then free the `TSparseArray` slot):
+Remove (체인에서 분리한 뒤 `TSparseArray` 슬롯을 해제):
 
 ```cpp
 bool Remove(const KeyType& Key)
@@ -1386,7 +1385,7 @@ bool Remove(const KeyType& Key)
 }
 ```
 
-Iterators forwarding to `TSparseArray`'s iterator:
+`TSparseArray`의 반복자에 위임하는 이터레이터:
 
 ```cpp
 // TSet.h
@@ -1410,7 +1409,7 @@ FIterator begin() { return m_Elements.begin(); }
 FIterator end() { return m_Elements.end(); }
 ```
 
-`TMultiMap` wrapping `TMap<K, TArray<V>>`:
+`TMap<K, TArray<V>>`를 감싸는 `TMultiMap`:
 
 ```cpp
 template<typename KeyType, typename ValueType>
@@ -1441,62 +1440,62 @@ public:
 };
 ```
 
-#### Step-by-step runtime behavior
+#### 단계별 런타임 동작
 
-**Element layout and chaining.** `TSet` stores `FSetElement { KeyType Key; int32 m_HashNext; }`; `TMap` stores `FMapElement { KeyType Key; ValueType Value; int32 m_HashNext; }`. Both are held inside a `TSparseArray<FSetElement>`/`TSparseArray<FMapElement>` (`m_Elements`), so each element gets a stable sparse index for as long as it lives, and `m_HashNext` is an intrusive singly-linked-list pointer (by sparse index, `INDEX_NONE`-terminated) chaining together every element that hashes to the same bucket — this is classic separate chaining, not open addressing.
+**원소 레이아웃과 체이닝.** `TSet`은 `FSetElement { KeyType Key; int32 m_HashNext; }`를 저장하고, `TMap`은 `FMapElement { KeyType Key; ValueType Value; int32 m_HashNext; }`를 저장한다. 둘 다 `TSparseArray<FSetElement>`/`TSparseArray<FMapElement>`(`m_Elements`) 안에 보관되므로, 각 원소는 살아있는 동안 안정적인 sparse 인덱스를 유지하며, `m_HashNext`는 같은 버킷으로 해시되는 모든 원소를 엮는 intrusive 단일 연결 리스트 포인터(sparse 인덱스 기준, `INDEX_NONE`으로 종료)다 — 이는 open addressing이 아니라 전형적인 분리 연결(separate chaining) 방식이다.
 
-**Bucket array.** `m_pBuckets` is a flat `int32*` array of `m_NumBuckets` chain-head indices (`INDEX_NONE` = empty), and `m_NumBuckets` is always kept a power of two so `BucketIndex(Hash)` can compute `Hash & (m_NumBuckets - 1)` (a mask) instead of a modulo. `AllocateBuckets` mallocs the array and initializes every slot to `INDEX_NONE`. Both `TSet` and `TMap` start with `m_pBuckets == nullptr, m_NumBuckets == 0` and lazily allocate `INITIAL_BUCKETS == 16` buckets on first insert via `ConditionalRehash`.
+**버킷 배열.** `m_pBuckets`는 `m_NumBuckets`개의 체인 헤드 인덱스(`INDEX_NONE` = 빈 버킷)를 담는 평평한 `int32*` 배열이며, `m_NumBuckets`는 항상 2의 거듭제곱으로 유지되어 `BucketIndex(Hash)`가 모듈로 연산 대신 `Hash & (m_NumBuckets - 1)`(마스크 연산)로 계산될 수 있다. `AllocateBuckets`는 배열을 malloc하고 모든 슬롯을 `INDEX_NONE`으로 초기화한다. `TSet`과 `TMap` 모두 `m_pBuckets == nullptr, m_NumBuckets == 0` 상태로 시작하며, 첫 삽입 시 `ConditionalRehash`를 통해 지연 방식으로 `INITIAL_BUCKETS == 16`개의 버킷을 할당한다.
 
-**Add / Find.** Both containers compute `BucketIndex(GetTypeHash(Key))` to get a reference to the bucket's head slot, then walk the `m_HashNext` chain comparing keys with `==`. For `TSet::Add`, if a matching key is found the call returns `false` (no duplicate insert); otherwise a new `FSetElement(Key, Bucket)` is emplaced into `m_Elements` — note the new element's `m_HashNext` is initialized to the *previous* bucket head (`Bucket`) before `Bucket` is reassigned to the new element's index, so insertion is O(1) push-to-front of the chain. `TMap::Add` does the analogous walk but instead of failing on a match, it overwrites `m_Elements[i].Value` in place (update semantics). `FindOrAdd`/`operator[]` do the same walk, returning a reference to the existing value or inserting a default-constructed one (`FMapElement(Key, Bucket)` — the value-less constructor default-constructs `Value`) if absent. `Find`/`FindIndex`/`Contains` are read-only walks of the same shape and return `nullptr`/`INDEX_NONE` on a miss.
+**Add / Find.** 두 컨테이너 모두 `BucketIndex(GetTypeHash(Key))`를 계산해 버킷 헤드 슬롯에 대한 참조를 얻은 뒤, `m_HashNext` 체인을 따라가며 `==`로 키를 비교한다. `TSet::Add`의 경우 일치하는 키가 발견되면 `false`를 반환하고(중복 삽입 없음), 그렇지 않으면 새로운 `FSetElement(Key, Bucket)`이 `m_Elements`에 emplace된다 — 이때 새 원소의 `m_HashNext`는 `Bucket`이 새 원소의 인덱스로 재할당되기 *이전의* 버킷 헤드 값으로 초기화되므로, 삽입은 체인 맨 앞에 O(1)로 push하는 형태가 된다. `TMap::Add`도 동일한 방식으로 체인을 순회하지만, 일치 시 실패 처리하는 대신 `m_Elements[i].Value`를 제자리에서 덮어쓴다(갱신 시맨틱). `FindOrAdd`/`operator[]`도 같은 방식으로 순회하며, 기존 값이 있으면 그 참조를 반환하고 없으면 기본 생성된 값을 삽입한다(`FMapElement(Key, Bucket)` — 값 없는 생성자가 `Value`를 기본 생성함). `Find`/`FindIndex`/`Contains`는 동일한 형태의 읽기 전용 순회이며, 미스 시 `nullptr`/`INDEX_NONE`을 반환한다.
 
-**Remove.** Rather than iterating with a simple index, `Remove` walks the chain holding a pointer-to-pointer (`int32* pLink`) starting at the bucket head; when it finds the matching key it splices the element out of the chain by writing `*pLink = m_Elements[Index].m_HashNext` (works uniformly whether the match is the bucket head or a middle/tail link, since `pLink` was previously either `&m_pBuckets[...]` or `&m_Elements[Index].m_HashNext` of the prior link), then calls `m_Elements.RemoveAt(Index)` to return the sparse slot to `TSparseArray`'s free list.
+**Remove.** 단순 인덱스로 순회하는 대신, `Remove`는 버킷 헤드에서 시작하는 포인터의 포인터(`int32* pLink`)를 들고 체인을 순회한다. 일치하는 키를 찾으면 `*pLink = m_Elements[Index].m_HashNext`를 써서 체인에서 해당 원소를 잘라낸다(일치한 대상이 버킷 헤드든 중간/끝 링크든 균일하게 동작하는데, 이는 `pLink`가 그 이전 단계에서 `&m_pBuckets[...]`이거나 앞선 링크의 `&m_Elements[Index].m_HashNext`였기 때문이다). 그런 다음 `m_Elements.RemoveAt(Index)`를 호출해 해당 sparse 슬롯을 `TSparseArray`의 free list로 반환한다.
 
-**ConditionalRehash / Rehash.** Every `Add`/`FindOrAdd` first calls `ConditionalRehash(m_Elements.Num() + 1)`. If buckets haven't been allocated yet, it allocates the initial 16 and returns (no rehash needed for an empty container). Otherwise, if the prospective element count would exceed `m_NumBuckets` (i.e., load factor > 1.0), it doubles `NewNumBuckets` until it's `>= NumElements`, then calls `Rehash(NewNumBuckets)`. Critically, `Rehash` does **not** move or reconstruct any elements in `m_Elements` — it only frees and reallocates the (much smaller) `int32` bucket array, then re-links every existing element by iterating `m_Elements.begin()..end()` (a `TSparseArray` iterator that already skips holes) and, for each, recomputing `BucketIndex(GetTypeHash(It->Key))` and pushing `It.GetIndex()` onto the new bucket's chain head. Because `TSparseArray` indices are stable, no `T` object is ever copied/moved/destroyed during a rehash — only the tiny bucket-head/`m_HashNext` integers change.
+**ConditionalRehash / Rehash.** 모든 `Add`/`FindOrAdd`는 먼저 `ConditionalRehash(m_Elements.Num() + 1)`를 호출한다. 버킷이 아직 할당되지 않았다면 초기 16개를 할당하고 리턴한다(빈 컨테이너에는 rehash가 필요 없음). 그렇지 않고 예상 원소 개수가 `m_NumBuckets`를 초과할 경우(즉 load factor > 1.0), `NewNumBuckets`가 `NumElements` 이상이 될 때까지 두 배씩 늘린 뒤 `Rehash(NewNumBuckets)`를 호출한다. 중요한 점은, `Rehash`가 `m_Elements` 안의 원소를 **이동하거나 재구성하지 않는다는** 것이다 — (훨씬 작은) `int32` 버킷 배열만 해제 후 재할당하고, `m_Elements.begin()..end()`를 순회하며(구멍을 이미 건너뛰는 `TSparseArray` 이터레이터) 각 원소에 대해 `BucketIndex(GetTypeHash(It->Key))`를 다시 계산해 `It.GetIndex()`를 새 버킷의 체인 헤드에 밀어넣는 방식으로 모든 기존 원소를 재연결한다. `TSparseArray` 인덱스가 안정적이기 때문에 rehash 도중 어떤 `T` 객체도 복사/이동/소멸되지 않으며, 오직 작은 버킷 헤드/`m_HashNext` 정수 값만 바뀐다.
 
-**Iterators forward to TSparseArray's iterator.** `TSet::FIterator`/`FConstIterator` are thin wrappers holding a `TSparseArray<FSetElement>::FIterator m_It`; `operator++` forwards to `++m_It`, `operator!=` forwards to `m_It != Other.m_It`, and `operator*` returns `(*m_It).Key` (i.e., it un-wraps the `FSetElement` down to just the `KeyType&`). `TMap` goes one step further and doesn't even wrap — it directly aliases `FIterator = typename TSparseArray<FMapElement>::FIterator` and its `begin()/end()` simply return `m_Elements.begin()/end()`, so dereferencing a `TMap` iterator yields an `FMapElement&` with public `.Key`/`.Value` members directly (as seen used in `TMultiMap::Num()`: `for (const auto& Bucket : m_Map) { Total += Bucket.Value.Num(); }`). In both cases, hole-skipping (only visiting allocated slots) is entirely inherited from `TSparseArray::FIterator::SkipToAllocated()`.
+**이터레이터는 TSparseArray의 이터레이터에 위임한다.** `TSet::FIterator`/`FConstIterator`는 `TSparseArray<FSetElement>::FIterator m_It`를 담고 있는 얇은 래퍼로, `operator++`는 `++m_It`에, `operator!=`는 `m_It != Other.m_It`에 위임하며, `operator*`는 `(*m_It).Key`를 반환한다(즉 `FSetElement`를 벗겨내어 `KeyType&`만 노출한다). `TMap`은 한 걸음 더 나아가 아예 래핑조차 하지 않는다 — `FIterator = typename TSparseArray<FMapElement>::FIterator`를 직접 별칭으로 사용하며, `begin()/end()`는 단순히 `m_Elements.begin()/end()`를 반환한다. 따라서 `TMap` 이터레이터를 역참조하면 공개 멤버 `.Key`/`.Value`를 가진 `FMapElement&`가 직접 나온다(`TMultiMap::Num()`에서 `for (const auto& Bucket : m_Map) { Total += Bucket.Value.Num(); }`와 같이 사용되는 것을 볼 수 있다). 두 경우 모두, 구멍 건너뛰기(할당된 슬롯만 방문하는 동작)는 전적으로 `TSparseArray::FIterator::SkipToAllocated()`로부터 상속받는다.
 
-**Copy semantics.** Both `TSet`'s and `TMap`'s copy constructor/assignment copy `m_Elements` via `TSparseArray`'s structural `CopyFrom` (which preserves sparse indices), and then simply `Memcpy` the bucket array (`FMemory::Memcpy(m_pBuckets, Other.m_pBuckets, sizeof(int32) * m_NumBuckets)`) rather than re-hashing — valid precisely because the structural copy guarantees every element keeps the same index in the copy as in the original, so the old bucket-chain indices remain correct.
+**복사 시맨틱.** `TSet`과 `TMap` 모두 복사 생성자/복사 대입에서 `m_Elements`를 `TSparseArray`의 구조적 `CopyFrom`(sparse 인덱스를 보존함)을 통해 복사한 뒤, 버킷 배열은 재해싱하지 않고 그냥 `Memcpy`한다(`FMemory::Memcpy(m_pBuckets, Other.m_pBuckets, sizeof(int32) * m_NumBuckets)`) — 이는 구조적 복사가 원본과 복사본에서 모든 원소가 동일한 인덱스를 유지함을 보장하기 때문에 정확히 성립하며, 그 결과 기존 버킷 체인 인덱스가 그대로 유효하게 남는다.
 
-**TMultiMap.** It holds a single private member `TMap<KeyType, TArray<ValueType>> m_Map` and has no hashing/bucket logic of its own — `Add` calls `m_Map.FindOrAdd(Key).Add(Value)` (get-or-create the value array, then append); `AddUnique` additionally checks `Values.Contains(Value)` before appending; `MultiFind`/`Contains` delegate to `m_Map.Find`; `RemoveSingle` finds the array, removes one matching value via `TArray::Remove`, and if the array becomes empty also calls `m_Map.Remove(Key)` to drop the key entirely; `RemoveAll` just calls `m_Map.Remove(Key)`. `NumKeys()` is `m_Map.Num()`; `Num()` (total values) iterates every bucket and sums `Bucket.Value.Num()`.
+**TMultiMap.** 이 클래스는 `TMap<KeyType, TArray<ValueType>> m_Map`이라는 단일 private 멤버만 가지고 있으며 자체적인 해싱/버킷 로직은 전혀 없다 — `Add`는 `m_Map.FindOrAdd(Key).Add(Value)`를 호출한다(값 배열을 가져오거나 생성한 뒤 추가); `AddUnique`는 추가하기 전에 `Values.Contains(Value)`를 추가로 검사한다; `MultiFind`/`Contains`는 `m_Map.Find`에 위임한다; `RemoveSingle`은 배열을 찾아 `TArray::Remove`로 일치하는 값 하나를 제거하고, 만약 배열이 비게 되면 `m_Map.Remove(Key)`를 호출해 키 자체도 제거한다; `RemoveAll`은 그냥 `m_Map.Remove(Key)`를 호출한다. `NumKeys()`는 `m_Map.Num()`이며; `Num()`(전체 값 개수)은 모든 버킷을 순회하며 `Bucket.Value.Num()`을 합산한다.
 
-#### Public API surface
+#### 공개 API 목록
 
-| Container | Member | Behavior |
+| 컨테이너 | 멤버 | 동작 |
 |---|---|---|
-| TSet | `Add(const K&)/Add(K&&)` | insert if absent, returns bool |
-| TSet | `Contains(const K&)` | membership test |
-| TSet | `Remove(const K&)` | unlink + free slot |
-| TSet | `Reset()`/`Empty()` | clear elements (keep/free buckets) |
-| TSet | `Num()`/`IsEmpty()` | delegate to `m_Elements` |
-| TSet | `begin()/end()` | `FIterator`/`FConstIterator` yielding `KeyType&` |
-| TMap | `Add(K,V)` | insert or overwrite value |
-| TMap | `FindOrAdd(const K&)` / `operator[]` | get-or-default-insert reference |
-| TMap | `Find(const K&)` | returns `ValueType*` or `nullptr` |
-| TMap | `FindRef(const K&)` | returns reference, `check()`s existence |
-| TMap | `Contains(const K&)` | membership test |
-| TMap | `Remove(const K&)` | unlink + free slot |
-| TMap | `Reset()`/`Empty()` | clear |
-| TMap | `Num()`/`IsEmpty()` | delegate to `m_Elements` |
-| TMap | `begin()/end()` | `TSparseArray<FMapElement>::FIterator` directly, yields `.Key`/`.Value` |
-| TMultiMap | `Add(K,V)` | append value under key |
-| TMultiMap | `AddUnique(K,V)` | append only if pair absent |
-| TMultiMap | `MultiFind(const K&)` | returns `const TArray<V>*` |
-| TMultiMap | `Contains(K)` / `Contains(K,V)` | key-only or key+value test |
-| TMultiMap | `RemoveSingle(K,V)` | remove one value, drop key if array empties |
-| TMultiMap | `RemoveAll(K)` | drop key entirely |
-| TMultiMap | `Reset()`/`Empty()` | delegate to `m_Map` |
-| TMultiMap | `NumKeys()`/`Num()`/`IsEmpty()` | key count / total value count / emptiness |
+| TSet | `Add(const K&)/Add(K&&)` | 없으면 삽입, bool 반환 |
+| TSet | `Contains(const K&)` | 존재 여부 검사 |
+| TSet | `Remove(const K&)` | 체인에서 분리 + 슬롯 해제 |
+| TSet | `Reset()`/`Empty()` | 원소 비우기 (버킷은 유지/해제) |
+| TSet | `Num()`/`IsEmpty()` | `m_Elements`에 위임 |
+| TSet | `begin()/end()` | `KeyType&`를 산출하는 `FIterator`/`FConstIterator` |
+| TMap | `Add(K,V)` | 삽입 또는 값 덮어쓰기 |
+| TMap | `FindOrAdd(const K&)` / `operator[]` | 있으면 참조 반환, 없으면 기본값 삽입 후 참조 반환 |
+| TMap | `Find(const K&)` | `ValueType*` 또는 `nullptr` 반환 |
+| TMap | `FindRef(const K&)` | 참조 반환, 존재 여부를 `check()`로 검증 |
+| TMap | `Contains(const K&)` | 존재 여부 검사 |
+| TMap | `Remove(const K&)` | 체인에서 분리 + 슬롯 해제 |
+| TMap | `Reset()`/`Empty()` | 비우기 |
+| TMap | `Num()`/`IsEmpty()` | `m_Elements`에 위임 |
+| TMap | `begin()/end()` | `TSparseArray<FMapElement>::FIterator`를 직접 사용, `.Key`/`.Value` 산출 |
+| TMultiMap | `Add(K,V)` | 해당 키 아래에 값 추가 |
+| TMultiMap | `AddUnique(K,V)` | 쌍이 없을 때만 추가 |
+| TMultiMap | `MultiFind(const K&)` | `const TArray<V>*` 반환 |
+| TMultiMap | `Contains(K)` / `Contains(K,V)` | 키만 검사 또는 키+값 검사 |
+| TMultiMap | `RemoveSingle(K,V)` | 값 하나 제거, 배열이 비면 키도 제거 |
+| TMultiMap | `RemoveAll(K)` | 키 전체 제거 |
+| TMultiMap | `Reset()`/`Empty()` | `m_Map`에 위임 |
+| TMultiMap | `NumKeys()`/`Num()`/`IsEmpty()` | 키 개수 / 전체 값 개수 / 비어있는지 여부 |
 
 ---
 
 ## HashFunctions
 
-#### Purpose
-`HashFunctions.h` (`/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/HashFunctions.h`) defines `GetTypeHash`, the free-function hashing hook that `TSet`/`TMap` call via `BucketIndex(GetTypeHash(Key))`, along with a generic byte-scanning fallback and explicit specializations for common scalar types.
+#### 목적
+`HashFunctions.h` (`/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/HashFunctions.h`)는 `TSet`/`TMap`이 `BucketIndex(GetTypeHash(Key))`를 통해 호출하는 자유 함수 해싱 훅인 `GetTypeHash`를 정의하며, 범용 바이트 스캔 폴백과 흔히 쓰이는 스칼라 타입들에 대한 명시적 특수화를 함께 제공한다.
 
-#### Real code excerpts
+#### 실제 코드 발췌
 
-Generic fallback (byte-level reinterpret + Murmur-inspired finalizer per byte):
+범용 폴백 (바이트 단위 재해석 + 바이트별 Murmur 계열 파이널라이저):
 
 ```cpp
 template<typename T>
@@ -1517,7 +1516,7 @@ inline uint32 GetTypeHash(const T& Value)
 }
 ```
 
-`int32`/`uint32` specialization:
+`int32`/`uint32` 특수화:
 
 ```cpp
 template<>
@@ -1541,7 +1540,7 @@ inline uint32 GetTypeHash(const uint32& Value)
 }
 ```
 
-`int64`/`uint64` specialization (MurmurHash3 64-bit finalizer, folded down to 32 bits):
+`int64`/`uint64` 특수화 (MurmurHash3 64비트 파이널라이저, 32비트로 폴딩):
 
 ```cpp
 template<>
@@ -1556,9 +1555,9 @@ inline uint32 GetTypeHash(const int64& Value)
     return (uint32)(H ^ (H >> 32));
 }
 ```
-(`uint64` has an identical specialization.)
+(`uint64`도 동일한 특수화를 가진다.)
 
-`float` specialization (canonicalizes `-0.0f` to `0.0f` before hashing):
+`float` 특수화 (해싱 전에 `-0.0f`를 `0.0f`로 정규화):
 
 ```cpp
 template<>
@@ -1575,7 +1574,7 @@ inline uint32 GetTypeHash(const float& Value)
 }
 ```
 
-`bool` specialization:
+`bool` 특수화:
 
 ```cpp
 template<>
@@ -1585,7 +1584,7 @@ inline uint32 GetTypeHash(const bool& Value)
 }
 ```
 
-Pointer overload (not a specialization — a separate templated overload taking `T*`):
+포인터 오버로드 (특수화가 아니라 `T*`를 받는 별도의 템플릿 오버로드):
 
 ```cpp
 template<typename T>
@@ -1596,32 +1595,33 @@ inline uint32 GetTypeHash(T* Ptr)
 }
 ```
 
-#### Step-by-step runtime behavior
+#### 단계별 런타임 동작
 
-**Generic fallback.** For any type `T` without an explicit specialization, `GetTypeHash` reinterprets `&Value` as a `const uint8*` and folds each byte into a running 32-bit hash using a per-byte Murmur-style mix (`Hash ^= byte << ((i&3)*8); Hash ^= Hash>>16; Hash *= 0x45d9f3bU; Hash ^= Hash>>16`). This makes `GetTypeHash` work out of the box for any trivially-hashable POD struct passed by value/reference, at the cost of being a pure bitwise hash of the object representation (padding bytes included, and it will treat any two objects with identical bit patterns as equal-hashing regardless of semantic equality).
+**범용 폴백.** 명시적 특수화가 없는 임의의 타입 `T`에 대해, `GetTypeHash`는 `&Value`를 `const uint8*`로 재해석한 뒤 각 바이트를 바이트별 Murmur 스타일 믹스(`Hash ^= byte << ((i&3)*8); Hash ^= Hash>>16; Hash *= 0x45d9f3bU; Hash ^= Hash>>16`)로 32비트 누적 해시에 접어넣는다. 이 덕분에 `GetTypeHash`는 값 또는 참조로 전달되는 단순 해싱 가능한(trivially-hashable) 임의의 POD 구조체에 대해 별도 작업 없이 바로 동작하지만, 대신 객체 표현에 대한 순수 비트 단위 해시라는 대가를 치른다(패딩 바이트까지 포함되며, 비트 패턴이 동일한 두 객체는 의미론적 동등성과 무관하게 동일한 해시로 취급된다).
 
-**int32 / uint32.** A single-pass integer finalizer: XOR-shift-right-16, multiply by the odd 32-bit constant `0x45d9f3bU`, XOR-shift-right-16 again — a cheap, well-mixing avalanche finalizer (this same `0x45d9f3bU` constant is reused as the byte-mixing multiplier in the generic fallback and the float hash).
+**int32 / uint32.** 단일 패스 정수 파이널라이저다: XOR-우측시프트-16, 홀수 32비트 상수 `0x45d9f3bU` 곱하기, 다시 XOR-우측시프트-16 — 저렴하면서도 잘 섞이는 avalanche 파이널라이저다(이 `0x45d9f3bU` 상수는 범용 폴백의 바이트 믹싱 곱셈 인자와 float 해시에서도 동일하게 재사용된다).
 
-**int64 / uint64.** Uses the classic MurmurHash3 64-bit finalizer (`fmix64`): three rounds of `H ^= H >> 33; H *= <64-bit odd constant>;` with constants `0xff51afd7ed558ccdULL` and `0xc4ceb9fe1a85ec53ULL`, then folds the 64-bit result down to 32 bits by XOR-ing the high and low halves (`H ^ (H >> 32)`).
+**int64 / uint64.** 전형적인 MurmurHash3 64비트 파이널라이저(`fmix64`)를 사용한다: `H ^= H >> 33; H *= <64비트 홀수 상수>;`를 세 라운드 반복하며 상수로 `0xff51afd7ed558ccdULL`와 `0xc4ceb9fe1a85ec53ULL`을 사용하고, 그 뒤 상위/하위 절반을 XOR(`H ^ (H >> 32)`)해서 64비트 결과를 32비트로 접는다.
 
-**float.** First canonicalizes so that `-0.0f` and `0.0f` hash identically (`(Value == 0.f) ? 0.f : Value`, since floating point `-0.0f == 0.0f` evaluates true), reinterprets the bits via `memcpy` into a `uint32` (avoiding strict-aliasing UB), then runs the same one-pass integer finalizer as `int32`/`uint32`.
+**float.** 먼저 `-0.0f`와 `0.0f`가 동일한 해시를 갖도록 정규화한다(`(Value == 0.f) ? 0.f : Value` — 부동소수점에서 `-0.0f == 0.0f`는 참으로 평가되기 때문). 그런 다음 `memcpy`로 비트를 `uint32`에 재해석해 넣고(strict-aliasing UB를 피하기 위함), `int32`/`uint32`와 동일한 단일 패스 정수 파이널라이저를 실행한다.
 
-**bool.** Trivial: `1u` for `true`, `0u` for `false` — no mixing needed since there are only two possible hash values.
+**bool.** 단순하다: `true`면 `1u`, `false`면 `0u` — 가능한 해시값이 두 가지뿐이므로 믹싱이 필요 없다.
 
-**Pointer overload.** Templated on `T*` (any pointer type), it casts the pointer to a `uint64` address (`(uint64)(uintptr_t)Ptr`) and forwards to the `int64`/`uint64` `GetTypeHash` specialization for the actual mixing, so pointer keys in a `TSet`/`TMap` get the full MurmurHash3 finalizer treatment rather than raw-address-modulo-buckets behavior.
+**포인터 오버로드.** `T*`(임의의 포인터 타입)에 대해 템플릿화되어 있으며, 포인터를 `uint64` 주소(`(uint64)(uintptr_t)Ptr`)로 캐스팅한 뒤 실제 믹싱을 위해 `int64`/`uint64` `GetTypeHash` 특수화로 위임한다. 이 덕분에 `TSet`/`TMap`의 포인터 키는 단순한 raw-address-modulo-buckets 방식이 아니라 완전한 MurmurHash3 파이널라이저 처리를 받는다.
 
-#### Public API surface
+#### 공개 API 목록
 
-| Function | Specialization for | Algorithm |
+| 함수 | 대상 특수화 | 알고리즘 |
 |---|---|---|
-| `GetTypeHash(const T&)` | generic/any type | per-byte Murmur-style mix over raw bytes |
-| `GetTypeHash(const int32&)` | `int32` | one-pass xorshift/multiply finalizer |
-| `GetTypeHash(const uint32&)` | `uint32` | one-pass xorshift/multiply finalizer |
-| `GetTypeHash(const int64&)` | `int64` | MurmurHash3 64-bit `fmix64`, folded to 32 bits |
-| `GetTypeHash(const uint64&)` | `uint64` | MurmurHash3 64-bit `fmix64`, folded to 32 bits |
-| `GetTypeHash(const float&)` | `float` | `-0.0`/`0.0` canonicalized, bit-cast + finalizer |
-| `GetTypeHash(const bool&)` | `bool` | `1`/`0` constant |
-| `GetTypeHash(T*)` | any pointer type | address cast to `uint64`, delegates to int64 hash |
+| `GetTypeHash(const T&)` | 범용/임의 타입 | 원시 바이트에 대한 바이트별 Murmur 스타일 믹스 |
+| `GetTypeHash(const int32&)` | `int32` | 단일 패스 xorshift/곱셈 파이널라이저 |
+| `GetTypeHash(const uint32&)` | `uint32` | 단일 패스 xorshift/곱셈 파이널라이저 |
+| `GetTypeHash(const int64&)` | `int64` | MurmurHash3 64비트 `fmix64`, 32비트로 폴딩 |
+| `GetTypeHash(const uint64&)` | `uint64` | MurmurHash3 64비트 `fmix64`, 32비트로 폴딩 |
+| `GetTypeHash(const float&)` | `float` | `-0.0`/`0.0` 정규화 후 비트 캐스트 + 파이널라이저 |
+| `GetTypeHash(const bool&)` | `bool` | `1`/`0` 상수 |
+| `GetTypeHash(T*)` | 임의의 포인터 타입 | `uint64`로 주소 캐스팅 후 int64 해시로 위임 |
+
 ---
 
 ## Math 라이브러리
@@ -1775,13 +1775,12 @@ int32 FRandomStream::NextSeed()
 ```
 
 이 시드를 바탕으로 `RandHelper(A)`(`[0,A)`), `RandRange(Min,Max)`(`[Min,Max]` 닫힌 구간), `FRand()`(`[0,1)`, 23비트 가수부 마스킹으로 float 생성), `FRandRange`, `RandBool`을 제공한다. `Reset()`은 `m_InitialSeed`로 되돌려 같은 시퀀스를 재현할 수 있게 한다. 같은 시드로 결정론적 재현이 가능하다는 특성 때문에 드롭 확률 계산, 몬스터 스폰, 리플레이/디버깅처럼 재현성이 필요한 게임플레이 난수에 사용하도록 설계되어 있다(CLAUDE.md 로드맵에도 "드롭 확률·몬스터 스폰" 용도로 명시됨).
----
 
 ## FString
 
-**Purpose.** `FString` is the engine's dynamic, heap-owning wide string type (`Engine/Include/Core/String/FString.h`, `FString.cpp`). It is the analogue of Unreal's `FString`, backed by `wchar_t` rather than any STL container, allocated exclusively through `FMemory::Malloc`/`FMemory::Free`.
+**목적.** `FString`은 엔진의 동적으로 힙에 소유권을 두는 와이드 문자열 타입이다(`Engine/Include/Core/String/FString.h`, `FString.cpp`). 언리얼의 `FString`에 대응하는 타입으로, STL 컨테이너가 아니라 `wchar_t`를 기반으로 하며, `FMemory::Malloc`/`FMemory::Free`를 통해서만 할당된다.
 
-**Buffer layout.** The whole state is three members:
+**버퍼 레이아웃.** 전체 상태는 멤버 세 개로 구성된다.
 
 ```cpp
 // FString.h
@@ -1790,7 +1789,7 @@ int32 m_Length;
 int32 m_Capacity;
 ```
 
-`m_pData` is `nullptr` for an empty/default string (no allocation happens for `FString()`), `m_Length` is the character count excluding the null terminator, and `m_Capacity` is the number of `wchar_t` slots actually allocated (always `>= m_Length + 1` so there is always room for the terminator). `GetData()` compensates for the null-buffer case by returning `L""` instead of `nullptr`:
+`m_pData`는 빈 문자열/기본 문자열일 때 `nullptr`이며(`FString()`은 아무 할당도 하지 않는다), `m_Length`는 널 종료 문자를 제외한 문자 개수, `m_Capacity`는 실제로 할당된 `wchar_t` 슬롯 개수다(항상 `m_Length + 1` 이상이므로 종료 문자를 위한 공간이 언제나 확보되어 있다). `GetData()`는 버퍼가 널인 경우를 보정하기 위해 `nullptr` 대신 `L""`을 반환한다.
 
 ```cpp
 const wchar_t* GetData() const
@@ -1799,30 +1798,30 @@ const wchar_t* GetData() const
 }
 ```
 
-Growth is handled by a private `Grow(int32 NewCapacity)` (`FString.cpp`) which mallocs a new buffer, copies `m_Length + 1` wide chars (including the terminator) from the old buffer if one exists, or writes a lone `L'\0'` if there wasn't one, then frees the old buffer. Callers (`operator+=`) compute the new capacity as `max(m_Capacity * 2, NewLength + 1)` — classic doubling growth with a floor at the exact requirement.
+증가(growth)는 `FString.cpp`의 private 함수 `Grow(int32 NewCapacity)`가 처리한다. 이 함수는 새 버퍼를 malloc하고, 기존 버퍼가 있다면 종료 문자를 포함한 `m_Length + 1`개의 와이드 문자를 복사하며(기존 버퍼가 없었다면 단독으로 `L'\0'` 하나만 기록한다), 그다음 기존 버퍼를 해제한다. 호출부(`operator+=`)는 새 용량을 `max(m_Capacity * 2, NewLength + 1)`로 계산한다 — 정확히 필요한 만큼을 하한선으로 두는 전형적인 2배 증가 전략이다.
 
-**Construction.**
-- `FString()` — zero-inits, no allocation.
-- `FString(const wchar_t* Str)` — allocates exactly `wcslen(Str)+1` slots and `Memcpy`s the source including its terminator; guarded by `check(m_pData != nullptr)`. A `nullptr` or empty input leaves the string in the default (unallocated) state.
-- `FString(const FString& Other)` — delegates to `*this = Other` (copy assignment), so it's a real deep copy with a fresh allocation sized to `Other.m_Length + 1`.
-- `FString(FString&& Other) noexcept` — steals `Other`'s pointer/length/capacity directly and resets `Other` to the empty state; no allocation, no copy.
-- Destructor frees `m_pData` if non-null.
+**생성.**
+- `FString()` — 제로 초기화, 할당 없음.
+- `FString(const wchar_t* Str)` — 정확히 `wcslen(Str)+1` 슬롯을 할당하고 소스를 종료 문자까지 포함해 `Memcpy`한다. `check(m_pData != nullptr)`로 보호된다. `nullptr`이거나 빈 입력이 들어오면 문자열은 기본(미할당) 상태로 남는다.
+- `FString(const FString& Other)` — `*this = Other`(복사 대입)로 위임한다. 즉 `Other.m_Length + 1` 크기로 새로 할당하는 진짜 깊은 복사다.
+- `FString(FString&& Other) noexcept` — `Other`의 포인터/길이/용량을 그대로 훔쳐오고 `Other`를 빈 상태로 리셋한다. 할당도, 복사도 일어나지 않는다.
+- 소멸자는 `m_pData`가 널이 아니면 해제한다.
 
-**Assignment.** `operator=(const FString&)` self-assign-checks, frees any existing buffer, then reallocates and copies (mirrors the copy constructor). `operator=(FString&&) noexcept` self-assign-checks, frees the current buffer, steals the source's members, and resets the source. `operator=(const wchar_t*)` is implemented by constructing a temporary `FString(Str)` and move-assigning it — i.e. it reuses the move path rather than duplicating logic.
+**대입.** `operator=(const FString&)`는 자기 대입 여부를 확인한 뒤 기존 버퍼를 해제하고, 다시 할당해 복사한다(복사 생성자와 동일한 방식). `operator=(FString&&) noexcept`는 자기 대입 여부를 확인한 뒤 현재 버퍼를 해제하고, 소스의 멤버를 훔쳐온 다음 소스를 리셋한다. `operator=(const wchar_t*)`는 임시 `FString(Str)`을 생성한 뒤 이동 대입하는 방식으로 구현되어 있다 — 즉 로직을 중복시키지 않고 이동 경로를 재사용한다.
 
-**Operator overloads present:**
-- `operator=` — copy, move, and `const wchar_t*`.
-- `operator+=` — `const FString&`, `const wchar_t*`, and single `wchar_t` (each grows the buffer as needed; the `wchar_t` overload manually writes the char plus a fresh null terminator and bumps `m_Length`).
-- `operator+` — `const FString&` and `const wchar_t*`, both implemented as "copy `*this`, then `+=`".
-- `operator==` / `operator!=` — length check first, then `wcscmp` (only called when both lengths are equal and nonzero; two empty strings compare equal without touching `m_pData`).
-- `operator<` — handles null-buffer cases explicitly (`nullptr < nullptr` is `false`, `nullptr < non-null` is `true`) before falling back to `wcscmp(...) < 0`.
-- `operator[]` (mutable and const) — bounds-checked via `check(m_pData && Index >= 0 && Index < m_Length)`.
+**존재하는 연산자 오버로드:**
+- `operator=` — 복사, 이동, `const wchar_t*` 세 가지.
+- `operator+=` — `const FString&`, `const wchar_t*`, 단일 `wchar_t` 세 가지(각각 필요한 만큼 버퍼를 늘린다. `wchar_t` 오버로드는 해당 문자를 직접 기록하고 새 널 종료 문자를 쓴 뒤 `m_Length`를 증가시킨다).
+- `operator+` — `const FString&`와 `const wchar_t*` 두 가지이며, 둘 다 "`*this`를 복사한 뒤 `+=`"로 구현되어 있다.
+- `operator==` / `operator!=` — 먼저 길이를 비교하고, 그다음 `wcscmp`를 호출한다(양쪽 길이가 같고 0이 아닐 때만 호출되며, 두 빈 문자열은 `m_pData`를 건드리지 않고도 같다고 판정된다).
+- `operator<` — 널 버퍼 케이스를 명시적으로 처리한 뒤(`nullptr < nullptr`은 `false`, `nullptr < non-null`은 `true`) `wcscmp(...) < 0`으로 폴백한다.
+- `operator[]`(mutable과 const 둘 다) — `check(m_pData && Index >= 0 && Index < m_Length)`로 범위를 검사한다.
 
-There is no `operator*` despite the CLAUDE.md roadmap mentioning one — the actual header only declares `+`, `+=`, `==`, `!=`, `<`, `[]`, and the assignment operators.
+CLAUDE.md 로드맵에서는 `operator*`를 언급하지만 실제로는 존재하지 않는다 — 실제 헤더에는 `+`, `+=`, `==`, `!=`, `<`, `[]`, 그리고 대입 연산자들만 선언되어 있다.
 
-**State queries.** `Len()`, `IsEmpty()`, `GetData()` — all trivial inline accessors.
+**상태 조회.** `Len()`, `IsEmpty()`, `GetData()` — 모두 사소한 인라인 접근자다.
 
-**Search methods** (`FString.cpp`):
+**검색 메서드**(`FString.cpp`):
 ```cpp
 bool FString::Contains(const FString& Sub) const
 {
@@ -1833,21 +1832,21 @@ bool FString::Contains(const FString& Sub) const
     return wcsstr(m_pData, Sub.m_pData) != nullptr;
 }
 ```
-`StartsWith` uses `wcsncmp` against the prefix length; `EndsWith` uses `wcscmp` starting at `m_pData + (m_Length - Suffix.m_Length)`. All three treat an empty needle as trivially matching.
+`StartsWith`는 접두사 길이만큼 `wcsncmp`를 사용하고, `EndsWith`는 `m_pData + (m_Length - Suffix.m_Length)`부터 `wcscmp`를 사용한다. 세 메서드 모두 빈 검색 문자열은 자명하게 매칭되는 것으로 취급한다.
 
-**Transform methods:**
-- `ToUpper()` / `ToLower()` — copy `*this`, then walk the copy's buffer doing manual ASCII range remapping (`'a'..'z'` <-> `'A'..'Z'`); no locale/Unicode case folding.
-- `Substring(int32 Start, int32 Length) const` — validates bounds (`Start` in range, `Length > 0`), clamps `ActualLen` to not run past the end, allocates a fresh buffer, `Memcpy`s the slice, and null-terminates.
-- `Split(wchar_t Delim, TArray<FString>& OutParts) const` — resets `OutParts`, then does a single forward scan (`i` from `0` to `m_Length` inclusive) calling `Substring(Start, i - Start)` and pushing it into `OutParts` whenever it hits the delimiter or the end of string; returns `OutParts.Num()`.
+**변환 메서드:**
+- `ToUpper()` / `ToLower()` — `*this`를 복사한 뒤, 그 복사본의 버퍼를 순회하며 수동으로 ASCII 범위 매핑(`'a'..'z'` <-> `'A'..'Z'`)을 수행한다. 로케일/유니코드 대소문자 폴딩은 없다.
+- `Substring(int32 Start, int32 Length) const` — 범위를 검증하고(`Start`가 유효 범위 안에 있는지, `Length > 0`인지), `ActualLen`을 문자열 끝을 넘어가지 않도록 클램프한 뒤, 새 버퍼를 할당해 해당 구간을 `Memcpy`하고 널로 종료한다.
+- `Split(wchar_t Delim, TArray<FString>& OutParts) const` — `OutParts`를 리셋한 다음, 단일 순방향 스캔(`i`를 `0`부터 `m_Length`까지 포함해서 순회)을 수행하며 구분자에 도달하거나 문자열 끝에 도달할 때마다 `Substring(Start, i - Start)`를 호출해 `OutParts`에 넣는다. 반환값은 `OutParts.Num()`이다.
 
-**Parsing methods:**
+**파싱 메서드:**
 ```cpp
 int32 FString::ToInt() const { return !m_pData ? 0 : (int32)wcstol(m_pData, nullptr, 10); }
 float FString::ToFloat() const { return !m_pData ? 0.f : wcstof(m_pData, nullptr); }
 ```
-Both are thin wrappers over the C runtime's wide-string parsers, with a null-buffer guard returning a zero value.
+둘 다 C 런타임의 와이드 문자열 파서를 얇게 감싼 래퍼일 뿐이며, 버퍼가 널인 경우에는 0 값을 반환하는 가드가 있다.
 
-**Printf.** There is no separate `Format` function — only `Printf`:
+**Printf.** 별도의 `Format` 함수는 없고 `Printf`만 있다.
 ```cpp
 FString FString::Printf(const wchar_t* Fmt, ...)
 {
@@ -1860,13 +1859,13 @@ FString FString::Printf(const wchar_t* Fmt, ...)
     return FString(Buffer);
 }
 ```
-It uses a fixed 4096-`wchar_t` stack buffer and `vswprintf`; if formatting fails or produces nothing (`vswprintf` returns negative on truncation/error), it returns a default (empty) `FString` rather than a truncated result. The result is built by copy-constructing `FString(Buffer)`, so the final string is a freshly right-sized heap allocation, not the stack buffer itself.
+고정 크기 4096-`wchar_t` 스택 버퍼와 `vswprintf`를 사용한다. 포맷팅이 실패하거나 아무것도 만들어내지 못하면(`vswprintf`는 잘림/오류 시 음수를 반환한다) 잘린 결과 대신 기본(빈) `FString`을 반환한다. 결과는 `FString(Buffer)`를 복사 생성하는 방식으로 만들어지므로, 최종 문자열은 스택 버퍼 그 자체가 아니라 정확한 크기로 새로 힙에 할당된 것이다.
 
 ## FName / FNamePool
 
-**Purpose.** `FName` is a cheap-to-copy, cheap-to-compare handle for interned strings, mirroring Unreal's `FName`: identical strings collapse to the same underlying entry, and comparisons/copies become `uint32` operations instead of string operations. All the actual storage and interning logic lives in `FNamePool` (`Engine/Include/Core/String/FNamePool.h/.cpp`); `FName` itself (`Engine/Include/Core/String/FName.h`) is just a wrapper around an index into that pool. Note: there is no `FName.cpp` in this tree — every `FName` member, including `ToString()`, is defined inline in `FName.h`.
+**목적.** `FName`은 인터닝된(interned) 문자열을 가리키는, 복사와 비교 비용이 저렴한 핸들이다. 언리얼의 `FName`을 그대로 본떠, 동일한 문자열은 같은 내부 엔트리로 합쳐지고 비교/복사는 문자열 연산이 아니라 `uint32` 연산이 된다. 실제 저장과 인터닝 로직은 모두 `FNamePool`(`Engine/Include/Core/String/FNamePool.h/.cpp`)에 있으며, `FName` 자체(`Engine/Include/Core/String/FName.h`)는 그 풀 안의 인덱스를 감싸는 래퍼에 불과하다. 참고로, 이 트리에는 `FName.cpp`가 존재하지 않는다 — `ToString()`을 포함한 `FName`의 모든 멤버는 `FName.h`에 인라인으로 정의되어 있다.
 
-**FNameEntry.** Fixed-size inline storage, no separate heap allocation per entry:
+**FNameEntry.** 엔트리별 별도 힙 할당이 없는, 고정 크기 인라인 저장 방식이다.
 ```cpp
 // FNamePool.h
 struct FNameEntry
@@ -1875,9 +1874,9 @@ struct FNameEntry
     wchar_t m_Name[NAME_SIZE];
 };
 ```
-Because the array is inline inside the struct, `TArray<FNameEntry> m_Entries` in `FNamePool` stores names contiguously with no per-entry pointer chasing/allocation — the tradeoff is a hard cap of 63 characters plus terminator per name (enforced at registration time, see below).
+배열이 구조체 내부에 인라인으로 들어있기 때문에, `FNamePool`의 `TArray<FNameEntry> m_Entries`는 이름들을 엔트리별 포인터 추적/할당 없이 연속된 메모리에 저장한다 — 그 대가로 이름 하나당 63자(+종료 문자)라는 확고한 상한이 생긴다(등록 시점에 강제되며, 아래에서 다룬다).
 
-**FNamePool singleton.** Declared with a private constructor and deleted copy operations, and exposed only through a function-local static:
+**FNamePool 싱글턴.** private 생성자와 삭제된 복사 연산으로 선언되며, 함수 로컬 static을 통해서만 노출된다.
 ```cpp
 FNamePool& FNamePool::Get()
 {
@@ -1885,16 +1884,16 @@ FNamePool& FNamePool::Get()
     return Instance;
 }
 ```
-This is the classic Meyers-singleton pattern, giving thread-safe (in C++11+) lazy initialization on first use, and guaranteeing construction-before-use regardless of static-init order across translation units. The constructor pre-registers the sentinel name:
+이는 전형적인 마이어스 싱글턴(Meyers singleton) 패턴으로, 최초 사용 시점에 (C++11 이상에서는 스레드 안전하게) 지연 초기화되며, 번역 단위 간 정적 초기화 순서와 무관하게 "사용 전 생성"을 보장한다. 생성자는 센티널 이름을 미리 등록한다.
 ```cpp
 FNamePool::FNamePool()
 {
     FindOrRegister(L"None");
 }
 ```
-This is why index `0` is reserved for `"None"` — `FName()`'s default `m_Index(0)` and `IsNone()`'s `m_Index == 0` check both rely on `"None"` always being the first entry ever registered.
+이 때문에 인덱스 `0`은 항상 `"None"`을 위해 예약된다 — `FName()`의 기본값 `m_Index(0)`과 `IsNone()`의 `m_Index == 0` 검사는 둘 다 `"None"`이 언제나 가장 먼저 등록되는 엔트리라는 사실에 의존한다.
 
-**Hashing.** `HashString` is a djb2 variant, using XOR-combine instead of the more common additive combine:
+**해싱.** `HashString`은 djb2 변형이며, 흔히 쓰이는 덧셈 결합 대신 XOR 결합을 사용한다.
 ```cpp
 uint32 FNamePool::HashString(const wchar_t* Str)
 {
@@ -1907,9 +1906,9 @@ uint32 FNamePool::HashString(const wchar_t* Str)
     return Hash;
 }
 ```
-(`(Hash << 5) + Hash` is `Hash * 33`, the classic djb2 multiplier; XOR-ing in the character is the "djb2a" variant.)
+(`(Hash << 5) + Hash`는 `Hash * 33`으로, 전형적인 djb2 승수다. 문자를 XOR로 결합하는 것은 "djb2a" 변형에 해당한다.)
 
-**FindOrRegister — the actual interning path.** Storage is `TArray<FNameEntry> m_Entries` (dense, index-addressable) plus `TMultiMap<uint32, uint32> m_HashToIndex` mapping hash -> candidate entry indices, used to resolve hash collisions by verifying full string equality:
+**FindOrRegister — 실제 인터닝 경로.** 저장소는 밀집되어(dense) 인덱스로 직접 접근 가능한 `TArray<FNameEntry> m_Entries`와, 해시 -> 후보 엔트리 인덱스들을 매핑하는 `TMultiMap<uint32, uint32> m_HashToIndex`로 구성되며, 후자는 완전한 문자열 동등성 검사를 통해 해시 충돌을 해소하는 데 쓰인다.
 ```cpp
 uint32 FNamePool::FindOrRegister(const wchar_t* Name)
 {
@@ -1944,14 +1943,14 @@ uint32 FNamePool::FindOrRegister(const wchar_t* Name)
     return NewIndex;
 }
 ```
-Step by step, on every `FName` construction from a string:
-1. Hash the input string with `HashString` (djb2a).
-2. Ask `m_HashToIndex.MultiFind(Hash)` for the bucket of every existing entry index that hashed to the same value. This is `O(1)` amortized to reach the bucket, not `O(n)` over all names.
-3. Because different strings can collide on the same 32-bit hash, every candidate in that bucket is verified with a full `wcscmp` against the stored inline buffer (`m_Entries[Index].m_Name`) before being accepted — this is the collision-safety net. If a candidate's string matches exactly, its existing index is returned and nothing new is registered.
-4. If no candidate matches (empty bucket, or all `wcscmp`s failed), the name is new: its length is checked against the 64-`wchar_t` capacity (`check(Length < FNameEntry::NAME_SIZE)` — this is where the earlier-mentioned 63-character cap is enforced, and it's a hard `assert`-style `check`, not a graceful failure), the string (including its null terminator) is `Memcpy`'d into a stack-local `FNameEntry`, that entry is appended to `m_Entries` (its index becomes `NewIndex = m_Entries.Num()` *before* the `Add`, i.e. the index it will occupy), and the same `(Hash, NewIndex)` pair is inserted into `m_HashToIndex` so future lookups find it.
-5. The new (or found) index is returned.
+단계별로 보면, `FName`을 문자열로부터 생성할 때마다 다음이 일어난다.
+1. `HashString`(djb2a)으로 입력 문자열을 해시한다.
+2. `m_HashToIndex.MultiFind(Hash)`로 같은 값으로 해시된 기존 엔트리 인덱스들의 버킷을 조회한다. 이는 전체 이름에 대해 `O(n)`이 아니라, 버킷에 도달하기까지 상각(amortized) `O(1)`이다.
+3. 서로 다른 문자열이라도 32비트 해시값이 충돌할 수 있으므로, 그 버킷에 있는 모든 후보는 저장된 인라인 버퍼(`m_Entries[Index].m_Name`)와 완전한 `wcscmp` 비교를 거친 후에야 채택된다 — 이것이 충돌에 대한 안전망이다. 후보 중 하나가 문자열과 정확히 일치하면 그 기존 인덱스가 반환되고 새로 등록되는 것은 없다.
+4. 일치하는 후보가 없으면(버킷이 비어 있거나, 모든 `wcscmp`가 실패한 경우) 이름은 새것으로 간주된다. 이때 길이가 64-`wchar_t` 용량과 비교 검사되고(`check(Length < FNameEntry::NAME_SIZE)` — 앞서 언급한 63자 상한이 강제되는 지점이며, 이는 우아한 실패 처리가 아니라 하드한 `assert` 방식의 `check`다), 종료 문자까지 포함한 문자열이 스택 지역 변수 `FNameEntry`에 `Memcpy`되며, 그 엔트리가 `m_Entries`에 추가된다(그 인덱스는 `Add` *이전*에 계산된 `NewIndex = m_Entries.Num()`, 즉 앞으로 그 엔트리가 차지하게 될 인덱스다). 그리고 동일한 `(Hash, NewIndex)` 쌍이 `m_HashToIndex`에 삽입되어 이후의 조회가 이를 찾을 수 있게 된다.
+5. 새로 만들어졌거나 이미 찾은 인덱스가 반환된다.
 
-`GetEntryName` is the reverse lookup, bounds-checked and returning a pointer straight into the pool's inline storage (valid for the pool's lifetime, since `m_Entries` is append-only and never reallocated entries away — though note a `TArray` growth/reallocation on `Add` could in principle relocate the whole array in memory; callers are expected to re-fetch rather than cache the raw pointer across registrations):
+`GetEntryName`은 역방향 조회로, 범위 검사를 거친 뒤 풀의 인라인 저장소를 가리키는 포인터를 그대로 반환한다(이 포인터는 풀이 살아있는 동안 유효하다. `m_Entries`는 추가만 되며 엔트리가 재배치되어 사라지지는 않기 때문이다 — 다만 `Add` 시 `TArray`가 성장하며 재할당이 일어나면 원칙적으로 배열 전체가 메모리상에서 이동할 수 있으므로, 호출부는 등록 사이에 원시 포인터를 캐시해두기보다 매번 다시 가져오는 것이 원칙이다).
 ```cpp
 const wchar_t* FNamePool::GetEntryName(uint32 Index) const
 {
@@ -1959,15 +1958,15 @@ const wchar_t* FNamePool::GetEntryName(uint32 Index) const
     return m_Entries[(int32)Index].m_Name;
 }
 ```
-`Num()` just forwards to `m_Entries.Num()`.
+`Num()`은 그냥 `m_Entries.Num()`으로 위임한다.
 
-**FName itself.** The entire object is one `uint32`:
+**FName 자체.** 객체 전체가 `uint32` 하나다.
 ```cpp
 // FName.h
 private:
     uint32 m_Index;
 ```
-Construction from `const wchar_t*` or `const FString&` guards against null/empty input (leaving `m_Index == 0`, i.e. `"None"`) and otherwise calls `FNamePool::Get().FindOrRegister(...)`:
+`const wchar_t*`나 `const FString&`로부터의 생성은 널/빈 입력을 가드하고(이 경우 `m_Index == 0`, 즉 `"None"`으로 남는다), 그 외에는 `FNamePool::Get().FindOrRegister(...)`를 호출한다.
 ```cpp
 FName(const wchar_t* Name) : m_Index(0)
 {
@@ -1977,13 +1976,13 @@ FName(const wchar_t* Name) : m_Index(0)
     }
 }
 ```
-Comparisons are pure index comparisons — this is the entire point of interning:
+비교는 순수한 인덱스 비교다 — 이것이 인터닝의 존재 이유 그 자체다.
 ```cpp
 bool operator==(const FName& Other) const { return m_Index == Other.m_Index; }
 bool operator!=(const FName& Other) const { return m_Index != Other.m_Index; }
 bool operator<(const FName& Other) const { return m_Index < Other.m_Index; }
 ```
-`ToString()` converts back to a real, independently-owned `FString` by looking up the pooled buffer and copy-constructing an `FString` from it:
+`ToString()`은 풀에 저장된 버퍼를 조회한 뒤 그것으로 `FString`을 복사 생성함으로써, 독립적으로 소유권을 가진 진짜 `FString`으로 되돌려준다.
 ```cpp
 FString ToString() const
 {
@@ -1991,26 +1990,26 @@ FString ToString() const
     return FString(pEntryName);
 }
 ```
-This is defined **inline in the header**, not out-of-line in a `.cpp` file, and there is no `ENGINE_NOINLINE`/`noinline` attribute anywhere in the `Engine/Include/Core/String/` tree (confirmed by search — no matches for `NOINLINE` in the repo, and no `FName.cpp` exists at all). This contradicts the roadmap note in this repo's own `CLAUDE.md`, which describes `FName::ToString()` as being deliberately moved out-of-line into `FName.cpp` with `noinline` to work around an "MSVC Debug inline codegen bug." Based on the actual source present, that migration either was never carried out or was reverted — the real code has `ToString()` as an ordinary inline header member.
+이 함수는 별도의 `.cpp` 파일에 out-of-line으로 정의되어 있지 않고 **헤더에 인라인으로** 정의되어 있으며, `Engine/Include/Core/String/` 트리 어디에도 `ENGINE_NOINLINE`/`noinline` 속성은 존재하지 않는다(검색으로 확인했다 — 저장소 전체에서 `NOINLINE`은 매치되지 않았고, `FName.cpp` 자체도 존재하지 않는다). 이는 이 저장소 자체의 `CLAUDE.md`에 있는 로드맵 항목과 모순된다. 해당 항목은 `FName::ToString()`이 "MSVC Debug 인라인 코드생성 버그"를 우회하기 위해 의도적으로 `FName.cpp`로 out-of-line 분리되고 `noinline`이 붙었다고 서술하고 있다. 실제로 존재하는 소스를 기준으로 보면, 그 마이그레이션은 애초에 수행되지 않았거나 이후 되돌려진 것으로 보인다 — 실제 코드에서 `ToString()`은 평범한 인라인 헤더 멤버다.
 
-Also present: `IsNone()` (`m_Index == 0`), `GetIndex()` (raw index accessor), and a free-function hash specialization in `FName.h`:
+또한 `IsNone()`(`m_Index == 0`), `GetIndex()`(원시 인덱스 접근자), 그리고 `FName.h`에 있는 프리 함수 형태의 해시 특수화도 존재한다.
 ```cpp
 inline uint32 GetTypeHash(const FName& Name)
 {
     return GetTypeHash(Name.GetIndex());
 }
 ```
-which lets `FName` be used as a key in the engine's `TMap`/`TSet`/`TMultiMap` by hashing the index (an existing `GetTypeHash(uint32)` overload from `HashFunctions.h`) rather than re-hashing the string — reinforcing that once interned, an `FName` never needs to touch its string content again for hashing or comparison.
+이를 통해 `FName`은 문자열을 다시 해싱하는 대신 인덱스를 해싱함으로써(`HashFunctions.h`에 이미 있는 `GetTypeHash(uint32)` 오버로드를 사용해서) 엔진의 `TMap`/`TSet`/`TMultiMap`에서 키로 사용될 수 있다 — 이는 일단 인터닝된 `FName`은 해싱이든 비교든 다시는 자신의 문자열 내용을 건드릴 필요가 없다는 점을 다시금 보여준다.
 
 ## FText
 
-**What it actually is.** `FText` (`Engine/Include/Core/String/FText.h/.cpp`) is a thin value-type wrapper around a single `FString` member — there is no localization table, no culture/locale key, no formatting-args support, and no separate "source string vs. displayed string" concept in this implementation. The entire private state is:
+**실제로 무엇인가.** `FText`(`Engine/Include/Core/String/FText.h/.cpp`)는 단일 `FString` 멤버를 감싼 얇은 값 타입 래퍼다 — 이 구현에는 로컬라이제이션 테이블도, 컬처/로케일 키도, 포맷 인자 지원도, "원본 문자열 대 표시 문자열"이라는 별도 개념도 존재하지 않는다. private 상태 전체는 다음과 같다.
 ```cpp
 private:
     FString m_String;
 ```
 
-**Construction/assignment.** All six special members are declared and defined out-of-line in `FText.cpp`, and every one of them simply forwards to the corresponding `FString` operation:
+**생성/대입.** 여섯 개의 특수 멤버 함수 모두가 `FText.cpp`에 out-of-line으로 선언·정의되어 있으며, 각각은 그저 대응하는 `FString` 연산으로 위임할 뿐이다.
 ```cpp
 FText::FText() {}
 FText::FText(const wchar_t* Str) : m_String(Str) {}
@@ -2022,21 +2021,20 @@ FText::FText(FText&& Other) noexcept : m_String(static_cast<FString&&>(Other.m_S
 FText& FText::operator=(const FText& Other) { m_String = Other.m_String; return *this; }
 FText& FText::operator=(FText&& Other) noexcept { m_String = static_cast<FString&&>(Other.m_String); return *this; }
 ```
-Note the move constructor is *not* marked `noexcept` in its own signature comment context inconsistency-wise — actually checking: `FText(FText&& Other) noexcept` in the header is `noexcept`, but the corresponding definition in `FText.cpp` (`FText::FText(FText&& Other) noexcept`) matches it correctly, so both declaration and definition agree.
+이동 생성자가 그 자체 시그니처 상 `noexcept`로 표시되어 있지 않은 것처럼 보일 수 있는데 — 실제로 확인해보면: 헤더의 `FText(FText&& Other) noexcept`는 `noexcept`이며, `FText.cpp`에 있는 대응 정의(`FText::FText(FText&& Other) noexcept`) 역시 이와 정확히 일치한다. 즉 선언과 정의가 서로 일치한다.
 
-**Everything else is inline in the header:**
+**나머지는 전부 헤더에 인라인으로 있다.**
 ```cpp
 bool operator==(const FText& Other) const { return m_String == Other.m_String; }
 bool operator!=(const FText& Other) const { return m_String != Other.m_String; }
 const FString& ToString() const { return m_String; }
 bool IsEmpty() const { return m_String.IsEmpty(); }
 ```
-`operator==`/`operator!=` defer directly to `FString`'s own comparison operators (length check + `wcscmp`, as detailed above). `ToString()` returns a `const FString&` — a reference to the internal buffer, not a copy (unlike `FName::ToString()`, which must materialize a new `FString` from pooled storage). `IsEmpty()` defers to `FString::IsEmpty()`.
+`operator==`/`operator!=`는 `FString` 자체의 비교 연산자(위에서 설명한 길이 검사 + `wcscmp`)로 그대로 위임한다. `ToString()`은 `const FString&`을 반환한다 — 복사본이 아니라 내부 버퍼에 대한 참조다(풀 저장소로부터 새 `FString`을 만들어내야 하는 `FName::ToString()`과는 다르다). `IsEmpty()`는 `FString::IsEmpty()`로 위임한다.
 
-In short, despite the "3-string-type / localization wrapper" framing suggested elsewhere in this project's planning notes, the code that actually exists implements `FText` as nothing more than an `FString` with a distinct type identity and a restricted interface (no direct `[]` indexing, no `+=`, no `Split`/`Contains`/etc. — none of `FString`'s search/transform/parse methods are exposed through `FText`). There is no localization key, no culture, and no runtime re-resolution of text by locale anywhere in `FText.h`/`FText.cpp`.
+요컨대, 이 프로젝트의 다른 기획 문서에서 시사하는 "3종 문자열 타입 / 로컬라이제이션 래퍼"라는 틀과는 달리, 실제로 존재하는 코드는 `FText`를 단지 별개의 타입 정체성과 제한된 인터페이스를 가진 `FString`으로 구현하고 있을 뿐이다(직접적인 `[]` 인덱싱도, `+=`도, `Split`/`Contains` 등도 없다 — `FString`의 검색/변환/파싱 메서드는 어느 것도 `FText`를 통해 노출되지 않는다). `FText.h`/`FText.cpp` 어디에도 로컬라이제이션 키, 컬처, 로케일에 따른 런타임 재해석 같은 것은 존재하지 않는다.
+
 ---
-
-I have all the content needed. Here is the Markdown section.
 
 ## Logging / Assert 시스템
 
