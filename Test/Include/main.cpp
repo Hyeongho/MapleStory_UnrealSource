@@ -28,6 +28,7 @@
 #include "Core/Containers/TMap.h"
 #include "Core/Containers/TSet.h"
 #include "Core/Containers/TMultiMap.h"
+#include "Render/DXDevice.h"
 #include "Core/Containers/TSparseArray.h"
 #include "Core/String/FString.h"
 #include "Core/String/FName.h"
@@ -1939,6 +1940,19 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7.5+ (5) TSparseArray/TMap/TSet Rework - ALL PASSED\n");
+	}
+
+	// Phase 8 — Renderer(DX11) 코어 부트스트랩
+	// HWND가 필요 없는 부분(디바이스 생성)만 콘솔에서 검증한다.
+	// 실제 스프라이트 렌더링(SpriteBatch/RenderQueue/FCamera2D)은 Game.exe를 실행해
+	// 화면에서 육안으로 확인하는 수동 검증 대상이다 — Docs/ENGINE_REFERENCE.md 및
+	// 계획 파일의 "검증" 절 참고.
+	{
+		FDXDevice TestDevice;
+		bool bDeviceOK = TestDevice.Initialize();
+		check(bDeviceOK);
+		wprintf(L"[Tests] Phase 8 FDXDevice::Initialize - %s\n", bDeviceOK ? L"PASSED" : L"FAILED");
+		TestDevice.Shutdown();
 	}
 
 	return 0;

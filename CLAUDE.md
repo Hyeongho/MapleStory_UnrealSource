@@ -392,26 +392,46 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 
 ### Phase 8 — Renderer (DX11) (1.5주)
 
-파일 위치: `Engine/Renderer/`
+파일 위치: `Engine/Include/Render/` (로드맵 문서엔 `Renderer`로 적혀있지만
+실제 스캐폴딩된 폴더명은 `Render` — 기존 폴더를 그대로 사용)
 
-- [ ] `DXDevice.h / .cpp` — ID3D11Device 초기화
-- [ ] `DXSwapChain.h / .cpp` — SwapChain + Present
-- [ ] `SpriteBatch.h / .cpp` — DirectXTK 연동
-- [ ] `RenderQueue.h / .cpp` — Z-Order 정렬 렌더링
-- [ ] `FCamera2D.h / .cpp` — 플레이어 추적 스크롤, 월드↔스크린 좌표 변환
+- [x] `DXDevice.h / .cpp` — ID3D11Device 초기화 (Debug 레이어 미설치 시
+  플래그 없이 재시도하는 폴백 포함)
+- [x] `DXSwapChain.h / .cpp` — SwapChain + Present (레거시
+  `DXGI_SWAP_CHAIN_DESC` 경로, 리사이즈는 다음 단계로 보류)
+- [x] `SpriteBatch.h / .cpp` — DirectXTK 연동 (`SpriteSortMode_Deferred`로
+  `FRenderQueue`가 CPU에서 정렬한 순서 그대로 그리도록 함) + 파일 없이
+  코드로 텍스처를 만드는 `CreateSolidColorTexture`/`CreateCheckerboardTexture`
+  플레이스홀더 헬퍼(Resource Manager/WZ 로딩 이전 임시)
+- [x] `RenderQueue.h / .cpp` — Z-Order 정렬 렌더링 (`TArray::StableSort`로
+  동일 ZOrder는 제출 순서 유지)
+- [x] `FCamera2D.h / .cpp` — 월드↔스크린 좌표 변환, `GetViewMatrix()`
+  (플레이어 추적 스크롤은 아직 미구현 — `SetLocation`만 있고 자동 추적
+  로직 없음)
 - [ ] Parallax Scrolling — 배경 원근 스크롤링
 - [ ] 레이어 렌더링 — 배경 / 오브젝트 / 이펙트 / UI
 - [ ] 스프라이트 틴트 / 피격 깜빡임
 - [ ] 데미지 숫자 팝업 렌더링
 - [ ] 화면 페이드인·아웃 (맵 이동 연출)
 
-★ WZ 병행 작업 (Phase 8 시작 시):
+★ WZ 병행 작업 (Phase 8 시작 시, 아직 미착수):
 - [ ] Canvas → 픽셀 변환 (WzPng) 구현  
   BGRA4444 / BGRA8888 / BC3·BC7 압축 해제 → ID3D11Texture2D 업로드
 - [ ] STL → 엔진 컨테이너 교체 (wz_test.cpp)  
   std::vector → TArray / std::string → FString / std::unordered_map → TMap / std::unique_ptr → TSharedPtr
 
-완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력
+완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — 코드 작성 완료,
+**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (DirectXTK
+NuGet 패키지 설치 등 수동 설정 필요, 아래 참고)
+
+**Visual Studio 수동 설정 필요** (Claude Code가 대신할 수 없음):
+1. 솔루션 우클릭 → NuGet 패키지 관리 → `directxtk_desktop_2019` 설치,
+   Engine·Game 프로젝트 둘 다 체크(Test는 불필요)
+2. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
+   (DirectXTK 내부가 예외를 던지므로 필요 — 엔진 자체 코드는 여전히
+   `check()`/`verify()`만 사용)
+3. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
+   자동 링크하므로 수동 설정 불필요
 
 ---
 

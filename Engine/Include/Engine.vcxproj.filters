@@ -46,6 +46,9 @@
     <Filter Include="04. Ability">
       <UniqueIdentifier>{938c909c-0a02-412a-b0e8-787cfbe79f07}</UniqueIdentifier>
     </Filter>
+    <Filter Include="05. Render">
+      <UniqueIdentifier>{6f3d8b2a-7e4c-4a1b-9c5d-2f8e1a6b3d40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -189,6 +192,21 @@
     <ClInclude Include="Object\UClass.h">
       <Filter>02. Object</Filter>
     </ClInclude>
+    <ClInclude Include="Render\DXDevice.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\DXSwapChain.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FCamera2D.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\RenderQueue.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteBatch.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
     <ClInclude Include="Timer\FTimerDelegate.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
@@ -313,6 +331,21 @@
     </ClCompile>
     <ClCompile Include="Object\UClass.cpp">
       <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\DXDevice.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\DXSwapChain.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FCamera2D.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\RenderQueue.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\SpriteBatch.cpp">
+      <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
       <Filter>03. Timer</Filter>
