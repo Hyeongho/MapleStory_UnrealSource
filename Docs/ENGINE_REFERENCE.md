@@ -43,6 +43,8 @@ Phase 7.7(+ Phase 7.5+ 최적화)까지 지금까지 구현된 모든 서브시�
 
 ## Memory
 
+게임에서는 몬스터, 이펙트, 스킬 판정 같은 객체가 매 프레임 수백 개씩 생겼다 사라진다. 그때마다 컴퓨터의 기본 할당 함수(malloc/new)에게 일일이 "이만큼 주세요"라고 직접 부탁하면 느리고, 관리도 안 되고, 다 쓴 메모리를 돌려주는 걸 깜빡하면(릭) 게임이 결국 멈춰버린다. Memory 시스템은 이 "메모리 빌리고 돌려주기"를 엔진이 직접 통제하는 하나의 창구로 만들어서, 상황에 맞는 방식(작은 물건은 미리 만든 서랍에서 바로 꺼내고, 프레임용 임시 물건은 한꺼번에 버리는 식)으로 빠르고 안전하게 처리하기 위한 것이다.
+
 ### IAllocator — 추상 얼로케이터 인터페이스
 
 **목적:** 모든 구체 얼로케이터(`FMallocAnsi`, `FMallocBinned`)가 반드시 구현해야 하는 최소한의 가상 계약(`Malloc`/`Realloc`/`Free`)을 정의한다. 이를 통해 엔진의 나머지 부분은 단일 전역 포인터 뒤에 숨겨진 구체적인 할당 전략과 분리될 수 있다.
@@ -117,6 +119,8 @@ void FMallocAnsi::Free(void* ptr)
 ---
 
 ### FMallocBinned — 64KB 페이지 기반 크기 클래스 Bin 얼로케이터
+
+16, 32, 64, 128, 256, 512바이트짜리 "서랍(Bin)"을 미리 만들어두고, 작은 크기의 데이터가 필요할 때마다 딱 맞는 서랍에서 하나 꺼내 쓰는 방식이다. 포인터 주소만 보고도 "이 메모리가 어느 페이지, 어느 서랍에서 나왔는지"를 계산만으로 바로 알아낼 수 있어서, 반납할 때 별도의 조회 장부 없이도 즉시 제자리로 돌려놓을 수 있다. 게임처럼 자잘한 객체가 쉴 새 없이 생겼다 사라지는 상황에서 매번 운영체제에 손 벌리지 않도록 설계된 것이다.
 
 **목적:** 64KB 정렬 페이지에서 잘라낸 프리 리스트로 소형 할당(≤512바이트, ≤16바이트 정렬)을 처리하고, 그 외의 경우에는 페이지 정렬된 "대형 할당" 경로로 폴백하는 버킷/Bin 방식 얼로케이터다. 이를 통해 소형 객체에 대한 할당 단위 CRT 오버헤드와 외부 단편화를 제거한다.
 
@@ -270,6 +274,8 @@ void FMallocBinned::Free(void* ptr)
 
 ### FMemory — 전역 얼로케이터 진입점
 
+엔진 안 모든 코드가 메모리를 요청할 때마다 각자 다른 방식을 쓰면, 나중에 할당 전략을 통째로 바꾸고 싶을 때 손 댈 곳이 수백 군데가 된다. FMemory는 "메모리가 필요하면 무조건 여기로 오세요"라는 단일 창구(GMalloc)를 세워두고, 그 뒤에서 실제로 어떤 방식으로 처리할지는 창구 뒤에 숨겨둔다. 그래서 얼로케이터 구현을 통째로 갈아끼우고 싶어도 이 파일 한 곳만 고치면 된다.
+
 **목적:** 프로세스 전역 `GMalloc` 포인터 위에 만들어진 정적 파사드로, 다른 모든 시스템이 `IAllocator`/CRT를 직접 건드리는 대신 호출하는 엔진 전역 할당 API(및 원시 메모리 연산)를 제공한다.
 
 **코드** (`Engine/Include/Core/Memory/FMemory.h`):
@@ -325,6 +331,8 @@ void* FMemory::Malloc(size_t size, uint32 alignment)
 
 ### MemoryOverride — 전역 `new`/`delete` 라우팅
 
+C++의 new/delete는 원래 컴퓨터의 기본 할당기를 쓰지만, 이 엔진은 그 동작을 가로채서 전부 FMemory 쪽으로 돌려보낸다. 프로그래머가 평소처럼 `new MyClass()`라고만 써도, 실제로는 엔진이 만든 전용 창구를 몰래 거쳐가는 것이다. 디버그 빌드에서는 이 길목에 감시 카메라(FMemoryTracker)를 하나 세워서, 지나가는 모든 할당/해제를 몰래 세고 있다.
+
 **목적:** 전역 `operator new`/`operator delete`(스칼라, 배열, sized-delete 형태 모두)를 오버라이드하여 엔진 전역의 *모든* `new`/`delete` 호출이 투명하게 `FMemory`/`GMalloc`을 거치고, (Debug 빌드에서는) `FMemoryTracker`를 거치도록 한다.
 
 **코드** (`Engine/Include/Core/Memory/MemoryOverride.cpp`):
@@ -375,6 +383,8 @@ void operator delete(void* ptr, size_t) noexcept
 ---
 
 ### FPoolAllocator — 고정 블록 크기 풀
+
+메이플스토리처럼 같은 종류의 몬스터나 파티클이 수백 개씩 계속 생성·소멸되는 상황을 위한 것이다. 매번 크기를 계산해서 새로 할당하는 대신, 미리 "몬스터 한 마리 크기의 칸"을 여러 개 잘라두고 필요할 때 빈 칸 하나를 꺼내 쓰고(Acquire), 다 쓰면 다시 반납한다(Release). 빈 칸들끼리는 "다음 빈 칸이 어디 있는지"를 자기 몸 안에 직접 적어두고 있어서, 별도의 장부 없이도 즉시 하나를 찾아 꺼낼 수 있다.
 
 **목적:** 하나의 연속 버퍼 위에서 동작하는 고정 크기 블록 얼로케이터로, `CLAUDE.md`에 따르면 몬스터나 파티클처럼 대량의 동종 객체를 할당하는 용도로 사용된다. 사용되지 않는 블록 내부에 직접 임베드된 인트루시브 단일 연결 프리 리스트를 사용한다.
 
@@ -452,6 +462,8 @@ void FPoolAllocator::Release(void* ptr)
 
 ### FStackAllocator — 프레임/선형(bump) 얼로케이터
 
+딱 한 프레임 동안만 쓰고 버릴 임시 데이터(예: 이번 프레임의 충돌 후보 목록)를 위한 할당기다. 하나씩 반납받는 대신, 프레임이 끝나면 "지금까지 쓴 거 전부 취소"라는 뜻으로 커서를 처음 위치로 되감는 것만으로 전부를 한 번에 회수한다. 영수증 롤에 계속 이어 쓰다가 장사가 끝나면 롤을 처음으로 되감아 다시 쓰는 것과 비슷해서, 항목을 하나하나 지울 필요가 없다.
+
 **목적:** 사전 할당된 하나의 버퍼 위에서 동작하는 선형 "bump-pointer" 얼로케이터로, 프레임 단위 임시 할당을 위한 것이며 단일 `Reset()` 호출로 모든 할당이 한꺼번에 폐기된다(할당별 `Free` 없음).
 
 **코드** (`Engine/Include/Core/Memory/FStackAllocator.h`):
@@ -515,6 +527,8 @@ void FStackAllocator::Reset()
 
 ### FMemoryTracker — 디버그 전용 릭/할당 추적
 
+메모리 릭(다 쓴 메모리를 안 돌려주는 버그)은 눈에 보이지 않기 때문에 찾기가 유독 어렵다. FMemoryTracker는 new가 호출될 때마다 +1, delete가 호출될 때마다 -1을 세는 카운터일 뿐이다. 게임을 종료할 때 이 숫자가 정확히 0으로 맞아떨어지지 않으면 어딘가에서 메모리를 돌려주지 않은 것이므로 릭이 있다는 뜻이며, 다만 정확히 어느 코드에서 샜는지까지 짚어주지는 못하는 단순한 경보기다.
+
 **목적:** 오버라이드된 `operator new`/`delete`에 훅으로 연결된 `_DEBUG` 전용 전역 할당/해제 카운터로, 종료 시점에 릭(할당/해제 카운트 불일치)을 감지한다. non-debug 빌드에서는 완전히 컴파일에서 제외된다.
 
 **코드** (`Engine/Include/Core/Memory/FMemoryTracker.h`):
@@ -573,7 +587,11 @@ void FMemoryTracker::ReportLeaks()
 
 ## Templates
 
+TArray, TMap처럼 어떤 타입이 들어올지 미리 알 수 없는 "틀"을 만들 때, "이 타입은 그냥 복사해도 되는 단순한 타입인가?", "이 함수는 특정 조건일 때만 존재해야 하는가?" 같은 질문에 프로그램이 실행되기 전, 즉 컴파일하는 순간에 이미 답을 정해두고 싶을 때가 있다. Templates 폴더는 이런 "컴파일 타임 질문"에 답을 주는 도구 상자로, RTTI(런타임 타입 확인 기능)를 쓰지 않고도 타입에 대한 판단을 코드가 만들어지는 단계에서 전부 끝내기 위해 존재한다.
+
 ### TypeTraits.h — 컴파일러 인트린식 기반 타입 트레이트 라이브러리
+
+`TIsBaseOf` 같은 트레이트는 `dynamic_cast` 없이 "A가 B의 부모 클래스인가"를 컴파일 시점에 알아내야 한다. 여기 쓰인 트릭(SFINAE)은 컴파일러에게 두 종류의 함수 원서를 동시에 내미는 것과 비슷하다 — 하나는 "정확히 Base 타입만 받는 깐깐한 원서", 하나는 "아무거나 다 받아주는 헐렁한 원서". Derived 타입을 넣어봤을 때 컴파일러가 어느 쪽 원서를 채택하는지를 보고 상속 관계 여부를 판별하는데, 이 심사 자체가 실제로 프로그램이 돌아갈 때가 아니라 컴파일이 끝나는 순간 이미 결론이 나 있다는 점이 핵심이다.
 
 **목적:** 직접 손으로 작성한, STL을 사용하지 않는 컴파일 타임 타입 트레이트 모음이다(정수 상수 래퍼, 동일 타입 검사, 참조/CV 제거, 포인터 판별, 컴파일러 인트린식을 통한 POD/trivial/enum/class 검사, `TEnableIf`/`TConditional` SFINAE 헬퍼, `TDecay`, 그리고 SFINAE 오버로드 해석으로 처음부터 구현한 `TIsBaseOf`).
 
@@ -654,6 +672,8 @@ struct TIsBaseOf : TIntegralConstant<bool, UObjectPrivate::TIsBaseOfHelper<Base,
 ---
 
 ### Utility.h — MoveTemp / Forward / Swap
+
+객체를 다른 곳으로 옮길 때 굳이 통째로 복사하지 않고 "소유권만 넘기고 원래 자리는 비워두는" 방식을 쓰면 훨씬 빠르다. MoveTemp는 "이 객체는 이제 복사하지 말고 그냥 가져가도 된다"는 표시를 컴파일러에게 붙여주는 역할이고, Swap은 이 방식으로 두 객체의 내용을 큰 복사 비용 없이 맞바꾼다. Forward는 함수가 인자를 다음 함수로 넘겨줄 때, 원래 그 인자가 "복사해도 되는 값"이었는지 "옮겨도 되는 값"이었는지의 성질을 잃지 않고 그대로 이어서 전달해주는 역할이다.
 
 **목적:** `std::move`, `std::forward`, `std::swap`을 대체하는 STL 없는 구현으로, 위의 `TRemoveReference` 트레이트 위에 직접 만들어져 있다.
 
@@ -746,6 +766,8 @@ struct TNot : TIntegralConstant<bool, !T::Value> {};
 
 ### TResult.h — 예외 없는 에러 전파를 위한 `Ok`/`Err` 결과 타입
 
+예외(try/catch)를 쓸 수 없는 이 엔진에서, 함수가 실패할 수도 있다는 사실을 반환 타입 자체에 정직하게 드러내는 방법이다. "성공했으면 결과값을, 실패했으면 에러 코드를 담아서 돌려준다"는 상자(TResult) 하나를 만들어서, 호출한 쪽이 반드시 `IsOk()`로 성공 여부를 먼저 확인한 뒤에야 값을 꺼내 쓰도록 강제한다. 확인도 안 하고 실패한 결과에서 값을 꺼내려 하면 그 자리에서 바로 어설트가 터지게 되어 있어서, 에러를 조용히 무시하고 넘어가는 실수를 막아준다.
+
 **목적:** `std::expected`/`Result` 스타일의 값-또는-에러 래퍼로, 엔진의 예외 없는 에러 전파 전략으로 사용된다(`CLAUDE.md`의 Phase 5.5: "예외 없는 에러 전파 전략 (`TResult<T,E>` 패턴)" 참고). 기본 에러 타입은 엔진 전역 `EEngineError` 열거형이다.
 
 **코드** (`Engine/Include/Core/Templates/TResult.h`):
@@ -831,6 +853,8 @@ public:
 ---
 
 ## TArray / TArrayView
+
+TArray는 언리얼 엔진에서 쓰는 것과 똑같은 방식으로 만든, STL의 `std::vector`를 대신하는 자체 동적 배열이다. 보통 동적 배열은 공간이 꽉 차면 더 큰 창고를 새로 빌려서 내용물을 통째로 이사시키는데, TArray는 아주 작은 배열(`TInlineAllocator`)이라면 이사 없이 배열 객체 자신에게 붙어있는 작은 서랍(인라인 버퍼)에 바로 담아두다가, 그 서랍이 꽉 찼을 때만 비로소 힙이라는 큰 창고로 옮긴다. TArrayView는 배열을 복사하지 않고 "이 구간만 보여줄게" 하는 창문 같은 것이라, 원본을 소유하지 않고 읽기 전용으로 들여다볼 때 쓴다.
 
 #### 목적
 `TArray<T, AllocatorType>`는 STL을 사용하지 않는 언리얼 스타일 동적 배열로, 항상 힙에 할당하는 방식(`TDefaultAllocator`)과 스몰 버퍼/인라인 방식(`TInlineAllocator<N>`) 저장 정책을 모두 지원한다. `TArrayView<T>`는 임의의 연속된 `T` 버퍼(원시 포인터+크기 또는 `TArray`) 위에 얹히는 비소유(non-owning) 읽기 전용 슬라이스다.
@@ -1041,6 +1065,8 @@ TArrayView(const TArray<T, AllocatorType>& InArray) noexcept
 
 ## TSparseArray
 
+원소를 넣고 뺄 때 그 자리의 "번호(인덱스)"가 절대 바뀌면 안 되는 특수한 배열이다. 마치 주차장처럼, 3번 자리의 차가 빠져나가도 뒤 칸의 차들을 앞으로 당겨서 번호를 다시 매기지 않는다 — 대신 비워진 3번 자리를 "다음 차는 여기 세우세요" 메모(프리 리스트)에 적어두고, 다음 차가 들어오면 그 번호를 그대로 재사용한다. 이 덕분에 TSet/TMap에 들어간 원소들은 삽입·삭제가 반복돼도 자기 고유 번호를 계속 유지할 수 있고, 뒤에서 살펴볼 해시 버킷이 "몇 번 자리를 가리킬지" 안심하고 기억해둘 수 있는 토대가 된다.
+
 #### 목적
 `TSparseArray<T>`는 프리 리스트(free-list) 기반의, 인덱스가 안정적으로 유지되는 구멍 뚫린(holey) 배열로 `TSet`과 `TMap`을 모두 뒷받침한다 — 각 원소는 생존 기간 동안 고정된 인덱스를 유지하며, 해제된 슬롯은 압축(compaction)되는 대신 침습적(intrusive) 단일 연결 프리 리스트를 통해 재활용된다.
 
@@ -1212,6 +1238,8 @@ void SkipToAllocated()
 ---
 
 ## TSet / TMap / TMultiMap
+
+해시맵은 데이터를 넣을 때 "몇 번 서랍(버킷)에 넣을지" 계산해서 그 서랍에 넣는 자료구조인데, 한 서랍에 여러 개가 몰리면 그것들을 사슬처럼 엮어서 매달아 놓는다. 실제 원소들은 위에서 본 TSparseArray라는 "원소 보관함"에 저장되고, 버킷 배열은 내용물 없이 그저 "몇 번 보관함 칸부터 사슬이 시작되는지"만 적어놓은 안내판 역할을 한다. 예전 방식(Open Addressing)은 원소를 지울 때 그 자리를 진짜로 비우지 못하고 "한때 여기 있었음" 표시(tombstone)만 남겨야 했는데, 삽입·삭제가 반복될수록 이 표시가 서랍장 곳곳에 쌓여 서랍장 자체가 지저분해지고 검색이 점점 느려지는 문제가 있었다. 지금 방식(체이닝 + TSparseArray)은 지운 자리를 즉시 실제로 비우고 프리 리스트로 재활용하기 때문에 이런 문제가 없다. TMultiMap은 한 서랍 칸(키)에 값을 여러 개 넣고 싶을 때 쓰는 것으로, 내부적으로는 "값 하나" 대신 "값들의 목록"을 넣는 TMap일 뿐이다.
 
 #### 목적
 `TSet<KeyType>`과 `TMap<KeyType, ValueType>`은 원소 저장을 위한 `TSparseArray` 위에 2의 거듭제곱 크기 버킷 배열(intrusive chain head 방식)을 얹은 분리 연결(separate chaining) 해시 컨테이너다. `TMultiMap<KeyType, ValueType>`은 `TMap<KeyType, TArray<ValueType>>` 위에 하나의 키에 여러 값을 매핑하는 API를 한 겹 씌운 구조다.
@@ -1490,6 +1518,8 @@ public:
 
 ## HashFunctions
 
+좋은 해시 함수란 비슷하게 생긴 값들도 완전히 다른 서랍 번호로 흩뿌려 보내는 함수다 — 카드를 섞을 때 순서가 비슷한 카드끼리 뭉쳐있으면 안 되는 것과 같은 이치다. 여러 값이 자꾸 같은 서랍에 몰리면 그 서랍의 사슬이 길어져서, 결국 배열을 처음부터 끝까지 뒤지는 것과 다를 바 없이 느려진다. 그래서 이 파일은 정수·실수·포인터 등 타입별로 "잘 섞이도록" 검증된 계산식을 따로 마련해 둔 것이다.
+
 #### 목적
 `HashFunctions.h` (`/home/user/MapleStory_UnrealSource/Engine/Include/Core/Containers/HashFunctions.h`)는 `TSet`/`TMap`이 `BucketIndex(GetTypeHash(Key))`를 통해 호출하는 자유 함수 해싱 훅인 `GetTypeHash`를 정의하며, 범용 바이트 스캔 폴백과 흔히 쓰이는 스칼라 타입들에 대한 명시적 특수화를 함께 제공한다.
 
@@ -1625,6 +1655,8 @@ inline uint32 GetTypeHash(T* Ptr)
 ---
 
 ## Math 라이브러리
+
+게임에서 캐릭터 위치를 옮기고, 색을 입히고, 회전시키고, 충돌을 판정하는 데 필요한 계산 도구들을 모아놓은 상자다. 벡터(위치·방향), 색상, 사각형(충돌 판정), 행렬(회전·이동·투영 변환), 시드 기반 난수 생성기(몬스터 스폰, 아이템 드롭 확률)처럼 이름만 봐도 용도가 짐작되는 기본 부품들이 대부분이라, 아래 각 타입은 이름과 코드만 봐도 충분히 이해된다.
 
 `Engine/Include/Core/Math/`에 위치한 순수 값 타입(POD에 가까운 struct-like class) 모음으로, STL `<cmath>`를 얇게 감싼 스칼라 유틸리티(`FMath`)부터 2D 벡터/사각형/색상/변환/행렬, 그리고 드롭률·스폰에 쓰는 결정론적 시드 RNG(`FRandomStream`)까지 엔진 전체에서 좌표·충돌·렌더링·게임플레이 확률 계산에 공통으로 쓰이는 기반 수학 타입을 제공한다.
 
@@ -1778,6 +1810,8 @@ int32 FRandomStream::NextSeed()
 
 ## FString
 
+STL의 `std::string`을 엔진이 직접 구현한 버전이라고 보면 된다. 즉, 길이가 계속 바뀌는 문자열을 힙(동적 메모리)에 저장해두고, 다 채워지면 버퍼를 2배씩 늘려가며 관리하는 가변 길이 문자열 타입이다.
+
 **목적.** `FString`은 엔진의 동적으로 힙에 소유권을 두는 와이드 문자열 타입이다(`Engine/Include/Core/String/FString.h`, `FString.cpp`). 언리얼의 `FString`에 대응하는 타입으로, STL 컨테이너가 아니라 `wchar_t`를 기반으로 하며, `FMemory::Malloc`/`FMemory::Free`를 통해서만 할당된다.
 
 **버퍼 레이아웃.** 전체 상태는 멤버 세 개로 구성된다.
@@ -1862,6 +1896,8 @@ FString FString::Printf(const wchar_t* Fmt, ...)
 고정 크기 4096-`wchar_t` 스택 버퍼와 `vswprintf`를 사용한다. 포맷팅이 실패하거나 아무것도 만들어내지 못하면(`vswprintf`는 잘림/오류 시 음수를 반환한다) 잘린 결과 대신 기본(빈) `FString`을 반환한다. 결과는 `FString(Buffer)`를 복사 생성하는 방식으로 만들어지므로, 최종 문자열은 스택 버퍼 그 자체가 아니라 정확한 크기로 새로 힙에 할당된 것이다.
 
 ## FName / FNamePool
+
+문자열 두 개가 같은지 비교하려면 원래는 글자를 하나하나 끝까지 대조해야 한다 — 문자열이 길수록 느려진다. FName은 이 문제를 "이름표 사전"으로 푼다. 어떤 문자열을 처음 쓸 때 딱 한 번만 사전(FNamePool)에 등록하고 짧은 번호표(uint32 인덱스)를 받아두면, 그 다음부터는 문자열끼리가 아니라 그 번호표 두 개만 비교하면 된다. 그래서 같은 이름은 항상 같은 번호로 귀결되고, "같다/다르다" 판정이 숫자 비교 수준으로 빨라진다 — 몬스터 이름, 스킬 태그, 애니메이션 상태 이름처럼 자주 비교되는 값에 딱 맞는 구조다. (참고로 아래 기술 설명에서, 이 문서는 실제 코드와 이 프로젝트의 이전 로드맵 문서 서술이 서로 어긋나는 지점도 하나 짚어낸다.)
 
 **목적.** `FName`은 인터닝된(interned) 문자열을 가리키는, 복사와 비교 비용이 저렴한 핸들이다. 언리얼의 `FName`을 그대로 본떠, 동일한 문자열은 같은 내부 엔트리로 합쳐지고 비교/복사는 문자열 연산이 아니라 `uint32` 연산이 된다. 실제 저장과 인터닝 로직은 모두 `FNamePool`(`Engine/Include/Core/String/FNamePool.h/.cpp`)에 있으며, `FName` 자체(`Engine/Include/Core/String/FName.h`)는 그 풀 안의 인덱스를 감싸는 래퍼에 불과하다. 참고로, 이 트리에는 `FName.cpp`가 존재하지 않는다 — `ToString()`을 포함한 `FName`의 모든 멤버는 `FName.h`에 인라인으로 정의되어 있다.
 
@@ -2003,6 +2039,8 @@ inline uint32 GetTypeHash(const FName& Name)
 
 ## FText
 
+이름이 거창하게 "Text"라서 다국어 번역이나 지역별 표시 처리를 해줄 것 같지만, 지금 코드를 보면 그냥 FString을 얇게 감싸서 이름표만 "FText"로 바꿔 단 것뿐이다. 즉 현재 시점에서는 "타입 이름만 다른 FString"이라고 이해하면 되고, 실제 로컬라이제이션 기능은 아직 들어있지 않다.
+
 **실제로 무엇인가.** `FText`(`Engine/Include/Core/String/FText.h/.cpp`)는 단일 `FString` 멤버를 감싼 얇은 값 타입 래퍼다 — 이 구현에는 로컬라이제이션 테이블도, 컬처/로케일 키도, 포맷 인자 지원도, "원본 문자열 대 표시 문자열"이라는 별도 개념도 존재하지 않는다. private 상태 전체는 다음과 같다.
 ```cpp
 private:
@@ -2038,7 +2076,11 @@ bool IsEmpty() const { return m_String.IsEmpty(); }
 
 ## Logging / Assert 시스템
 
+게임을 만들다 보면 "지금 뭐가, 어디서, 왜 잘못됐는지" 콘솔이나 파일에 기록을 남겨야 할 때가 많다. 이 섹션은 그런 로그를 심각도(경고/에러/치명적 오류 등)와 시스템별 카테고리로 분류해서 화면·디버거·파일 세 군데에 동시에 남기는 로깅 시스템, 그리고 "이 조건은 반드시 참이어야 한다"를 검사하는 assert류 매크로들을 다룬다.
+
 ### 1. 로그 카테고리 — `FLogCategoryBase` / `DECLARE_LOG_CATEGORY_EXTERN` / `DEFINE_LOG_CATEGORY`
+
+로그를 아무 표시 없이 그냥 쏟아내면 나중에 그게 렌더러에서 난 로그인지 AI 쪽에서 난 로그인지 구분할 수가 없다. 그래서 "LogCore", "LogRenderer"처럼 이름표를 하나씩 붙여두고, 로그를 볼 때 어느 시스템에서 나온 메시지인지 한눈에 알 수 있게 한 것뿐이다.
 
 로그 카테고리는 이름 하나만 들고 있는 아주 얇은 구조체다. `Engine/Include/Core/Logging/LogMacros.h`:
 
@@ -2081,6 +2123,8 @@ DEFINE_LOG_CATEGORY(LogUI);
 카테고리별로 별도의 필터링/verbosity 오버라이드 같은 부가 정보는 없다 — `FLogCategoryBase`는 이름 문자열 하나만 가지고 있으며, 실제 verbosity 판단은 카테고리가 아니라 매 `Log()` 호출에 전달되는 `ELogVerbosity` 값으로 처리된다.
 
 ### 2. `UE_LOG` 매크로와 `FLogger::Log` 실행 흐름
+
+`UE_LOG`는 "이 카테고리로, 이 심각도로, 이런 메시지를 남겨라"를 한 줄로 짧게 쓰게 해주는 매크로다. 내부적으로는 메시지를 조립해서 콘솔, 비주얼스튜디오 디버거 창, 로그 파일 세 곳에 동시에 찍어주고, 심각도가 "Fatal(치명적)"이면 그 자리에서 프로그램을 강제로 멈추거나 종료시킨다.
 
 `UE_LOG`는 `Category`, `Verbosity`, `Format`, 가변 인자를 받아 `FLogger::Log`를 호출하는 얇은 래퍼다 (`LogMacros.h`):
 
@@ -2157,6 +2201,8 @@ static void WriteToOutputs(FILE* pFile, const wchar_t* FullBuf)
 
 ### 3. `FLogger::Init` / `Shutdown` — 로그 파일 경로 구성
 
+프로그램을 실행할 때마다 exe가 있는 폴더 밑에 `logs` 폴더를 만들고, 그 안에 실행 시각이 찍힌 이름(예: `engine_2026-07-21_10-30-00.log`)으로 새 로그 파일을 하나씩 새로 만든다. 그래서 이전 실행 기록을 덮어쓰지 않고, 나중에 "그날 그 시점에 무슨 일이 있었는지"를 따로 찾아볼 수 있다.
+
 ```cpp
 void FLogger::Init()
 {
@@ -2216,6 +2262,8 @@ void FLogger::Shutdown()
 
 ### 4. `ensure(expr)` — 한 번만 발동하는 소프트 assert
 
+`ensure()`는 "이 조건이 깨지면 곤란하긴 한데, 그렇다고 게임 전체를 멈출 정도는 아니다"라는 상황을 위한 장치다. 조건이 실패하면 경고를 남기고 디버거를 한 번 멈춰 세우는데, 같은 코드 위치에서 매 프레임 수십 번씩 계속 실패해도 로그 창이 도배되지 않도록 "그 자리에서는 딱 한 번만" 경고하고 그 이후로는 조용히 넘어간다.
+
 `LogMacros.h`의 정의를 그대로 옮기면:
 
 ```cpp
@@ -2247,6 +2295,8 @@ void FLogger::Shutdown()
 
 ### 5. `check(expr)` / `verify(expr)` — `EnginePCH.h`
 
+`check()`는 디버그 모드에서만 작동하는 안전벨트라서, 실전 배포판(Release)에서는 조용히 사라진다. 그래서 `check()` 안에 뭔가를 "실행"하는 코드를 넣으면, 디버그에서는 잘 되다가 배포판에서는 그 코드 자체가 통째로 안 돌아가는 사고가 난다 — 실제로 이 프로젝트에서 겪었던 버그다. `verify()`는 이 문제를 피하려고 만든 버전으로, 배포판에서도 조건식 자체는 항상 실행되도록 보장한다(다만 실패해도 프로그램을 멈추진 않는다). 그래서 "조건 안에 실제로 실행되어야 하는 코드가 들어간다면 `check` 대신 `verify`를 써야 한다"는 규칙이 여기서 나온다.
+
 `Engine/Include/EnginePCH.h` 상단, 주석까지 포함해 그대로 옮기면:
 
 ```cpp
@@ -2276,11 +2326,15 @@ void FLogger::Shutdown()
 
 ## 스마트 포인터 (TSharedPtr / TWeakPtr / TSharedRef)
 
+객체를 다 쓴 뒤 누가 언제 메모리를 해제할지 정하는 문제(소유권)를 사람이 직접 `delete`로 관리하면 실수하기 쉽다 — 두 번 지우거나(이중 해제), 아예 안 지우거나(누수). TSharedPtr는 "몇 명이 이 객체를 함께 소유하고 있는지" 자동으로 세어뒀다가 마지막 한 명이 손을 떼는 순간 알아서 정리해주는 스마트 포인터다. 다만 서로가 서로를 붙잡고 있는 순환 참조 상황에서는 이 자동 정리마저 꼬일 수 있는데, 아래에서 그 문제와 해결 방법을 실제로 겪었던 버그와 함께 다룬다.
+
 경로: `Engine/Include/Core/SmartPointer/{SharedPointerInternals.h, TSharedPtr.h, TWeakPtr.h, TSharedRef.h}`
 
 이 서브시스템은 언리얼의 `TSharedPtr` / `TWeakPtr` / `TSharedRef`를 STL(`std::shared_ptr`) 없이 직접 구현한 것이다. 소유권 공유 스마트 포인터 세 종류가 모두 하나의 공용 제어 블록(`FRefCountBlock`)을 통해 동작하며, `FSmartPtrAtomics`라는 컴파일러 분기 래퍼로 참조 카운트 증감을 원자적으로 수행한다. Phase 6 문서(CLAUDE.md)의 `FReferenceControllerBase → FRefCountBlock` 최적화 항목("멀티스레드 안전 공유 소유권")이 바로 이 구현이다.
 
 ### 1. FSmartPtrAtomics — MSVC / GCC 분기 원자 연산 래퍼
+
+여러 스레드가 동시에 참조 카운트를 건드려도 숫자가 꼬이지 않게 해주는 안전장치다. CPU에게 "이 증가·감소·읽기 연산은 중간에 다른 스레드가 끼어들지 못하게 한 번에 처리해줘"라고 부탁하는 것이라고 생각하면 된다. 컴파일러(MSVC/GCC)마다 이 부탁을 하는 방법이 다르기 때문에, 이 클래스가 그 차이를 감추고 항상 같은 방식으로 쓸 수 있게 해준다.
 
 `SharedPointerInternals.h`는 표준 라이브러리의 `std::atomic` 대신, 전처리기로 MSVC 인트린식과 GCC/Clang 빌트인을 직접 분기하는 최소한의 원자 연산 래퍼를 정의한다.
 
@@ -2321,6 +2375,8 @@ struct FSmartPtrAtomics
 주목할 점은 `Load`가 MSVC 분기에서는 `*pValue`로 단순 역참조만 한다는 것이다. `_InterlockedIncrement`/`_InterlockedDecrement`류의 MSVC 인트린식은 완전한 메모리 펜스를 동반하는 것으로 알려져 있어 x86/x64에서는 단순 읽기로도 실질적으로 안전하다고 간주하고 있는 것으로 보이나, GCC 분기처럼 명시적 `__atomic_load_n`을 쓰지 않는다는 점에서 두 분기가 완전히 대칭적인 원자성 보장을 제공하진 않는다.
 
 ### 2. FRefCountBlock — 공유/약 참조 카운트를 함께 관리하는 제어 블록
+
+이 구조체가 바로 "관리 장부"다 — 진짜 객체를 세는 카운트(m_SharedCount)와 장부 자신을 세는 카운트(m_WeakCount)를 함께 들고 다니며, 객체가 다 정리된 뒤에도 장부 자신은 조금 더 살아남을 수 있게 설계되어 있다.
 
 ```cpp
 struct FRefCountBlock
@@ -2389,6 +2445,8 @@ struct FRefCountBlock
 `ReleaseWeak()` 자체는 훨씬 단순하다 — `TWeakPtr`가 소멸하거나 재대입될 때마다 호출되며, `m_WeakCount`를 감소시켜 0이 되면(즉 공유 그룹의 암묵적 몫 포함 모든 약 참조가 사라졌다면) `FMemory::Free(this)`로 블록을 해제한다. `m_SharedCount`가 아직 0이 아닌 상태(즉 살아있는 `TSharedPtr`가 있는 상태)에서는 애초에 `m_WeakCount`가 최소 1(암묵적 몫) 이상이므로 이 경로로 블록이 해제될 수 없다.
 
 ### 3. TSharedPtr — 소유권 공유 포인터
+
+"내가 이 객체의 주인 중 한 명이다"라는 뜻의 포인터다. 같은 객체를 여러 TSharedPtr가 동시에 가리킬 수 있고, 마지막 주인이 사라지는 순간 객체가 자동으로 정리된다. 여러 명이 물건 하나를 같이 들고 있다가, 마지막 한 명이 손을 떼는 순간 자동으로 치워지는 것과 비슷하다.
 
 `TSharedPtr.h`는 원시 포인터 생성자, 복사/이동 생성자, 템플릿 업캐스트 생성자, 대입 연산자, 그리고 `MakeShared<T>` 헬퍼로 구성된다.
 
@@ -2509,6 +2567,8 @@ TSharedPtr<T> MakeShared(Args&&... InArgs)
 
 ### 4. TWeakPtr — 소유권 없이 관찰만 하는 약한 참조
 
+"나는 이 객체를 지켜보기만 할 뿐 주인은 아니다"라는 뜻의 포인터다. 객체가 아직 살아있는지(IsValid)만 확인할 수 있고, 필요하면 Pin()으로 잠깐 진짜 주인(TSharedPtr)이 되어볼 수도 있다 — 다만 그 사이에 객체가 이미 사라졌을 수도 있으니 항상 "아직 살아있다면"이라는 전제 하에 빌려 쓰는 셈이다.
+
 `TWeakPtr.h`는 `TSharedPtr`와 동일한 두 멤버(`T* m_pElement`, `FRefCountBlock* m_pRefCountBlock`)를 갖되, 자신의 존재는 오직 `m_WeakCount`에만 반영한다.
 
 **`TSharedPtr`로부터의 생성**은 포인터와 블록을 그대로 복사한 뒤 `AddWeak()`를 호출한다.
@@ -2567,6 +2627,8 @@ void ReleaseRef()
 
 ### 5. TSharedRef — 널이 될 수 없는 공유 참조
 
+TSharedPtr와 거의 똑같이 동작하지만 "절대 비어있을 수 없다"는 약속이 추가된 버전이다. 생성할 때부터 반드시 진짜 객체를 가리키도록 강제하기 때문에, 이걸 쓰는 쪽 코드는 "혹시 null이면 어떡하지" 하는 검사를 따로 할 필요가 없다.
+
 `TSharedRef.h`는 완전히 새로운 참조 카운팅 로직을 갖지 않고, 내부에 `TSharedPtr<T> m_SharedPtr` 하나만 멤버로 갖는 얇은 래퍼다. 모든 연산(`operator*`, `operator->`, `Get()`, `GetRefCount()`, 대입, 이동)은 이 내부 `TSharedPtr`에 그대로 위임된다.
 
 ```cpp
@@ -2598,7 +2660,11 @@ TSharedPtr<T> ToSharedPtr() const
 
 ## Object 시스템 (UClass / Cast / UObject / AActor)
 
+언리얼 엔진의 UObject/AActor/Cast 체계를 RTTI(런타임 타입 확인 기능) 없이 직접 재구현한 부분이다. "이 객체가 실제로 어떤 타입인지"를 dynamic_cast 대신 직접 만든 이름표 체계로 판별하고, 게임 오브젝트(AActor)는 여러 기능 부품(Component)을 붙였다 뗐다 하며 조립하는 구조를 그대로 따랐다.
+
 ### 1. UClass — FName + SuperClass* + IsChildOf
+
+이 프로젝트는 dynamic_cast를 쓸 수 있게 해주는 RTTI 기능을 꺼두었기 때문에, 그 대신 클래스마다 UClass라는 "이름표"를 딱 하나씩 만들어 붙인다. 이름표 안에는 "내 이름"과 "내 부모 이름표가 누구인지"가 들어있어서, 이 이름표들을 부모 방향으로 사슬처럼 연결하면 클래스 상속 관계 전체가 표현된다.
 
 `Engine/Include/Object/UClass.h`는 언리얼의 리플렉션 시스템을 흉내 내는 최소 단위 "타입 정보" 객체다. RTTI(`/GR-`)를 쓸 수 없기 때문에, 클래스 하나당 정확히 하나씩 존재하는 `UClass` 인스턴스가 타입 식별자 역할을 한다.
 
@@ -2665,6 +2731,8 @@ bool UClass::IsChildOf(const UClass* TestClass) const
 
 ### 2. ObjectMacros.h — DECLARE_CLASS_ROOT / DECLARE_CLASS와 매직 스태틱
 
+클래스를 하나 만들 때마다 "이 클래스의 이름표(UClass)를 만들고, 부모 이름표와 연결하고, GetClass() 함수를 오버라이드하는" 반복적인 코드를 매번 손으로 쓰는 대신, `DECLARE_CLASS(TClass, TSuperClass)` 한 줄만 클래스 안에 적으면 매크로가 그 코드를 자동으로 채워 넣어준다. 서류 양식에 빈칸만 채우면 나머지 절차는 자동으로 처리되는 것과 비슷하다.
+
 `Engine/Include/Object/ObjectMacros.h`는 위 `UClass` 인스턴스를 실제로 "생성하고 연결하는" 매크로 두 개를 정의한다.
 
 ```cpp
@@ -2718,6 +2786,8 @@ private:
 
 ### 3. CastTemplates.h — Cast / CastChecked / ExactCast
 
+`Cast<T>()`는 객체의 이름표(UClass)에서 시작해 부모 방향으로 사슬을 타고 올라가면서 "T가 이 사슬 안에 있는가"를 직접 확인한다. 있으면 안전하다고 판단해 원하는 타입으로 바꿔서 돌려주고, 없으면 nullptr을 돌려준다 — RTTI 없이도 언리얼 엔진이 실제로 쓰는 것과 같은 방식으로 "이 객체가 정말 이 타입이 맞는지"를 검사하는 핵심 트릭이다.
+
 `Engine/Include/Object/CastTemplates.h`는 위 `IsChildOf`/`IsExactClass`를 이용해 다운캐스트를 구현한다.
 
 ```cpp
@@ -2768,6 +2838,8 @@ T* ExactCast(U* Obj)
 
 ### 4. TSubclassOf<T> — 타입 안전 클래스 레퍼런스
 
+"이 자리에는 아무 타입이나 넣을 수 없고, 반드시 특정 클래스(또는 그 자손)만 넣을 수 있다"는 규칙을 강제하는 상자다. 예를 들어 몬스터 종류를 등록하는 슬롯에 실수로 아이템 클래스를 넣는 것을 그 자리에서 막아준다.
+
 `Engine/Include/Object/TSubclassOf.h`는 `UClass*`를 그냥 들고 다니는 대신, "이 포인터는 반드시 `T` 또는 `T`의 자손 클래스를 가리킨다"는 불변식을 컴파일 타임 템플릿 파라미터와 런타임 `check()`로 함께 강제하는 얇은 래퍼다.
 
 ```cpp
@@ -2810,6 +2882,8 @@ private:
 
 ### 5. UObject — 루트 클래스, 그리고 BeginPlay/Tick/EndPlay가 여기 있다는 사실
 
+이 엔진의 모든 게임 오브젝트가 상속받는 가장 꼭대기의 클래스다. BeginPlay(시작할 때), Tick(매 프레임), EndPlay(끝날 때) 세 가지 생명주기 함수가 여기 정의되어 있는데, 실제 언리얼 엔진에서는 이 함수들이 더 아래 계층(AActor 등)에만 있다는 점에서 이 프로젝트가 구조를 단순화한 지점이다.
+
 `Engine/Include/Object/UObject.h`:
 
 ```cpp
@@ -2842,6 +2916,8 @@ void UObject::EndPlay() { }
 **중요한 점**: 이 세 라이프사이클 함수는 `AActor`나 `UActorComponent`가 아니라 **`UObject` 자체에** 선언되어 있다. 실제 언리얼 엔진에서는 `UObject`에 `BeginPlay`/`Tick`/`EndPlay` 개념이 존재하지 않는다 — 이것들은 `AActor`(`BeginPlay`, `Tick`은 사실 `AActor::Tick` 및 `UActorComponent::TickComponent`를 통해 `FTickFunction`이라는 별도의 틱 스케줄링 서브시스템으로 위임됨) 및 `UActorComponent` 계층에서만 도입되는 개념이며, 순수 `UObject`(예: 에셋, 데이터 컨테이너 등)는 이런 게임플레이 라이프사이클을 갖지 않는다. 이 코드베이스는 그 구분을 하지 않고 라이프사이클 함수 세 개를 최상위 `UObject`에 몰아넣었다 — 즉, 이는 실제 언리얼 아키텍처로부터 의도적으로 단순화된(그리고 명백히 갈라진) 지점이다. 결과적으로 이 엔진에서는 `UObject`를 상속하는 어떤 클래스든(게임플레이와 무관하더라도) `BeginPlay`/`Tick`/`EndPlay`를 오버라이드할 수 있는 구조가 된다.
 
 ### 6. UActorComponent / USceneComponent
+
+액터(AActor)가 "게임 안의 물체"(캐릭터, 몬스터 등)라면, 컴포넌트는 그 물체에 붙는 기능 부품이다 — 움직임, 그림(스프라이트), 소리 같은 기능 하나하나를 컴포넌트 단위로 떼었다 붙였다 할 수 있다. USceneComponent는 그중에서도 "위치·회전·크기 정보"와 "부모-자식으로 매달리는 구조"를 가진 특별한 컴포넌트다.
 
 `Engine/Include/Object/UActorComponent.h`:
 
@@ -2932,6 +3008,8 @@ FTransform2D USceneComponent::GetWorldTransform() const
   다만 이 재귀는 부모의 월드 트랜스폼을 그대로 반환할 뿐, 자기 자신의 `m_RelativeTransform`을 부모의 월드 트랜스폼과 실제로 합성(곱)하지 않는다 — 즉 부모가 있으면 자신의 상대 트랜스폼은 무시되고 루트 부모의 트랜스폼만 그대로 리턴된다. 언리얼의 `GetComponentTransform()`처럼 계층을 따라 트랜스폼을 누적 결합하는 진짜 계층적 변환 합성은 구현되어 있지 않다. 따라서 "SceneComponent에 스텁 이상의 내용이 있는가?"라는 질문에는 예 — 트랜스폼 저장과 attach 트리 자체는 실제 데이터를 갖는 진짜 구현이지만, 월드 트랜스폼 계산 로직은 부모-자식 트랜스폼을 올바르게 합성하지 않는 단순화(사실상 미완성)된 상태라고 명확히 해야 한다.
 
 ### 7. AActor — AddComponent<T>() / GetComponent<T>()와 라이프사이클 오버라이드
+
+액터는 캐릭터, 몬스터, 아이템처럼 "게임 월드 안에 실제로 존재하는 물체" 하나하나를 뜻한다. AddComponent<T>()로 새 기능 부품을 붙이고 GetComponent<T>()로 필요한 부품을 찾아 쓰는데, 이렇게 하면 캐릭터 하나를 거대한 클래스 하나로 몰아서 만들지 않고 움직임/그림/소리 같은 기능을 레고 블록처럼 조립해서 만들 수 있다.
 
 `Engine/Include/Object/AActor.h`:
 
@@ -3059,11 +3137,15 @@ void AActor::EndPlay()
 
 ## Timer 시스템 (FTimerManager)
 
+"N초 후에 이거 실행해줘" 또는 "N초마다 계속 반복해줘"를 미리 예약해두는 알람 시계 관리자다. 몬스터가 죽고 3초 뒤에 다시 태어나게 하거나, 스킬 쿨다운이 다 됐을 때 자동으로 알려주거나, 독 데미지를 1초마다 틱내는 것처럼, "지금 당장이 아니라 나중에 벌어질 일"을 전부 이 관리자 하나가 시간 맞춰 챙겨준다.
+
 ### 목적
 
 `FTimerManager`는 언리얼의 `FTimerManager`를 그대로 본뜬, "N초 후 콜백 실행" / "N초마다 반복 콜백 실행"을 담당하는 전역 시스템이다. 몬스터 리스폰 지연(`SetTimerNextFrame`), 스킬 쿨다운 표시, 주기적 도트뎀 틱 등 시간 기반 이벤트의 기반이 된다. 델리게이트는 함수 포인터(`FTimerFunc = void(*)(void*)`) + `void* Context` 쌍으로, STL 없이도 멤버 함수 바인딩을 가능하게 하는 얇은 래퍼다.
 
 ### FTimerHandle — 식별자
+
+알람을 하나 예약할 때마다 발급되는 번호표다. 나중에 "그 알람 취소해줘"라거나 "그 알람 아직 안 울렸어?"라고 물어볼 때, 이 번호표를 제시해서 어떤 알람인지 콕 집어 가리키는 용도로 쓴다.
 
 `Engine/Include/Timer/FTimerHandle.h`는 단순히 `uint64 m_Handle`을 감싼 구조체다.
 
@@ -3082,6 +3164,8 @@ struct FTimerHandle
 `0`은 "유효하지 않은 핸들"을 의미하며, `FTimerManager`는 `m_NextHandleID`(1부터 시작하는 uint64 카운터)를 발급해 매 `SetTimer` 호출마다 고유 ID를 부여한다. `GetTypeHash`도 함께 정의되어 있어 TMap/TSet의 키로도 쓸 수 있게 되어 있다(비트 믹싱을 위한 murmur 계열 해시 마무리 연산 `Val ^= Val >> 33; Val *= 0xff51afd7ed558ccdULL; ...`).
 
 ### FTimerDelegate — 콜백 타입
+
+"시간이 다 되면 이 함수를 불러줘"라고 미리 등록해두는 장치다. STL의 `std::function` 없이도 특정 객체의 멤버 함수를 함수 포인터 트릭으로 저장해뒀다가, 나중에 그 객체 것인 척 대신 호출해주는 얇은 래퍼라고 보면 된다.
 
 `Engine/Include/Timer/FTimerDelegate.h`는 함수 포인터 기반의 정적 델리게이트다.
 
@@ -3163,6 +3247,8 @@ void FTimerManager::SetTimerNextFrame(FTimerHandle& OutHandle, const FTimerDeleg
 
 ### Tick — 실제 시간 진행과 콜백 발화
 
+매 프레임마다 관리자가 갖고 있는 모든 알람 시계를 한 바퀴 돌면서 "너 시간 다 됐어?"를 확인하는 부분이다. 다 된 알람은 울리고(콜백 실행), 반복 알람이면 다시 태엽을 감고, 1회성 알람이면 치워버린다.
+
 `Tick`이 이 시스템의 심장부다. 매 프레임 게임 루프에서 `GTimerManager->Tick(DeltaTime)`이 호출된다고 가정할 수 있다.
 
 ```cpp
@@ -3231,6 +3317,8 @@ extern FTimerManager* GTimerManager;
 
 ## Gameplay Ability System (GAS)
 
+캐릭터의 스킬, 버프/디버프, 스탯을 전부 하나의 통일된 방식으로 다루는 시스템이다. 포션을 마셔서 HP가 즉시 차오르는 것, 독에 걸려 HP가 서서히 깎이는 것, 활을 장착해서 공격력이 영구히 오르는 것 — 겉보기엔 완전히 다른 일 같지만, 내부적으로는 전부 "어떤 스탯에, 어떤 크기의 효과를, 얼마나 오래 적용할지"를 정하는 같은 틀(`GameplayEffect`)로 처리된다. 여기에 "지금 스턴 상태다", "지금 쿨다운 중이다" 같은 조건을 계층화된 이름표(태그)로 붙여서, 스킬을 쓸 수 있는지 없는지도 이 틀 안에서 함께 판단한다.
+
 ### 개요
 
 `Engine/Include/Ability/` 아래의 GAS는 언리얼의 GameplayAbilitySystem을 RTTI 없이, `UClass` 기반 `Cast<T>()`와 이 엔진 자체 컨테이너(`TArray`, `TMap`, `FName`)만으로 재구현한 것이다. 핵심 축은 세 가지다: (1) **태그**(`FGameplayTag`/`FGameplayTagContainer`)로 상태와 차단 조건을 표현하고, (2) **속성**(`FGameplayAttribute`/`UAttributeSet`)이 HP/MP/ATK 같은 수치를 Base/Current 이원화로 보관하며, (3) **효과**(`UGameplayEffect`)가 속성에 가하는 변경을 시간 축(Instant/Duration/Infinite)에 따라 정의한다. 이 모든 걸 `UAbilitySystemComponent`(줄여서 ASC)가 캐릭터에 붙는 `UActorComponent`로서 관리한다.
@@ -3281,6 +3369,8 @@ struct FGameplayAbilitySpec
 
 ### 2. FGameplayTag / FGameplayTagContainer — 계층 태그와 매칭
 
+태그는 `"Skill.Attack.Slash"`처럼 우편 주소나 폴더 경로처럼 계층으로 이름을 붙인 딱지다. "Skill.Attack"이라는 상위 주소로 검색하면 그 아래 사는 "Skill.Attack.Slash"도 함께 걸려든다 — 그래서 "지금 쿨다운 중인가?"를 확인할 때 정확한 스킬 이름을 몰라도 "Cooldown"이라는 큰 카테고리로 한 번에 물어볼 수 있다.
+
 `FGameplayTag`(`Engine/Include/Ability/FGameplayTag.h`)는 내부적으로 `FName m_TagName` 하나만 가지는 얇은 래퍼다. 핵심은 `MatchesParent`(`Engine/Include/Ability/FGameplayTag.cpp`)의 접두사 판정 로직이다.
 
 ```cpp
@@ -3315,6 +3405,8 @@ bool FGameplayTag::MatchesParent(const FGameplayTag& Parent) const
 `AddTag`는 중복 삽입을 막기 위해 `HasTag` 체크 후 추가하고, `RemoveTag`는 `RemoveAtSwap`으로 O(1) 제거한다.
 
 ### 3. FGameplayAttribute / UAttributeSet — Base/Current 이원화
+
+스탯 하나마다 "원래 값"(장비도 버프도 다 뺀 순수 능력치, Base)과 "지금 값"(버프·장비까지 전부 반영된 실제 능력치, Current)을 따로 들고 있는다. 버프가 붙었다 떨어졌다 할 때마다 항상 Base에서부터 처음부터 다시 계산하기 때문에, 버프가 몇 개 겹치든 순서가 꼬이든 결과가 항상 정확하게 맞아떨어진다.
 
 `FGameplayAttribute`(`Engine/Include/Ability/FGameplayAttribute.h`, 헤더 전용 구현)는 다음 네 값을 가진다.
 
@@ -3357,6 +3449,8 @@ void UAttributeSet::ResetCurrentValues()
 ```
 
 ### 4. UGameplayEffect — 효과 정의
+
+효과에는 세 가지 유형이 있다. 포션처럼 마시는 즉시 끝나는 "즉시 효과"(Instant), 스킬 쿨다운이나 독 디버프처럼 정해진 시간 동안만 유지되다 사라지는 "일정 시간 지속"(Duration), 장비 스탯이나 패시브 스킬처럼 벗거나 취소하기 전까진 영원히 붙어있는 "영구 지속"(Infinite)이다. 여기에 `Period`(주기) 값이 있으면 "몇 초마다 한 번씩" 효과를 반복 적용한다는 뜻이 되는데, 이게 바로 독 도트 데미지가 1초마다 깎이는 원리다.
 
 `Engine/Include/Ability/UGameplayEffect.h`는 `UObject`를 상속하며, 데이터 필드가 대부분이다.
 
@@ -3518,6 +3612,8 @@ bool UAbilitySystemComponent::TryStackEffect(UGameplayEffect* pEffect)
 
 #### RecalculateAttributes — Add → Multiply → Override 3-패스
 
+버프가 여러 개 붙어있을 때 "먼저 +20을 더하고 나중에 1.5배를 곱하기"와 "먼저 1.5배를 곱하고 나중에 +20을 더하기"는 최종 결과가 다르다. 만약 이 순서를 "어떤 버프가 먼저 걸렸는가"에 맡겨버리면, 똑같은 버프 조합이라도 붙는 순서에 따라 스탯이 매번 다르게 나오는 버그가 생긴다. 그래서 이 시스템은 순서를 절대 임의로 두지 않고 항상 "전부 더하기(Add) → 전부 곱하기(Multiply) → 마지막에 통째로 덮어쓰기(Override)"라는 고정된 3단계로만 계산한다. 이렇게 하면 버프가 몇 개 붙어있든, 어떤 순서로 걸렸든 항상 똑같은 결과가 나온다는 게 보장된다. Override는 항상 맨 마지막에 실행되므로 다른 어떤 버프보다도 최종적으로 우선하는 "덮어쓰기 절대값"으로 동작한다.
+
 이 함수가 "현재 걸려 있는 모든 지속 효과로부터 CurrentValue를 매번 처음부터 다시 계산"하는 GAS의 핵심 알고리즘이다.
 
 ```cpp
@@ -3585,6 +3681,8 @@ void UAbilitySystemComponent::RecalculateAttributes()
 6. `Attr->SetCurrentValue(Val)`는 내부적으로 Min/Max 클램프를 거친다.
 
 #### TickActiveEffects — 지속시간 감소, 주기 발동, 만료 처리
+
+매 프레임 캐릭터에게 걸려 있는 모든 버프/디버프를 한 바퀴 돌면서, 남은 지속시간을 깎고, 독 도트처럼 "몇 초마다 반복"인 효과는 주기가 됐는지 확인해 발동시키고, 시간이 다 된 효과는 목록에서 정리해서 없앤다. `FTimerManager::Tick`이 알람 시계를 확인하는 것과 똑같은 구조로, GAS의 시간 관리를 이 함수 하나가 전담한다.
 
 ```cpp
 void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
