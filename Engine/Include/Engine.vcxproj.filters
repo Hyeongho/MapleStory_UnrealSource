@@ -46,6 +46,9 @@
     <Filter Include="04. Ability">
       <UniqueIdentifier>{938c909c-0a02-412a-b0e8-787cfbe79f07}</UniqueIdentifier>
     </Filter>
+    <Filter Include="05. Render">
+      <UniqueIdentifier>{77f3b3ab-8b52-4a66-aba9-0f0cd6920790}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -228,6 +231,21 @@
     <ClInclude Include="Core\Containers\TSparseArray.h">
       <Filter>01. Core\03. Containers</Filter>
     </ClInclude>
+    <ClInclude Include="Render\DXDevice.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\DXSwapChain.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\Camera2D.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\RenderQueue.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteBatch.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -337,6 +355,21 @@
     </ClCompile>
     <ClCompile Include="Core\Memory\FMallocBinned.cpp">
       <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\DXDevice.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\DXSwapChain.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\RenderQueue.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\SpriteBatch.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\Camera2D.cpp">
+      <Filter>05. Render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -216,6 +216,11 @@
     <ClInclude Include="Object\UClass.h" />
     <ClInclude Include="Object\UObject.h" />
     <ClInclude Include="Object\USceneComponent.h" />
+    <ClInclude Include="Render\Camera2D.h" />
+    <ClInclude Include="Render\DXDevice.h" />
+    <ClInclude Include="Render\DXSwapChain.h" />
+    <ClInclude Include="Render\RenderQueue.h" />
+    <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
@@ -259,6 +264,11 @@
     <ClCompile Include="Object\UClass.cpp" />
     <ClCompile Include="Object\UObject.cpp" />
     <ClCompile Include="Object\USceneComponent.cpp" />
+    <ClCompile Include="Render\Camera2D.cpp" />
+    <ClCompile Include="Render\DXDevice.cpp" />
+    <ClCompile Include="Render\DXSwapChain.cpp" />
+    <ClCompile Include="Render\RenderQueue.cpp" />
+    <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
   </ItemGroup>
   <ItemGroup>
