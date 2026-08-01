@@ -421,16 +421,36 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   std::vector → TArray / std::string → FString / std::unordered_map → TMap / std::unique_ptr → TSharedPtr
 
 완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — 코드 작성 완료,
-**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (DirectXTK
-NuGet 패키지 설치 등 수동 설정 필요, 아래 참고)
+**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (vcpkg로
+DirectXTK 설치 등 로컬 환경 설정 필요, 아래 참고)
 
-**Visual Studio 수동 설정 필요** (Claude Code가 대신할 수 없음):
-1. 솔루션 우클릭 → NuGet 패키지 관리 → `directxtk_desktop_2019` 설치,
-   Engine·Game 프로젝트 둘 다 체크(Test는 불필요)
-2. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
+**DirectXTK 설치 방식**: NuGet 패키지(`directxtk_desktop_2019`,
+`directxtk_desktop_win10`)는 둘 다 deprecated(더 이상 관리 안 함)
+상태로 확인되어, 공식 권장 방식인 **vcpkg**로 설치한다. `vcpkg.json`
+(솔루션 루트)과 `Engine.vcxproj`/`Game.vcxproj`의
+`VcpkgEnableManifest=true` 설정은 이미 커밋되어 있음 — 아래 로컬 도구
+설치만 사용자가 직접 하면 됨.
+
+**로컬 환경 설정 필요** (Claude Code가 대신할 수 없음 — vcpkg 실행
+파일 자체는 사용자의 Windows 머신에서만 준비 가능):
+1. vcpkg 클론·부트스트랩(최초 1회):
+   ```
+   git clone https://github.com/microsoft/vcpkg.git
+   cd vcpkg
+   .\bootstrap-vcpkg.bat
+   .\vcpkg.exe integrate install
+   ```
+2. `VCPKG_ROOT` 환경 변수를 vcpkg 클론 경로로 설정(영구 적용은 Windows
+   시스템 환경 변수 패널에서)
+3. Visual Studio에서 Engine·Game 프로젝트 각각 Project Properties →
+   vcpkg → *Use Vcpkg Manifest*가 `Yes`인지 확인(vcxproj에 이미 XML로
+   추가되어 있으므로 자동 인식되어야 함)
+4. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
    (DirectXTK 내부가 예외를 던지므로 필요 — 엔진 자체 코드는 여전히
    `check()`/`verify()`만 사용)
-3. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
+5. 빌드(Engine 먼저, Game 그다음) — **첫 빌드는 vcpkg가 DirectXTK를
+   그 자리에서 소스부터 컴파일하므로 평소보다 오래 걸릴 수 있음**
+6. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
    자동 링크하므로 수동 설정 불필요
 
 ---
