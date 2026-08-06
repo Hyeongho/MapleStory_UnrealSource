@@ -25,9 +25,6 @@
     <RootNamespace>Game</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-  <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -77,19 +74,19 @@
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
     <TargetName>MapleStory</TargetName>
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
     <TargetName>MapleStory_Debug</TargetName>
     <OutDir>../Bin/</OutDir>
@@ -157,6 +154,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\DirectXTK\DirectXTK_Desktop_2022.vcxproj">
+      <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
