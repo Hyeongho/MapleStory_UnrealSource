@@ -9,6 +9,10 @@
 #include <SpriteBatch.h>
 #include <CommonStates.h>
 
+// ThirdParty/DirectXTK/Lib/x64/$(Configuration)/에 사용자가 직접 빌드해 넣은
+// DirectXTK.lib를 자동으로 링크한다(LibraryPath는 Game.vcxproj에 설정되어 있음).
+#pragma comment(lib, "DirectXTK.lib")
+
 // DirectXTK의 DirectX::SpriteBatch / DirectX::CommonStates를 감싸는 얇은 래퍼.
 // FRenderQueue가 Z-Order로 미리 정렬한 순서 그대로 그리기 위해
 // SpriteSortMode_Deferred(자체 재정렬 없음)로 Begin한다.

@@ -83,12 +83,12 @@
     <OutDir>../BIn/</OutDir>
     <IntDir>../BinObj/</IntDir>
     <TargetName>$(ProjectName)_Debug</TargetName>
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;$(ProjectDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>../BIn/</OutDir>
     <IntDir>../BinObj/</IntDir>
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;$(ProjectDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -273,11 +273,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Copy.bat" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\DirectXTK\DirectXTK_Desktop_2022.vcxproj">
-      <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

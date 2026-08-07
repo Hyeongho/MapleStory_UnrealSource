@@ -421,39 +421,40 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   std::vector → TArray / std::string → FString / std::unordered_map → TMap / std::unique_ptr → TSharedPtr
 
 완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — 코드 작성 완료,
-**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (git
-서브모듈로 받은 DirectXTK 초기화 등 로컬 환경 설정 필요, 아래 참고)
+**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (DirectXTK를
+별도로 빌드해 결과물을 넣는 등 로컬 환경 설정 필요, 아래 참고)
 
 **DirectXTK 설치 방식**: NuGet 패키지(`directxtk_desktop_2019`,
 `directxtk_desktop_win10`)는 둘 다 deprecated 상태였고, vcpkg는 사용자
-환경에서 `vcpkg` 명령어가 PATH에 없어 막혔다. 최종적으로 **git
-서브모듈 + 프로젝트 참조** 방식을 사용한다 — DirectXTK 저장소
-(`https://github.com/microsoft/DirectXTK`)를 솔루션 루트에 서브모듈로
-추가하고, 그 안의 `DirectXTK_Desktop_2022.vcxproj`를 `MapleStory.sln`의
-4번째 프로젝트로 등록해 Engine·Game이 `ProjectReference`로 참조한다.
-NuGet도 vcpkg 도구 설치도 필요 없음 — Visual Studio가 솔루션을 빌드할
-때 DirectXTK도 함께 빌드해서 결과물을 자동으로 링크한다. `.gitmodules`,
-`MapleStory.sln`의 4번째 프로젝트 항목, `Engine.vcxproj`/
-`Game.vcxproj`의 `ProjectReference`·`IncludePath` 설정은 이미 커밋되어
-있음 — 아래 서브모듈 초기화만 사용자가 직접 하면 됨.
+환경에서 `vcpkg` 명령어가 PATH에 없어 막혔고, git 서브모듈 + 프로젝트
+참조 방식은 솔루션 구조가 복잡해진다는 이유로 보류했다. 최종적으로
+**DirectXTK를 솔루션 밖에서 별도로 빌드한 뒤, 그 결과물(.lib)과
+헤더만 파일로 가져다 놓는 방식**을 사용한다 — 별도 패키지 관리자도,
+서브모듈도, 추가 프로젝트도 없이 순수하게 "미리 빌드된 라이브러리
+링크"만 하면 된다. 벤더 폴더(`ThirdParty/DirectXTK/Inc/`,
+`ThirdParty/DirectXTK/Lib/x64/Debug|Release/`, 각 폴더의
+`README.txt`)와 `Engine.vcxproj`/`Game.vcxproj`의
+`IncludePath`/`LibraryPath` 설정, `SpriteBatch.h`의
+`#pragma comment(lib, "DirectXTK.lib")`는 이미 커밋되어 있음 — 아래
+빌드·복사만 사용자가 직접 하면 됨.
 
-**로컬 환경 설정 필요** (Claude Code가 대신할 수 없음 — 서브모듈
-초기화는 사용자의 로컬 clone에서만 가능):
-1. 이 브랜치를 받은 뒤 서브모듈 내용을 내려받음(최초 1회, 또는 새로
-   clone한 경우):
-   ```
-   git submodule update --init --recursive
-   ```
-2. Visual Studio에서 `MapleStory.sln`을 열어 "DirectXTK" 프로젝트가
-   솔루션 탐색기에 정상적으로 보이는지 확인(02. Engine 폴더 아래 위치)
-3. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
-   (DirectXTK 내부가 예외를 던지므로 필요 — 엔진 자체 코드는 여전히
+**로컬 환경 설정 필요** (Claude Code가 대신할 수 없음 — 실제 빌드는
+사용자의 Windows 머신에서만 가능):
+1. `https://github.com/microsoft/DirectXTK`를 아무 곳에나 clone(또는
+   release zip 다운로드) — 이 저장소 안에 넣을 필요 없음, 빌드 재료일
+   뿐.
+2. 그 폴더의 `DirectXTK_Desktop_2022.sln`을 Visual Studio로 열어
+   Debug|x64로 빌드 → 결과물 `DirectXTK.lib`를
+   `ThirdParty/DirectXTK/Lib/x64/Debug/DirectXTK.lib`로 복사.
+3. Release|x64로 다시 빌드 → 결과물을
+   `ThirdParty/DirectXTK/Lib/x64/Release/DirectXTK.lib`로 복사.
+4. DirectXTK 저장소의 `Inc` 폴더 전체를
+   `ThirdParty/DirectXTK/Inc/`로 복사(빌드 없이 파일 복사만).
+5. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
+   (DirectXTK 헤더가 예외를 쓰므로 필요 — 엔진 자체 코드는 여전히
    `check()`/`verify()`만 사용)
-4. 빌드 — DirectXTK 프로젝트가 먼저 빌드되고(`ProjectReference`로
-   빌드 순서·자동 링크가 보장됨), 그다음 Engine, Game 순서로 진행됨.
-   **DirectXTK는 처음엔 소스부터 컴파일되므로 첫 빌드는 평소보다 오래
-   걸릴 수 있음**
-5. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
+6. `MapleStory.sln`을 Engine → Game 순서로 빌드.
+7. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
    자동 링크하므로 수동 설정 불필요
 
 ---

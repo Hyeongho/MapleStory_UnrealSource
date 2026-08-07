@@ -431,3 +431,15 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,c++
+
+# 위쪽의 범용 x64/Debug/Release 무시 규칙이 우리가 일부러 커밋해 넣는
+# DirectXTK 벤더 라이브러리(ThirdParty/DirectXTK/Lib/...)까지 가려버리므로
+# 이 경로만 명시적으로 예외 처리한다.
+!ThirdParty/
+!ThirdParty/DirectXTK/
+!ThirdParty/DirectXTK/Lib/
+!ThirdParty/DirectXTK/Lib/x64/
+!ThirdParty/DirectXTK/Lib/x64/Debug/
+!ThirdParty/DirectXTK/Lib/x64/Release/
+!ThirdParty/DirectXTK/Lib/x64/Debug/**
+!ThirdParty/DirectXTK/Lib/x64/Release/**

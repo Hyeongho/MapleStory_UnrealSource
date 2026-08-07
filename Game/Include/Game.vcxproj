@@ -74,20 +74,20 @@
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
     <TargetName>MapleStory</TargetName>
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
     <TargetName>MapleStory_Debug</TargetName>
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
@@ -154,11 +154,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\DirectXTK\DirectXTK_Desktop_2022.vcxproj">
-      <Project>{e0b52ae7-e160-4d32-bf3f-910b785e5a8e}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
