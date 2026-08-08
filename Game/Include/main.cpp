@@ -9,8 +9,8 @@
 #include "Core/Math/FLinearColor.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
-static const uint32 WINDOW_WIDTH = 800;
-static const uint32 WINDOW_HEIGHT = 600;
+static const uint32 WINDOW_WIDTH = 1366;
+static const uint32 WINDOW_HEIGHT = 768;
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -142,7 +142,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(400.0f, 300.0f), /*ZOrder=*/ 0);
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0);
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
