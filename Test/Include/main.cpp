@@ -29,6 +29,7 @@
 #include "Core/Containers/TSet.h"
 #include "Core/Containers/TMultiMap.h"
 #include "Core/Containers/TSparseArray.h"
+#include "Render/DXDevice.h"
 #include "Core/String/FString.h"
 #include "Core/String/FName.h"
 #include "Core/String/FNamePool.h"
@@ -1939,6 +1940,14 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7.5+ (5) TSparseArray/TMap/TSet Rework - ALL PASSED\n");
+	}
+
+	{
+		FDXDevice TestDevice;
+		bool bDeviceOK = TestDevice.Initialize();
+		check(bDeviceOK);
+		wprintf(L"[Tests] Phase 8 FDXDevice::Initialize - %s\n", bDeviceOK ? L"PASSED" : L"FAILED");
+		TestDevice.Shutdown();
 	}
 
 	return 0;

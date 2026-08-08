@@ -237,7 +237,7 @@
     <ClInclude Include="Render\DXSwapChain.h">
       <Filter>05. Render</Filter>
     </ClInclude>
-    <ClInclude Include="Render\Camera2D.h">
+    <ClInclude Include="Render\FCamera2D.h">
       <Filter>05. Render</Filter>
     </ClInclude>
     <ClInclude Include="Render\RenderQueue.h">
@@ -368,7 +368,7 @@
     <ClCompile Include="Render\SpriteBatch.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
-    <ClCompile Include="Render\Camera2D.cpp">
+    <ClCompile Include="Render\FCamera2D.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
   </ItemGroup>
