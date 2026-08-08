@@ -415,8 +415,33 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 - [ ] 화면 페이드인·아웃 (맵 이동 연출)
 
 ★ WZ 병행 작업 (Phase 8 시작 시, 아직 미착수):
-- [ ] Canvas → 픽셀 변환 (WzPng) 구현  
-  BGRA4444 / BGRA8888 / BC3·BC7 압축 해제 → ID3D11Texture2D 업로드
+- [x] Canvas → 픽셀 변환 (WzPng) 구현 — **C# DLL 브리지 확장 방식**으로 완료  
+  `wz_test.cpp`가 순수 C++ 파서가 아니라 C# Native AOT DLL(`WzNativeLib.dll`,
+  `WzComparerR2.WzLib` 재사용)을 `LoadLibraryA`로 부르는 얇은 래퍼임을
+  확인하고, 처음부터 C++로 새로 짜는 대신(zlib 벤더링 + BGRA4444/RGB565/
+  DXT3·DXT5·BC7 디코더 전부 재구현) 기존 `Wz_Png.ExtractPng()`를 감싸는
+  새 export `wz_read_canvas`를 추가하는 쪽을 택했다(WzComparerR2 저장소
+  `claude/dx11-2d-engine-fr8yv` 브랜치, `WzExports.cs`). BGRA8888 raw
+  픽셀을 네이티브로 넘기면, 엔진 쪽 `Engine/Include/Render/WzTextureLoader.h/.cpp`가
+  이를 `ID3D11ShaderResourceView`로 업로드한다(`DXGI_FORMAT_B8G8R8A8_UNORM`,
+  `DXDevice`가 이미 `D3D11_CREATE_DEVICE_BGRA_SUPPORT`로 생성돼 있어
+  채널 스왑 불필요). `main.cpp`는 실제 WZ Canvas 로드를 먼저 시도하고
+  실패하면 체커보드 placeholder로 폴백한다.  
+  참고: 이 방식은 CLAUDE.md 하단 "면접 어필 포인트"의 "WZ 파서 직접
+  C++ 이식" 항목과는 어긋난다(실제 디코딩은 C# 코드가 수행) — 필요하면
+  나중에 순수 C++ 구현(zlib 벤더링 + 포맷별 디코더 이식)으로 교체
+  가능하도록 `FWzTextureLoader`의 인터페이스는 그대로 두고 내부 구현만
+  바꾸면 되는 구조로 분리해뒀다.  
+  **로컬 빌드·배치 필요** (Claude Code가 대신할 수 없음):
+  1. `/home/user/WzComparerR2`에서 `WzTest/WzNativeLib` 프로젝트를
+     `dotnet publish -r win-x64 -p:NativeLib=Shared -c Release`로 빌드.
+  2. 결과물 `WzNativeLib.dll`(`bin/Release/net8.0/win-x64/publish/`)을
+     `Game/Bin/`(`MapleStory.exe`와 같은 폴더)에 복사.
+  3. `Game/Include/main.cpp`의 `TestWzPath`/`TestCanvasNodePath` 상수를
+     로컬에 있는 실제 WZ 파일 경로/Canvas 노드 경로로 수정.
+  4. 1차 검증은 엔진 빌드 전에 `wz_test.exe`로 먼저 해볼 수 있음 —
+     `wz_test.exe WzNativeLib.dll "<wz경로>" "" "" "<canvas 노드 경로>" canvas.bmp`
+     실행 후 생성된 `canvas.bmp`를 이미지 뷰어로 열어 디코딩 결과 확인.
 - [ ] STL → 엔진 컨테이너 교체 (wz_test.cpp)  
   std::vector → TArray / std::string → FString / std::unordered_map → TMap / std::unique_ptr → TSharedPtr
 
