@@ -221,6 +221,7 @@
     <ClInclude Include="Render\FCamera2D.h" />
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
+    <ClInclude Include="Render\WzTextureLoader.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
@@ -269,6 +270,7 @@
     <ClCompile Include="Render\FCamera2D.cpp" />
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
+    <ClCompile Include="Render\WzTextureLoader.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
   </ItemGroup>
   <ItemGroup>

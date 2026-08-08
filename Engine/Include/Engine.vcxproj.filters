@@ -207,6 +207,9 @@
     <ClInclude Include="Render\SpriteBatch.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Render\WzTextureLoader.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
     <ClInclude Include="Timer\FTimerDelegate.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
@@ -345,6 +348,9 @@
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\SpriteBatch.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\WzTextureLoader.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
