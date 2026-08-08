@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "SpriteBatch.h"
 #include "Core/Memory/FMemory.h"
 
@@ -76,9 +76,9 @@ ID3D11ShaderResourceView* FSpriteBatch::CreateSolidColorTexture(FDXDevice& Devic
 
 	for (size_t i = 0; i < PixelCount; i++)
 	{
-		// DXGI_FORMAT_R8G8B8A8_UNORMÀº ¸Ş¸ğ¸®»ó ¹ÙÀÌÆ® ¼ø¼­°¡ R,G,B,A´Ù.
-		// FColor::ToPackedRGBA()¸¦ memcpyÇÏ¸é ¸®Æ² ¿£µğ¾È¿¡¼­ A,B,G,R ¼ø¼­°¡ µÇ¾î
-		// Á¶¿ëÈ÷ Àß¸øµÈ »öÀÌ µÇ¹Ç·Î, ¹ÙÀÌÆ®¸¦ Á÷Á¢ ÇÏ³ª¾¿ ¾´´Ù.
+		// DXGI_FORMAT_R8G8B8A8_UNORMì€ ë©”ëª¨ë¦¬ìƒ ë°”ì´íŠ¸ ìˆœì„œê°€ R,G,B,Aë‹¤.
+		// FColor::ToPackedRGBA()ë¥¼ memcpyí•˜ë©´ ë¦¬í‹€ ì—”ë””ì•ˆì—ì„œ A,B,G,R ìˆœì„œê°€ ë˜ì–´
+		// ì¡°ìš©íˆ ì˜ëª»ëœ ìƒ‰ì´ ë˜ë¯€ë¡œ, ë°”ì´íŠ¸ë¥¼ ì§ì ‘ í•˜ë‚˜ì”© ì“´ë‹¤.
 		uint8* pPixel = pPixels + i * 4;
 		pPixel[0] = Color.m_R;
 		pPixel[1] = Color.m_G;
@@ -107,8 +107,8 @@ ID3D11ShaderResourceView* FSpriteBatch::CreateSolidColorTexture(FDXDevice& Devic
 	ID3D11Texture2D* pTexture = nullptr;
 	HRESULT hr = Device.GetDevice()->CreateTexture2D(&TexDesc, &InitData, &pTexture);
 
-	// D3D11_USAGE_IMMUTABLE ÅØ½ºÃ³´Â CreateTexture2D°¡ ¹İÈ¯ÇÏ´Â ½ÃÁ¡¿¡
-	// ÀÌ¹Ì GPU ÂÊÀ¸·Î µ¥ÀÌÅÍ°¡ º¹»çµÇ¾î ÀÖÀ¸¹Ç·Î ¿©±â¼­ ¹Ù·Î ÇØÁ¦ÇØµµ ¾ÈÀüÇÏ´Ù.
+	// D3D11_USAGE_IMMUTABLE í…ìŠ¤ì²˜ëŠ” CreateTexture2Dê°€ ë°˜í™˜í•˜ëŠ” ì‹œì ì—
+	// ì´ë¯¸ GPU ìª½ìœ¼ë¡œ ë°ì´í„°ê°€ ë³µì‚¬ë˜ì–´ ìˆìœ¼ë¯€ë¡œ ì—¬ê¸°ì„œ ë°”ë¡œ í•´ì œí•´ë„ ì•ˆì „í•˜ë‹¤.
 	FMemory::Free(pPixels);
 
 	check(SUCCEEDED(hr));

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "EnginePCH.h"
 #include <d3d11.h>
@@ -38,4 +38,5 @@ private:
 };
 
 extern FDXDevice* GDXDevice;
+
 

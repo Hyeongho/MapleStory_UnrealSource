@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+﻿#include "EnginePCH.h"
 #include "FTransform2D.h"
 
 FTransform2D::FTransform2D() : m_Location(0.f, 0.f), m_Rotation(0.f), m_Scale(1.f, 1.f)

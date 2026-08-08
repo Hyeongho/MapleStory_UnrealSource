@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "FMath.h"
 
@@ -32,4 +32,5 @@ public:
 	static const FLinearColor Black;
 	static const FLinearColor Transparent;
 };
+
 

@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+Ôªø#include "EnginePCH.h"
 #include "FMatrix3x3.h"
 
 FMatrix3x3::FMatrix3x3()
@@ -120,7 +120,7 @@ FMatrix3x3 FMatrix3x3::Inverse() const
 	float C21 = -(m_M[0][0] * m_M[1][2] - m_M[0][2] * m_M[1][0]);
 	float C22 = (m_M[0][0] * m_M[1][1] - m_M[0][1] * m_M[1][0]);
 
-	// Adjugate = Cofactor «‡∑ƒ¿« ¿¸ƒ°
+	// Adjugate = Cofactor ÌñâÎ†¨Ïùò Ï†ÑÏπò
 	FMatrix3x3 Result;
 	Result.m_M[0][0] = C00 * InvDet;  Result.m_M[0][1] = C10 * InvDet;  Result.m_M[0][2] = C20 * InvDet;
 	Result.m_M[1][0] = C01 * InvDet;  Result.m_M[1][1] = C11 * InvDet;  Result.m_M[1][2] = C21 * InvDet;

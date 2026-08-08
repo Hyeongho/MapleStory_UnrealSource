@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "EnginePCH.h"
 #include "LogMacros.h"
@@ -20,4 +20,5 @@ private:
 
     static const wchar_t* VerbosityToString(ELogVerbosity Verbosity);
 };
+
 

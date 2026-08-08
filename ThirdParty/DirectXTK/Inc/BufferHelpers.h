@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: BufferHelpers.h
 //
 // Copyright (c) Microsoft Corporation.
@@ -191,3 +191,4 @@ namespace DirectX
         Microsoft::WRL::ComPtr<ID3D11Buffer> mConstantBuffer;
     };
 }
+

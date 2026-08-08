@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 class FLinearColor;
 
@@ -28,4 +28,5 @@ public:
 	static const FColor Blue;
 	static const FColor Transparent;
 };
+
 

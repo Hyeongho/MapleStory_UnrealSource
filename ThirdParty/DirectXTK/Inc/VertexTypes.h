@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: VertexTypes.h
 //
 // Copyright (c) Microsoft Corporation.
@@ -519,3 +519,4 @@ namespace DirectX
 #if defined(DIRECTX_TOOLKIT_IMPORT) && defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+

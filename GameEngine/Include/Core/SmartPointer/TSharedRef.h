@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "TWeakPtr.h"
 
 template<typename T>

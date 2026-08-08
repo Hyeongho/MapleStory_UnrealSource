@@ -1,7 +1,7 @@
-#pragma once
+ï»¿#pragma once
 #include "EnginePCH.h"
 
-// --- ±â¹İ Å¸ÀÔ ---
+// --- ê¸°ë°˜ íƒ€ì… ---
 template<typename T, T Val>
 struct TIntegralConstant
 {
@@ -17,16 +17,16 @@ struct TIntegralConstant
 using FTrueType = TIntegralConstant<bool, true>;
 using FFalseType = TIntegralConstant<bool, false>;
 
-// --- µ¿ÀÏ Å¸ÀÔ °Ë»ç ---
+// --- ë™ì¼ íƒ€ì… ê²€ì‚¬ ---
 template<typename A, typename B> struct TIsSame : FFalseType {};
 template<typename T> struct TIsSame<T, T> : FTrueType {};
 
-// --- ÂüÁ¶ Á¦°Å ---
+// --- ì°¸ì¡° ì œê±° ---
 template<typename T> struct TRemoveReference { using Type = T; };
 template<typename T> struct TRemoveReference<T&> { using Type = T; };
 template<typename T> struct TRemoveReference<T&&> { using Type = T; };
 
-// --- CV Á¦°Å ---
+// --- CV ì œê±° ---
 template<typename T> struct TRemoveConst { using Type = T; };
 template<typename T> struct TRemoveConst<const T> { using Type = T; };
 
@@ -38,7 +38,7 @@ template<typename T> struct TRemoveCV
 	using Type = typename TRemoveConst<typename TRemoveVolatile<T>::Type>::Type;
 };
 
-// --- Æ÷ÀÎÅÍ °Ë»ç / Á¦°Å ---
+// --- í¬ì¸í„° ê²€ì‚¬ / ì œê±° ---
 template<typename T> struct TIsPointer : FFalseType {};
 template<typename T> struct TIsPointer<T*> : FTrueType {};
 template<typename T> struct TIsPointer<T* const> : FTrueType {};
@@ -47,28 +47,28 @@ template<typename T> struct TRemovePointer { using Type = T; };
 template<typename T> struct TRemovePointer<T*> { using Type = T; };
 template<typename T> struct TRemovePointer<T* const> { using Type = T; };
 
-// --- ÂüÁ¶ Á¾·ù °Ë»ç ---
+// --- ì°¸ì¡° ì¢…ë¥˜ ê²€ì‚¬ ---
 template<typename T> struct TIsLValueReference : FFalseType {};
 template<typename T> struct TIsLValueReference<T&> : FTrueType {};
 
 template<typename T> struct TIsRValueReference : FFalseType {};
 template<typename T> struct TIsRValueReference<T&&> : FTrueType {};
 
-// --- ÄÄÆÄÀÏ·¯ ÀÎÆ®¸°½Ä ±â¹İ ---
+// --- ì»´íŒŒì¼ëŸ¬ ì¸íŠ¸ë¦°ì‹ ê¸°ë°˜ ---
 template<typename T> struct TIsPOD : TIntegralConstant<bool, __is_pod(T)> {};
 template<typename T> struct TIsTriviallyCopyable : TIntegralConstant<bool, __is_trivially_copyable(T)> {};
 template<typename T> struct TIsEnum : TIntegralConstant<bool, __is_enum(T)> {};
 template<typename T> struct TIsClass : TIntegralConstant<bool, __is_class(T)> {};
 
-// --- SFINAE À¯Æ¿ ---
+// --- SFINAE ìœ í‹¸ ---
 template<bool Condition, typename T = void> struct TEnableIf {};
 template<typename T> struct TEnableIf<true, T> { using Type = T; };
 
-// --- Á¶°ÇºÎ Å¸ÀÔ ¼±ÅÃ ---
+// --- ì¡°ê±´ë¶€ íƒ€ì… ì„ íƒ ---
 template<bool Cond, typename TrueT, typename FalseT> struct TConditional { using Type = FalseT; };
 template<typename TrueT, typename FalseT>            struct TConditional<true, TrueT, FalseT> { using Type = TrueT; };
 
-// --- TDecay (ÂüÁ¶¡¤CV Á¦°Å) ---
+// --- TDecay (ì°¸ì¡°Â·CV ì œê±°) ---
 template<typename T>
 struct TDecay
 {

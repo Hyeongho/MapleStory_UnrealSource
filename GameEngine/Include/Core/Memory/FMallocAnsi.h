@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "IAllocator.h"
 
 class FMallocAnsi : public IAllocator

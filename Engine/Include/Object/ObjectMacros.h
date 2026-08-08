@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define UOBJ_WIDEN2(x)  L ## x
 #define UOBJ_WIDEN(x)   UOBJ_WIDEN2(x)

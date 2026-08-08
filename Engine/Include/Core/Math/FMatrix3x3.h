@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "FVector2D.h"
 
@@ -17,9 +17,9 @@ public:
 
 	FMatrix3x3 operator*(const FMatrix3x3& Other) const;
 
-	// µ¿Â÷ ÁÂÇ¥ [x, y, 1] º¯È¯ (ÀÌµ¿ Æ÷ÇÔ)
+	// ë™ì°¨ ì¢Œí‘œ [x, y, 1] ë³€í™˜ (ì´ë™ í¬í•¨)
 	FVector2D TransformPoint(FVector2D V)  const;
-	// ¹æÇâ º¤ÅÍ [x, y, 0] º¯È¯ (ÀÌµ¿ Á¦¿Ü)
+	// ë°©í–¥ ë²¡í„° [x, y, 0] ë³€í™˜ (ì´ë™ ì œì™¸)
 	FVector2D TransformVector(FVector2D V) const;
 
 	FMatrix3x3 Transpose() const;
@@ -29,4 +29,5 @@ public:
 	bool operator==(const FMatrix3x3& Other) const;
 	bool operator!=(const FMatrix3x3& Other) const;
 };
+
 

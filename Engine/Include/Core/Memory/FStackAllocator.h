@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "EnginePCH.h"
 
 class FStackAllocator
@@ -14,4 +14,5 @@ private:
 	size_t  m_Capacity = 0;
 	size_t  m_Offset = 0;
 };
+
 

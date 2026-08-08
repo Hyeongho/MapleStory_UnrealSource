@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+﻿#include "EnginePCH.h"
 #include "Ability/UGameplayEffect.h"
 
 UGameplayEffect::UGameplayEffect() = default;

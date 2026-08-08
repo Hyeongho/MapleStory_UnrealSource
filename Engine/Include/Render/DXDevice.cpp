@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "DXDevice.h"
 
 FDXDevice* GDXDevice = nullptr;
@@ -22,8 +22,8 @@ bool FDXDevice::Initialize()
 #ifdef _DEBUG
 	hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, BaseFlags | D3D11_CREATE_DEVICE_DEBUG, FeatureLevels, 1, D3D11_SDK_VERSION, &m_pDevice, &m_FeatureLevel, &m_pContext);
 
-	// µğ¹ö±× ·¹ÀÌ¾î(Graphics Tools ¿É¼Ç ±â´É)°¡ ¼³Ä¡µÇ¾î ÀÖÁö ¾ÊÀ¸¸é À§ È£ÃâÀÌ ½ÇÆĞÇÑ´Ù.
-	// ±× °æ¿ì µğ¹ö±× ÇÃ·¡±× ¾øÀÌ ÇÑ ¹ø ´õ ½ÃµµÇØ¼­ ·»´õ¸µ ÀÚÃ¼´Â °¡´ÉÇÏ°Ô ÇÑ´Ù.
+	// ë””ë²„ê·¸ ë ˆì´ì–´(Graphics Tools ì˜µì…˜ ê¸°ëŠ¥)ê°€ ì„¤ì¹˜ë˜ì–´ ìˆì§€ ì•Šìœ¼ë©´ ìœ„ í˜¸ì¶œì´ ì‹¤íŒ¨í•œë‹¤.
+	// ê·¸ ê²½ìš° ë””ë²„ê·¸ í”Œë˜ê·¸ ì—†ì´ í•œ ë²ˆ ë” ì‹œë„í•´ì„œ ë Œë”ë§ ìì²´ëŠ” ê°€ëŠ¥í•˜ê²Œ í•œë‹¤.
 	if (FAILED(hr))
 	{
 		hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, BaseFlags, FeatureLevels, 1, D3D11_SDK_VERSION, &m_pDevice, &m_FeatureLevel, &m_pContext);

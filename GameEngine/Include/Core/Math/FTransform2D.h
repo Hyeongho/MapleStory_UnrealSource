@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "FVector2D.h"
 
@@ -6,7 +6,7 @@ class FTransform2D
 {
 public:
 	FVector2D m_Location;
-	float m_Rotation; // ¶óµğ¾È
+	float m_Rotation; // ë¼ë””ì•ˆ
 	FVector2D m_Scale;
 
 	FTransform2D();
@@ -14,9 +14,9 @@ public:
 
 	static FTransform2D Identity();
 
-	// ½ºÄÉÀÏ ¡æ È¸Àü ¡æ ÀÌµ¿ ¼øÀ¸·Î º¯È¯
+	// ìŠ¤ì¼€ì¼ â†’ íšŒì „ â†’ ì´ë™ ìˆœìœ¼ë¡œ ë³€í™˜
 	FVector2D TransformPoint(FVector2D Point) const;
-	// ½ºÄÉÀÏ ¡æ È¸Àü¸¸ Àû¿ë (ÀÌµ¿ ¾øÀ½)
+	// ìŠ¤ì¼€ì¼ â†’ íšŒì „ë§Œ ì ìš© (ì´ë™ ì—†ìŒ)
 	FVector2D TransformDirection(FVector2D Dir) const;
 
 	FTransform2D Inverse() const;
@@ -24,4 +24,5 @@ public:
 	bool operator==(const FTransform2D& Other) const;
 	bool operator!=(const FTransform2D& Other) const;
 };
+
 

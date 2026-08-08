@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Object/ObjectMacros.h"
 #include "Object/UClass.h"
 

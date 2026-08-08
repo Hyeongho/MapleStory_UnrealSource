@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "EnginePCH.h"
 
 class FMath
@@ -55,4 +55,5 @@ public:
 	static bool IsNearlyZero(float Value, float Tolerance = KINDA_SMALL_NUMBER);
 	static bool IsNearlyEqual(float A, float B, float Tolerance = KINDA_SMALL_NUMBER);
 };
+
 

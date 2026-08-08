@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 class FIntPoint
 {
@@ -19,4 +19,5 @@ public:
 
 	static const FIntPoint Zero;
 };
+
 

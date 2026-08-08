@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "FMallocAnsi.h"
 
 extern IAllocator* GMalloc;

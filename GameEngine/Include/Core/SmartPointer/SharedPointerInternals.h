@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "EnginePCH.h"
 #include "Core/Memory/FMemory.h"

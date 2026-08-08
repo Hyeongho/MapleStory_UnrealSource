@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+﻿#include "EnginePCH.h"
 #include "UClass.h"
 
 UClass::UClass(const wchar_t* ClassName, UClass* InSuperClass) : m_ClassName(ClassName), m_SuperClass(InSuperClass)
@@ -26,3 +26,4 @@ bool UClass::IsChildOf(const UClass* TestClass) const
 
     return false;
 }
+

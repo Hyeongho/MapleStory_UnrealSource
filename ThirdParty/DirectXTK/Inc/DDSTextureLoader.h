@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: DDSTextureLoader.h
 //
 // Functions for loading a DDS texture and creating a Direct3D runtime resource for it
@@ -283,3 +283,4 @@ namespace DirectX
 #pragma clang diagnostic pop
 #endif
 }
+

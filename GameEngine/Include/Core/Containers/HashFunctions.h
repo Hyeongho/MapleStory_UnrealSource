@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "EnginePCH.h"
 
 // Default hash using Murmur-inspired finalizer (byte-level reinterpret)

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "EnginePCH.h"
 
 class FPoolAllocator
@@ -15,4 +15,5 @@ private:
 	size_t  m_BlockSize = 0;
 	uint32  m_BlockCount = 0;
 };
+
 

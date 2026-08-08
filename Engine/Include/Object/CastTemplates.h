@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Object/UClass.h"
 
 template<typename T, typename U>

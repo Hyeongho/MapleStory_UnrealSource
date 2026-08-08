@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Object/UObject.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Templates/TypeTraits.h"

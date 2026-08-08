@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: WICTextureLoader.h
 //
 // Function for loading a WIC image and creating a Direct3D runtime texture for it
@@ -273,3 +273,4 @@ namespace DirectX
 #pragma clang diagnostic pop
 #endif
 }
+

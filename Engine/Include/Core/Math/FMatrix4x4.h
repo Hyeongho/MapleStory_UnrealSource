@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "FMath.h"
 
@@ -16,7 +16,7 @@ public:
 	static FMatrix4x4 RotationY(float Radians);
 	static FMatrix4x4 RotationZ(float Radians);
 	static FMatrix4x4 ScaleMatrix(float X, float Y, float Z);
-	// DirectX LH Á÷±³ Åõ¿µ (2D ·»´õ¸µ¿ë)
+	// DirectX LH ì§êµ íˆ¬ì˜ (2D ë Œë”ë§ìš©)
 	static FMatrix4x4 OrthoLH(float Width, float Height, float NearZ, float FarZ);
 
 	FMatrix4x4 operator*(const FMatrix4x4& Other) const;
@@ -28,4 +28,5 @@ public:
 	bool operator==(const FMatrix4x4& Other) const;
 	bool operator!=(const FMatrix4x4& Other) const;
 };
+
 

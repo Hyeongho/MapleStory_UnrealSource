@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "FMath.h"
 
@@ -9,10 +9,10 @@ public:
 	explicit FRandomStream(int32 Seed);
 
 	void Initialize(int32 Seed);
-	void Reset(); // m_InitialSeedÀ¸·Î µÇµ¹¸²
+	void Reset(); // m_InitialSeedìœ¼ë¡œ ë˜ëŒë¦¼
 
 	int32 RandHelper(int32 A); // [0, A)
-	int32 RandRange(int32 Min, int32 Max); // [Min, Max] Æ÷ÇÔ
+	int32 RandRange(int32 Min, int32 Max); // [Min, Max] í¬í•¨
 	float FRand(); // [0.0f, 1.0f)
 	float FRandRange(float Min, float Max); // [Min, Max]
 	bool  RandBool();
@@ -28,4 +28,5 @@ private:
 
 	int32 NextSeed();
 };
+
 

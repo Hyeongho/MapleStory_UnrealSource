@@ -1,4 +1,4 @@
-//-------------------------------------------------------------------------------------
+﻿//-------------------------------------------------------------------------------------
 // SimpleMath.h -- Simplified C++ Math wrapper for DirectXMath
 //
 // Copyright (c) Microsoft Corporation.
@@ -1162,3 +1162,4 @@ namespace std
 #if defined(DIRECTX_TOOLKIT_IMPORT) && defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+

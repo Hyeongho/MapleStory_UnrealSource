@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: Keyboard.h
 //
 // Copyright (c) Microsoft Corporation.
@@ -551,3 +551,4 @@ namespace DirectX
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+

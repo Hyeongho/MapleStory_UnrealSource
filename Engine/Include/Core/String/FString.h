@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "EnginePCH.h"
 #include "Core/Memory/FMemory.h"
@@ -285,4 +285,5 @@ public:
 
     static FString Printf(const wchar_t* Fmt, ...);
 };
+
 

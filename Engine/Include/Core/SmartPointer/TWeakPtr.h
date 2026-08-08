@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "TSharedPtr.h"
 
 template<typename T>

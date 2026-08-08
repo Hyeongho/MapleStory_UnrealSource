@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: ScreenGrab.h
 //
 // Function for capturing a 2D texture and saving it to a file (aka a 'screenshot'
@@ -72,3 +72,4 @@ namespace DirectX
             _In_ std::function<void __cdecl(IPropertyBag2*)> setCustomProps = nullptr,
             _In_ bool forceSRGB = false);
 }
+

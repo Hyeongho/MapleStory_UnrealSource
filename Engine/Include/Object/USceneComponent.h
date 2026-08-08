@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Object/UActorComponent.h"
 #include "Core/Math/FTransform2D.h"
 #include "Core/Containers/TArray.h"

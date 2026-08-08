@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "FCamera2D.h"
 
 FCamera2D* GCamera2D = nullptr;
@@ -23,9 +23,9 @@ DirectX::XMMATRIX FCamera2D::GetViewMatrix() const
 {
 	using namespace DirectX;
 
-	// MonoGame/XNA¿¡¼­ ³Î¸® ¾²ÀÌ´Â 2D Ä«¸Ş¶ó °ü¿ë±¸:
-	// Ä«¸Ş¶ó ±âÁØÀ¸·Î ÀÌµ¿ -> ÁÜ Àû¿ë -> ºäÆ÷Æ® Áß½ÉÀ¸·Î ÀÌµ¿.
-	// WorldToScreen°ú Á¤È®È÷ °°Àº ¿¬»êÀ» Çà·Ä·Î Ç¥ÇöÇÑ °ÍÀÌ´Ù.
+	// MonoGame/XNAì—ì„œ ë„ë¦¬ ì“°ì´ëŠ” 2D ì¹´ë©”ë¼ ê´€ìš©êµ¬:
+	// ì¹´ë©”ë¼ ê¸°ì¤€ìœ¼ë¡œ ì´ë™ -> ì¤Œ ì ìš© -> ë·°í¬íŠ¸ ì¤‘ì‹¬ìœ¼ë¡œ ì´ë™.
+	// WorldToScreenê³¼ ì •í™•íˆ ê°™ì€ ì—°ì‚°ì„ í–‰ë ¬ë¡œ í‘œí˜„í•œ ê²ƒì´ë‹¤.
 	XMMATRIX T1 = XMMatrixTranslation(-m_Location.m_X, -m_Location.m_Y, 0.0f);
 	XMMATRIX S = XMMatrixScaling(m_Zoom, m_Zoom, 1.0f);
 	XMMATRIX T2 = XMMatrixTranslation(m_ViewportWidth * 0.5f, m_ViewportHeight * 0.5f, 0.0f);

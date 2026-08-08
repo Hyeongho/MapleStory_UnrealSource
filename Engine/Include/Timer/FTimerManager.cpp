@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+﻿#include "EnginePCH.h"
 #include "Timer/FTimerManager.h"
 
 FTimerManager* GTimerManager = nullptr;

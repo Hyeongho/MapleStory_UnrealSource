@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "EnginePCH.h"
 #include "Timer/FTimerHandle.h"
 #include "Timer/FTimerDelegate.h"

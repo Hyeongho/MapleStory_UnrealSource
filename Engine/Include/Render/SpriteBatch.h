@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "EnginePCH.h"
 #include "Render/DXDevice.h"
@@ -26,14 +26,14 @@ public:
 	void Shutdown();
 
 	void Begin(DirectX::FXMMATRIX Transform);
-	void Begin(); // Transform = Ç×µîÇà·Ä
+	void Begin(); // Transform = í•­ë“±í–‰ë ¬
 
 	void DrawSprite(ID3D11ShaderResourceView* pTexture, const FVector2D& Position, const FVector2D& Scale = FVector2D(1.0f, 1.0f), float RotationRadians = 0.0f, const FLinearColor& Tint = FLinearColor::White, const RECT* pSourceRect = nullptr, float LayerDepth = 0.0f);
 
 	void End();
 
-	// ¾ÆÁ÷ Resource Manager(Phase 14)/WZ ÅØ½ºÃ³ ·ÎµùÀÌ ¾øÀ¸¹Ç·Î,
-	// ÆÄÀÏ ¾øÀÌ ÄÚµå·Î Á÷Á¢ ÅØ½ºÃ³¸¦ ¸¸µé¾î ½ºÇÁ¶óÀÌÆ® ·»´õ¸µÀ» °ËÁõÇÏ±â À§ÇÑ ÇïÆÛ.
+	// ì•„ì§ Resource Manager(Phase 14)/WZ í…ìŠ¤ì²˜ ë¡œë”©ì´ ì—†ìœ¼ë¯€ë¡œ,
+	// íŒŒì¼ ì—†ì´ ì½”ë“œë¡œ ì§ì ‘ í…ìŠ¤ì²˜ë¥¼ ë§Œë“¤ì–´ ìŠ¤í”„ë¼ì´íŠ¸ ë Œë”ë§ì„ ê²€ì¦í•˜ê¸° ìœ„í•œ í—¬í¼.
 	static ID3D11ShaderResourceView* CreateSolidColorTexture(FDXDevice& Device, FColor Color, uint32 Width = 1, uint32 Height = 1);
 	static ID3D11ShaderResourceView* CreateCheckerboardTexture(FDXDevice& Device, uint32 Width, uint32 Height, uint32 CellSize, FColor ColorA, FColor ColorB);
 
@@ -43,4 +43,5 @@ private:
 	DirectX::CommonStates* m_pCommonStates = nullptr;
 	bool m_bInBeginEnd = false;
 };
+
 

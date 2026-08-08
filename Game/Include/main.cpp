@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "Render/DXDevice.h"
 #include "Render/DXSwapChain.h"
 #include "Render/SpriteBatch.h"
@@ -37,13 +37,13 @@ static HWND CreateAppWindow(HINSTANCE hInstance, uint32 Width, uint32 Height)
 	wc.lpfnWndProc = WndProc;
 	wc.hInstance = hInstance;
 	wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-	wc.hbrBackground = nullptr; // DX°¡ Å¬¶óÀÌ¾ğÆ® ¿µ¿ªÀ» ±×¸®¹Ç·Î GDI ¹è°æ ºê·¯½Ã¸¦ µÎÁö ¾Ê´Â´Ù(±ôºıÀÓ ¹æÁö).
+	wc.hbrBackground = nullptr; // DXê°€ í´ë¼ì´ì–¸íŠ¸ ì˜ì—­ì„ ê·¸ë¦¬ë¯€ë¡œ GDI ë°°ê²½ ë¸ŒëŸ¬ì‹œë¥¼ ë‘ì§€ ì•ŠëŠ”ë‹¤(ê¹œë¹¡ì„ ë°©ì§€).
 	wc.lpszClassName = WINDOW_CLASS_NAME;
 
 	ATOM Registered = RegisterClassExW(&wc);
 	check(Registered != 0);
 
-	// ÀÌ¹ø ´Ü°è´Â ¸®»çÀÌÁî(WM_SIZE / ½º¿ÒÃ¼ÀÎ Àç»ı¼º)¸¦ ´Ù·çÁö ¾ÊÀ¸¹Ç·Î °íÁ¤ Å©±â Ã¢À¸·Î ¸¸µç´Ù.
+	// ì´ë²ˆ ë‹¨ê³„ëŠ” ë¦¬ì‚¬ì´ì¦ˆ(WM_SIZE / ìŠ¤ì™‘ì²´ì¸ ì¬ìƒì„±)ë¥¼ ë‹¤ë£¨ì§€ ì•Šìœ¼ë¯€ë¡œ ê³ ì • í¬ê¸° ì°½ìœ¼ë¡œ ë§Œë“ ë‹¤.
 	DWORD Style = WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
 
 	RECT Rect = { 0, 0, (LONG)Width, (LONG)Height };
@@ -109,8 +109,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	pCamera->SetViewportSize((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
 	GCamera2D = pCamera;
 
-	// Resource Manager(Phase 14)/WZ ÅØ½ºÃ³ ·ÎµùÀÌ ¾ÆÁ÷ ¾øÀ¸¹Ç·Î,
-	// ½ºÇÁ¶óÀÌÆ® ÆÄÀÌÇÁ¶óÀÎ °ËÁõ¿ëÀ¸·Î Ã¼Ä¿º¸µå ÅØ½ºÃ³¸¦ ÄÚµå·Î Á÷Á¢ ¸¸µç´Ù.
+	// Resource Manager(Phase 14)/WZ í…ìŠ¤ì²˜ ë¡œë”©ì´ ì•„ì§ ì—†ìœ¼ë¯€ë¡œ,
+	// ìŠ¤í”„ë¼ì´íŠ¸ íŒŒì´í”„ë¼ì¸ ê²€ì¦ìš©ìœ¼ë¡œ ì²´ì»¤ë³´ë“œ í…ìŠ¤ì²˜ë¥¼ ì½”ë“œë¡œ ì§ì ‘ ë§Œë“ ë‹¤.
 	ID3D11ShaderResourceView* pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
 	check(pTestTexture != nullptr);
 

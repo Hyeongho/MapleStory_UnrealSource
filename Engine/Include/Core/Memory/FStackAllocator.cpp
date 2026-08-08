@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "FStackAllocator.h"
 #include "FMemory.h"
 
@@ -11,7 +11,7 @@ void FStackAllocator::Init(size_t capacity)
 
 void* FStackAllocator::Alloc(size_t size, uint32 alignment)
 {
-	// ÇöÀç OffsetÀ» alignment¿¡ ¸Â°Ô ¿Ã¸²
+	// í˜„ì¬ Offsetì„ alignmentì— ë§ê²Œ ì˜¬ë¦¼
 	size_t aligned = (m_Offset + alignment - 1) & ~(static_cast<size_t>(alignment) - 1);
 	check(aligned + size <= m_Capacity && "[FStackAllocator] Out of capacity");
 	void* ptr = m_pBuffer + aligned;

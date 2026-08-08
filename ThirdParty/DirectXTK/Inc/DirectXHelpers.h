@@ -1,4 +1,4 @@
-//--------------------------------------------------------------------------------------
+﻿//--------------------------------------------------------------------------------------
 // File: DirectXHelpers.h
 //
 // Copyright (c) Microsoft Corporation.
@@ -249,3 +249,4 @@ namespace DirectX
         return CreateInputLayoutFromEffect(device, effect, T::InputElements, T::InputElementCount, pInputLayout);
     }
 }
+

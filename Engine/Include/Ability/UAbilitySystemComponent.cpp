@@ -1,4 +1,4 @@
-#include "EnginePCH.h"
+ï»¿#include "EnginePCH.h"
 #include "Ability/UAbilitySystemComponent.h"
 #include "Ability/UAttributeSet.h"
 #include "Ability/UGameplayEffect.h"
@@ -12,7 +12,7 @@ UAbilitySystemComponent::UAbilitySystemComponent() : m_pAttributeSet(nullptr)
 UAbilitySystemComponent::~UAbilitySystemComponent() = default;
 
 // ---------------------------------------------------------------------------
-// ¼Ó¼º
+// ì†ì„±
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::SetAttributeSet(UAttributeSet* pSet)
@@ -44,7 +44,7 @@ float UAbilitySystemComponent::GetAttributeBaseValue(const FName& Name) const
 }
 
 // ---------------------------------------------------------------------------
-// ÅÂ±×
+// íƒœê·¸
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::HasTag(const FGameplayTag& Tag) const
@@ -68,7 +68,7 @@ void UAbilitySystemComponent::RemoveLooseTag(const FGameplayTag& Tag)
 }
 
 // ---------------------------------------------------------------------------
-// È¿°ú Àû¿ë
+// íš¨ê³¼ ì ìš©
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::ApplyGameplayEffect(UGameplayEffect* pEffect)
@@ -170,7 +170,7 @@ void UAbilitySystemComponent::RemoveEffectsOfClass(UGameplayEffect* pEffect)
 }
 
 // ---------------------------------------------------------------------------
-// ½ºÅ³
+// ìŠ¤í‚¬
 // ---------------------------------------------------------------------------
 
 int32 UAbilitySystemComponent::GrantAbility(UGameplayAbility* pAbility, int32 Level)
@@ -292,10 +292,10 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
 }
 
 // ---------------------------------------------------------------------------
-// ¼Ó¼º Àç°è»ê
-// RecalculateAttributes: ºñPeriod Duration/Infinite È¿°ú¸¸ ´Ù½Ã Àû¿ë.
-//   1. °ü·Ã ¼Ó¼º CurrentValue = BaseValue ÃÊ±âÈ­
-//   2. Add Àû¿ë ¡æ Multiply Àû¿ë ¡æ Override Àû¿ë
+// ì†ì„± ì¬ê³„ì‚°
+// RecalculateAttributes: ë¹„Period Duration/Infinite íš¨ê³¼ë§Œ ë‹¤ì‹œ ì ìš©.
+//   1. ê´€ë ¨ ì†ì„± CurrentValue = BaseValue ì´ˆê¸°í™”
+//   2. Add ì ìš© â†’ Multiply ì ìš© â†’ Override ì ìš©
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::RecalculateAttributes()

@@ -1,8 +1,8 @@
-#pragma once
+ï»¿#pragma once
 #include "EnginePCH.h"
 #include "TypeTraits.h"
 
-// TAnd: ¸ğµÎ trueÀÏ ¶§¸¸ true (ºó ÆÑ = true, short-circuit Æò°¡)
+// TAnd: ëª¨ë‘ trueì¼ ë•Œë§Œ true (ë¹ˆ íŒ© = true, short-circuit í‰ê°€)
 template<typename... Types> struct TAnd;
 template<>                  struct TAnd<> : FTrueType {};
 template<typename First, typename... Rest>
@@ -10,7 +10,7 @@ struct TAnd<First, Rest...>
 	: TConditional<First::Value, TAnd<Rest...>, FFalseType>::Type {
 };
 
-// TOr: ÇÏ³ª¶óµµ true¸é true (ºó ÆÑ = false, short-circuit Æò°¡)
+// TOr: í•˜ë‚˜ë¼ë„ trueë©´ true (ë¹ˆ íŒ© = false, short-circuit í‰ê°€)
 template<typename... Types> struct TOr;
 template<>                  struct TOr<> : FFalseType {};
 template<typename First, typename... Rest>
@@ -18,6 +18,6 @@ struct TOr<First, Rest...>
 	: TConditional<First::Value, FTrueType, TOr<Rest...>>::Type {
 };
 
-// TNot: ³í¸® ¹İÀü
+// TNot: ë…¼ë¦¬ ë°˜ì „
 template<typename T>
 struct TNot : TIntegralConstant<bool, !T::Value> {};

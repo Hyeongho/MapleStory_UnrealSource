@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "EnginePCH.h"
 #include "DXDevice.h"
@@ -38,7 +38,7 @@ private:
 
 	IDXGISwapChain* m_pSwapChain = nullptr;
 	ID3D11RenderTargetView* m_pRenderTargetView = nullptr;
-	ID3D11DeviceContext* m_pContext = nullptr; // non-owning, FDXDevice°¡ ¼ÒÀ¯
+	ID3D11DeviceContext* m_pContext = nullptr; // non-owning, FDXDeviceê°€ ì†Œìœ 
 	uint32 m_Width = 0;
 	uint32 m_Height = 0;
 };
