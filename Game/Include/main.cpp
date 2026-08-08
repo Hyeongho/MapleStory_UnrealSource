@@ -160,6 +160,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		pRenderQueue->Flush(*pSpriteBatch);
 		pSpriteBatch->End();
 
+		pSpriteBatch->Begin(); // 항등 변환 — UI는 카메라와 무관하게 화면 좌표에 고정
+		pRenderQueue->FlushUI(*pSpriteBatch);
+		pSpriteBatch->End();
+
 		pSwapChain->Present(1);
 	}
 

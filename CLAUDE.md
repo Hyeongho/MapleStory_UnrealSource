@@ -409,7 +409,12 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   (플레이어 추적 스크롤은 아직 미구현 — `SetLocation`만 있고 자동 추적
   로직 없음)
 - [ ] Parallax Scrolling — 배경 원근 스크롤링
-- [ ] 레이어 렌더링 — 배경 / 오브젝트 / 이펙트 / UI
+- [x] 레이어 렌더링 — 배경 / 오브젝트 / 이펙트 / UI (`RenderQueue.h`에
+  `ELayer` enum 추가, 정렬 키를 `(Layer, ZOrder)` 2단으로 변경.
+  `Flush()`는 월드 좌표 레이어(Background/Object/Effect)만, 신규
+  `FlushUI()`는 UI 레이어만 화면 좌표(항등 변환)로 그림 — `main.cpp`가
+  프레임마다 `Begin(카메라 행렬)/Flush/End` 다음에
+  `Begin()/FlushUI/End`를 추가로 호출)
 - [ ] 스프라이트 틴트 / 피격 깜빡임
 - [ ] 데미지 숫자 팝업 렌더링
 - [ ] 화면 페이드인·아웃 (맵 이동 연출)

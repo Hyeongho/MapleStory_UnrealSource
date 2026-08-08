@@ -18,7 +18,8 @@ void FRenderQueue::SubmitSprite(
 	int32 ZOrder,
 	const FVector2D& Scale,
 	float RotationRadians,
-	const FLinearColor& Tint)
+	const FLinearColor& Tint,
+	ELayer Layer)
 {
 	FRenderQueueEntry Entry;
 	Entry.m_pTexture = pTexture;
@@ -27,21 +28,51 @@ void FRenderQueue::SubmitSprite(
 	Entry.m_RotationRadians = RotationRadians;
 	Entry.m_Tint = Tint;
 	Entry.m_ZOrder = ZOrder;
+	Entry.m_Layer = Layer;
 
 	m_Entries.Add(Entry);
 }
 
-void FRenderQueue::Flush(FSpriteBatch& SpriteBatch)
+void FRenderQueue::SortEntries()
 {
-	// StableSort — 같은 ZOrder를 가진 항목끼리는 제출한 순서를 유지한다.
+	// StableSort — Layer가 1차 키, 같은 Layer 안에서는 ZOrder가 2차 키.
+	// 둘 다 같으면 제출한 순서를 유지한다.
 	m_Entries.StableSort([](const FRenderQueueEntry& A, const FRenderQueueEntry& B)
 		{
+			if (A.m_Layer != B.m_Layer)
+			{
+				return A.m_Layer < B.m_Layer;
+			}
 			return A.m_ZOrder < B.m_ZOrder;
 		});
+}
+
+void FRenderQueue::Flush(FSpriteBatch& SpriteBatch)
+{
+	SortEntries();
 
 	for (int32 i = 0; i < m_Entries.Num(); i++)
 	{
 		const FRenderQueueEntry& Entry = m_Entries[i];
+		if (Entry.m_Layer == ELayer::UI)
+		{
+			continue; // UI는 화면 좌표라 FlushUI()에서 항등 변환으로 따로 그린다.
+		}
+		SpriteBatch.DrawSprite(Entry.m_pTexture, Entry.m_Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
+	}
+}
+
+void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
+{
+	SortEntries();
+
+	for (int32 i = 0; i < m_Entries.Num(); i++)
+	{
+		const FRenderQueueEntry& Entry = m_Entries[i];
+		if (Entry.m_Layer != ELayer::UI)
+		{
+			continue;
+		}
 		SpriteBatch.DrawSprite(Entry.m_pTexture, Entry.m_Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
 	}
 
