@@ -75,19 +75,19 @@
     <IntDir>../BinObj/</IntDir>
     <TargetName>MapleStory</TargetName>
     <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\x64\$(Configuration)\;../Bin/;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)ThirdParty\DirectXTK\Lib\;../Bin/;$(LibraryPath)</LibraryPath>
     <TargetName>MapleStory_Debug</TargetName>
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>

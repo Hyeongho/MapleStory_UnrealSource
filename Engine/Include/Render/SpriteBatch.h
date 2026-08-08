@@ -9,9 +9,15 @@
 #include <SpriteBatch.h>
 #include <CommonStates.h>
 
-// ThirdParty/DirectXTK/Lib/x64/$(Configuration)/에 사용자가 직접 빌드해 넣은
-// DirectXTK.lib를 자동으로 링크한다(LibraryPath는 Game.vcxproj에 설정되어 있음).
+// ThirdParty/DirectXTK/Lib/에 사용자가 직접 빌드해 넣은 DirectXTK.lib를
+// 자동으로 링크한다(LibraryPath는 Game.vcxproj에 설정되어 있음). Debug/Release
+// 빌드는 서로 호환되지 않으므로 EnginePCH.h의 Engine.lib/Engine_Debug.lib와
+// 동일하게 파일명으로 구분한다.
+#ifdef _DEBUG
+#pragma comment(lib, "DirectXTK_Debug.lib")
+#else
 #pragma comment(lib, "DirectXTK.lib")
+#endif
 
 // DirectXTK의 DirectX::SpriteBatch / DirectX::CommonStates를 감싸는 얇은 래퍼.
 // FRenderQueue가 Z-Order로 미리 정렬한 순서 그대로 그리기 위해

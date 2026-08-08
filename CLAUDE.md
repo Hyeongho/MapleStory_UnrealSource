@@ -432,11 +432,15 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 헤더만 파일로 가져다 놓는 방식**을 사용한다 — 별도 패키지 관리자도,
 서브모듈도, 추가 프로젝트도 없이 순수하게 "미리 빌드된 라이브러리
 링크"만 하면 된다. 벤더 폴더(`ThirdParty/DirectXTK/Inc/`,
-`ThirdParty/DirectXTK/Lib/x64/Debug|Release/`, 각 폴더의
-`README.txt`)와 `Engine.vcxproj`/`Game.vcxproj`의
-`IncludePath`/`LibraryPath` 설정, `SpriteBatch.h`의
-`#pragma comment(lib, "DirectXTK.lib")`는 이미 커밋되어 있음 — 아래
-빌드·복사만 사용자가 직접 하면 됨.
+`ThirdParty/DirectXTK/Lib/`, 각 폴더의 `README.txt`)와
+`Engine.vcxproj`/`Game.vcxproj`의 `IncludePath`/`LibraryPath` 설정은
+이미 커밋되어 있음 — 아래 빌드·복사만 사용자가 직접 하면 됨.
+
+**DirectXTK.lib 배치 방식**: Debug/Release용 `.lib`를 하위 폴더로
+나누지 않고 `ThirdParty/DirectXTK/Lib/` 한 폴더에 파일명으로만
+구분해서 넣는다 — `EnginePCH.h`가 `Engine.lib`/`Engine_Debug.lib`로
+구분하는 것과 동일한 관례. `SpriteBatch.h`가
+`#ifdef _DEBUG`로 `DirectXTK_Debug.lib`/`DirectXTK.lib`를 갈라 링크한다.
 
 **로컬 환경 설정 필요** (Claude Code가 대신할 수 없음 — 실제 빌드는
 사용자의 Windows 머신에서만 가능):
@@ -444,10 +448,11 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
    release zip 다운로드) — 이 저장소 안에 넣을 필요 없음, 빌드 재료일
    뿐.
 2. 그 폴더의 `DirectXTK_Desktop_2022.sln`을 Visual Studio로 열어
-   Debug|x64로 빌드 → 결과물 `DirectXTK.lib`를
-   `ThirdParty/DirectXTK/Lib/x64/Debug/DirectXTK.lib`로 복사.
-3. Release|x64로 다시 빌드 → 결과물을
-   `ThirdParty/DirectXTK/Lib/x64/Release/DirectXTK.lib`로 복사.
+   Debug|x64로 빌드 → 결과물 `DirectXTK.lib`의 이름을
+   **`DirectXTK_Debug.lib`로 바꿔서**
+   `ThirdParty/DirectXTK/Lib/DirectXTK_Debug.lib`로 복사.
+3. Release|x64로 다시 빌드 → 결과물 `DirectXTK.lib`는 **이름 그대로**
+   `ThirdParty/DirectXTK/Lib/DirectXTK.lib`로 복사.
 4. DirectXTK 저장소의 `Inc` 폴더 전체를
    `ThirdParty/DirectXTK/Inc/`로 복사(빌드 없이 파일 복사만).
 5. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
