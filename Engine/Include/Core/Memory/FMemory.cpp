@@ -38,6 +38,11 @@ void* FMemory::Realloc(void* ptr, size_t newSize, uint32 alignment)
 
 void FMemory::Free(void* ptr)
 {
+	if (!GMalloc) 
+	{ 
+		InitMemory(); 
+	}
+
 	check(GMalloc);
 	GMalloc->Free(ptr);
 }

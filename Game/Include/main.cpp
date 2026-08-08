@@ -4,6 +4,7 @@
 #include "Render/SpriteBatch.h"
 #include "Render/RenderQueue.h"
 #include "Render/FCamera2D.h"
+#include "Render/WzTextureLoader.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
@@ -109,10 +110,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	pCamera->SetViewportSize((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
 	GCamera2D = pCamera;
 
-	// Resource Manager(Phase 14)/WZ 텍스처 로딩이 아직 없으므로,
-	// 스프라이트 파이프라인 검증용으로 체커보드 텍스처를 코드로 직접 만든다.
-	ID3D11ShaderResourceView* pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
-	check(pTestTexture != nullptr);
+	// 실제 WZ 리소스 경로 — 로컬 환경에 맞게 바꿔서 테스트한다.
+	// WzTextureLoader.h 상단 주석 참고: WzNativeLib.dll을 이 exe와 같은 폴더(Game/Bin/)에 둬야 한다.
+	static const char* TestWzPath = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
+	static const char* TestCanvasNodePath = R"(Mob\_Canvas\0100200.img\stand\0)";
+
+	ID3D11ShaderResourceView* pTestTexture = FWzTextureLoader::LoadCanvasTexture(*pDevice, TestWzPath, TestCanvasNodePath);
+	if (!pTestTexture)
+	{
+		// DLL/WZ 파일이 아직 준비되지 않았거나 경로가 로컬 환경과 다르면,
+		// Resource Manager(Phase 14) 이전까지 쓰던 체커보드 placeholder로 폴백한다.
+		pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
+	}
 
 	MSG Msg = {};
 	bool bRunning = true;
