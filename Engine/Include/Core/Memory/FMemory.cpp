@@ -3,26 +3,43 @@
 #include "FMallocAnsi.h"
 #include "FMallocBinned.h"
 
-void FMemory::InitMemory()
+static IAllocator& GetDefaultAllocator()
 {
 	static FMallocBinned BinnedAllocator;
-	GMalloc = &BinnedAllocator;
+	return BinnedAllocator;
+}
+
+void FMemory::InitMemory()
+{
+	GMalloc = &GetDefaultAllocator();
 }
 
 void* FMemory::Malloc(size_t size, uint32 alignment)
 {
+	if (!GMalloc)
+	{
+		InitMemory();
+	}
 	check(GMalloc);
 	return GMalloc->Malloc(size, alignment);
 }
 
 void* FMemory::Realloc(void* ptr, size_t newSize, uint32 alignment)
 {
+	if (!GMalloc)
+	{
+		InitMemory();
+	}
 	check(GMalloc);
 	return GMalloc->Realloc(ptr, newSize, alignment);
 }
 
 void FMemory::Free(void* ptr)
 {
+	if (!GMalloc)
+	{
+		InitMemory();
+	}
 	check(GMalloc);
 	GMalloc->Free(ptr);
 }
