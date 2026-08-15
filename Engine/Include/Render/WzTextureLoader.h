@@ -37,8 +37,16 @@ public:
 	static ID3D11ShaderResourceView* LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth = nullptr, int32* OutHeight = nullptr);
 
 	// WzPath: WZ 파일 경로 또는 WZ 폴더 경로 (Base.wz 등)
-	// LoadoutSpec: 세미콜론 구분 "슬롯=아이템ID" 목록
-	//           (예: "body=2000000;face=20000;hair=30000;cap=1002140;coat=1040002")
+	// LoadoutSpec: 콤마 구분 29칸 위치 기반 아이템 ID 목록 — WzComparerR2 GUI
+	//           (AvatarForm.GetAllPartsTag())가 만드는 "아바타 코드"와 동일한
+	//           포맷. AvatarCanvas.Parts[] 인덱스 순서 그대로:
+	//           0=Body,1=Head,2=Face,3=Hair,4=Cap,5=Coat,6=Longcoat,7=Pants,
+	//           8=Shoes,9=Glove,10=SubWeapon,11=Cape,12=Weapon,13=Earrings,
+	//           14=FaceAccessory,15=EyeAccessory,16=Taming,17=Saddle,18=Chair,
+	//           19=Effect,20=Pendant,21=Belt,22=ShoulderPad,23=Pocket,
+	//           24=Emblem,25=Ring1,26=Ring2,27=Ring3,28=Ring4. 장착 안 한
+	//           슬롯은 빈 칸으로 둔다
+	//           (예: "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,")
 	// ActionName/FrameIndex: 몸 액션 이름("stand1" 등)과 프레임 번호
 	// EmotionName/EmotionFrameIndex: 표정 이름과 프레임 번호(기본값이면 무표정 1프레임)
 	// 실패 시(DLL 없음/파츠 없음/합성 실패) m_pTexture가 nullptr — 호출자가
