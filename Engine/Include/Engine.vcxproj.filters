@@ -201,6 +201,9 @@
     <ClInclude Include="Render\FCamera2D.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Render\FDamagePopup.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
     <ClInclude Include="Render\FHitFlash.h">
       <Filter>05. Render</Filter>
     </ClInclude>
@@ -345,6 +348,9 @@
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\FCamera2D.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FDamagePopup.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\FHitFlash.cpp">
