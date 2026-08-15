@@ -146,9 +146,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
 
 	// 아바타 합성 렌더링(wz_read_avatar) — 바디/페이스/헤어/장비를 하나로 합성한
-	// 캐릭터 텍스처. loadoutSpec은 나중에 직업별 CSV에서 조립하게 될 예정이고,
-	// 지금은 하드코딩된 예시로 파이프라인만 검증한다.
-	static const char* TestLoadoutSpec = "body=2000000;face=20000;hair=30000;cap=1002140;coat=1040002;pants=1060026;shoes=1072001;glove=1082002;weapon=1302000;cape=1102022";
+	// 캐릭터 텍스처. loadoutSpec은 WzComparerR2 GUI의 "아바타 코드"와 같은 포맷
+	// (콤마 구분 29칸 위치 기반, WzTextureLoader.h 주석 참고) — 나중에 직업별
+	// CSV에서 이 형식 그대로 조립하게 될 예정이고, 지금은 하드코딩된 예시로
+	// 파이프라인만 검증한다.
+	static const char* TestLoadoutSpec = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
 	FAvatarTexture TestAvatar = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
 	bool bAvatarLoaded = TestAvatar.m_pTexture != nullptr;
 
