@@ -145,6 +145,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	FDamageFont DamageFont;
 	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
 
+	// 아바타 합성 렌더링(wz_read_avatar) — 바디/페이스/헤어/장비를 하나로 합성한
+	// 캐릭터 텍스처. loadoutSpec은 나중에 직업별 CSV에서 조립하게 될 예정이고,
+	// 지금은 하드코딩된 예시로 파이프라인만 검증한다.
+	static const char* TestLoadoutSpec = "body=2000000;face=20000;hair=30000;cap=1002140;coat=1040002;pants=1060026;shoes=1072001;glove=1082002;weapon=1302000;cape=1102022";
+	FAvatarTexture TestAvatar = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
+	bool bAvatarLoaded = TestAvatar.m_pTexture != nullptr;
+
 	MSG Msg = {};
 	bool bRunning = true;
 
@@ -242,6 +249,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
 		}
 
+		// TODO: 아바타 합성 렌더링(wz_read_avatar) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+		// TestAvatar.m_Origin만큼 빼서, 합성 결과의 기준점(발밑)이 지정한 월드
+		// 좌표에 오도록 정렬한다(FDamageFont의 origin 보정과 같은 방식).
+		if (bAvatarLoaded)
+		{
+			pRenderQueue->SubmitSprite(TestAvatar.m_pTexture, FVector2D(-300.0f, 100.0f) - TestAvatar.m_Origin, /*ZOrder=*/ 0);
+		}
+
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
 		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
 		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
@@ -268,6 +283,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	pTestTexture->Release();
 	pBlackTexture->Release();
+	if (TestAvatar.m_pTexture) TestAvatar.m_pTexture->Release();
 
 	delete pTimerManager;
 	GTimerManager = nullptr;
