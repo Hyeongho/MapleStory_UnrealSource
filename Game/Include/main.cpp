@@ -5,6 +5,7 @@
 #include "Render/RenderQueue.h"
 #include "Render/FCamera2D.h"
 #include "Render/WzTextureLoader.h"
+#include "Render/FHitFlash.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
@@ -134,6 +135,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MSG Msg = {};
 	bool bRunning = true;
 
+	// TODO: 피격 깜빡임(FHitFlash) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+	// 전역 GetDeltaTime()/GTimerManager가 아직 게임 루프에 안 붙어있어서(별도 이슈로 남겨둠),
+	// 이 데모에서만 QueryPerformanceCounter로 델타타임을 직접 잰다.
+	FHitFlash HitFlash;
+	constexpr float FLASH_INTERVAL = 1.0f; // 1초마다 한 번씩 트리거해서 육안으로 비교
+	float TimeSinceLastFlash = 0.0f;
+
+	LARGE_INTEGER Frequency;
+	QueryPerformanceFrequency(&Frequency);
+	LARGE_INTEGER LastCounter;
+	QueryPerformanceCounter(&LastCounter);
+
 	while (bRunning)
 	{
 		while (PeekMessageW(&Msg, nullptr, 0, 0, PM_REMOVE))
@@ -152,6 +165,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
+		LARGE_INTEGER CurrentCounter;
+		QueryPerformanceCounter(&CurrentCounter);
+		float DeltaTime = (float)(CurrentCounter.QuadPart - LastCounter.QuadPart) / (float)Frequency.QuadPart;
+		LastCounter = CurrentCounter;
+
+		TimeSinceLastFlash += DeltaTime;
+		if (TimeSinceLastFlash >= FLASH_INTERVAL)
+		{
+			HitFlash.Trigger();
+			TimeSinceLastFlash = 0.0f;
+		}
+		HitFlash.Update(DeltaTime);
+
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
 		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
 		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
@@ -161,7 +187,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		// 덜 따라가야 정상(= 카메라와 같은 방향으로 30px만 이동, 나머지는 화면에 남는 느낌).
 		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(-200.0f, 0.0f), -1, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::Background, 0.3f);
 
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0);
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, HitFlash.GetTint());
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
