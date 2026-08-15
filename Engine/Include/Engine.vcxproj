@@ -222,6 +222,7 @@
     <ClInclude Include="Render\FDamageFont.h" />
     <ClInclude Include="Render\FDamagePopup.h" />
     <ClInclude Include="Render\FHitFlash.h" />
+    <ClInclude Include="Render\FScreenFade.h" />
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Render\WzTextureLoader.h" />
@@ -274,6 +275,7 @@
     <ClCompile Include="Render\FDamageFont.cpp" />
     <ClCompile Include="Render\FDamagePopup.cpp" />
     <ClCompile Include="Render\FHitFlash.cpp" />
+    <ClCompile Include="Render\FScreenFade.cpp" />
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Render\WzTextureLoader.cpp" />
