@@ -7,6 +7,7 @@
 #include "Render/WzTextureLoader.h"
 #include "Render/FHitFlash.h"
 #include "Render/FDamagePopup.h"
+#include "Render/FDamageFont.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
@@ -137,6 +138,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	check(pTestTexture != nullptr);
 
+	// 실제 데미지 숫자 이미지 폰트(Etc.wz/DamageSkin.img, 스킨 0 기본 "NoRed0" 스타일).
+	// Etc.wz도 KMST 병합 포맷 덕에 위 TestWzPath(Base.wz 루트)로 접근 가능하다.
+	// 실패 시(DLL/경로 없음) IsLoaded()가 false를 반환 — 아래 데모에서 placeholder로 폴백.
+	FDamageFont DamageFont;
+	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
+
 	MSG Msg = {};
 	bool bRunning = true;
 
@@ -146,9 +153,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	constexpr float FLASH_INTERVAL = 1.0f; // 1초마다 한 번씩 트리거해서 육안으로 비교
 	float TimeSinceLastFlash = 0.0f;
 
-	// TODO: 데미지 숫자 팝업(FDamagePopup) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	// 실제 숫자 글리프를 그릴 SpriteFont 에셋이 아직 없어서(Phase 14 UFont), 기존
-	// placeholder 텍스처(pTestTexture)를 그대로 재사용해 "떠오르며 페이드아웃" 생명주기만 검증한다.
+	// TODO: 데미지 숫자 팝업(FDamagePopup/FDamageFont) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+	// bDamageFontLoaded면 실제 WZ 데미지 숫자 이미지로, 아니면 기존 placeholder 텍스처로
+	// "떠오르며 페이드아웃" 생명주기를 검증한다.
 	FDamagePopup DamagePopup;
 	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
 	float TimeSinceLastPopup = 0.0f;
@@ -186,14 +193,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		TimeSinceLastPopup += DeltaTime;
 		if (TimeSinceLastPopup >= DAMAGE_POPUP_INTERVAL)
 		{
-			// 노란색 placeholder — 실제 크리티컬/일반 데미지 색 분기는 Phase 12(UI)에서 정의.
-			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor(1.0f, 1.0f, 0.0f, 1.0f));
+			// 흰색(White) 틴트 — NoRed0 글리프 자체가 이미 빨간 데미지 색 그림이라
+			// 틴트를 곱하면 색이 바뀌므로, 알파(페이드)만 영향 주도록 흰색을 쓴다.
+			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor::White);
 			TimeSinceLastPopup = 0.0f;
 		}
 		DamagePopup.Update(DeltaTime);
 		if (DamagePopup.IsActive())
 		{
-			pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
+			if (bDamageFontLoaded)
+			{
+				DamageFont.SubmitNumber(*pRenderQueue, 1234, DamagePopup.GetPosition(), /*ZOrder=*/ 0, DamagePopup.GetTint(), ELayer::Effect);
+			}
+			else
+			{
+				pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
+			}
 		}
 
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
