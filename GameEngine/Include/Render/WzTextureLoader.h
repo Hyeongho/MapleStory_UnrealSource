@@ -1,17 +1,29 @@
-#pragma once
+ï»¿#pragma once
 
 #include "EnginePCH.h"
 #include "Render/DXDevice.h"
+#include "Core/Math/FVector2D.h"
 #include <d3d11.h>
+
+struct FAvatarTexture
+{
+	ID3D11ShaderResourceView* m_pTexture = nullptr;
+	FVector2D m_Origin = FVector2D::Zero;
+};
 
 class FWzTextureLoader
 {
 public:
-	// WzPath: WZ ÆÄÀÏ °æ·Î ¶Ç´Â WZ Æú´õ °æ·Î
-	// NodePath: IMG ³»ºÎ Canvas ³ëµå±îÁöÀÇ ¹é½½·¡½Ã ±¸ºĞ °æ·Î
-	//           (¿¹: "Face.img\\00020000\\face\\0")
-	// ½ÇÆĞ ½Ã(DLL ¾øÀ½/³ëµå ¾øÀ½/µğÄÚµù ¿À·ù) nullptr ¹İÈ¯ ? È£ÃâÀÚ°¡
-	// placeholder ÅØ½ºÃ³·Î Æú¹éÇÒ °Í.
-	static ID3D11ShaderResourceView* LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath);
+	// WzPath: WZ íŒŒì¼ ê²½ë¡œ ë˜ëŠ” WZ í´ë” ê²½ë¡œ
+	// NodePath: IMG ë‚´ë¶€ Canvas ë…¸ë“œê¹Œì§€ì˜ ë°±ìŠ¬ë˜ì‹œ êµ¬ë¶„ ê²½ë¡œ
+	//           (ì˜ˆ: "Face.img\\00020000\\face\\0")
+	// ì‹¤íŒ¨ ì‹œ(DLL ì—†ìŒ/ë…¸ë“œ ì—†ìŒ/ë””ì½”ë”© ì˜¤ë¥˜) nullptr ë°˜í™˜ â€” í˜¸ì¶œìê°€
+	// placeholder í…ìŠ¤ì²˜ë¡œ í´ë°±í•  ê²ƒ.
+	static ID3D11ShaderResourceView* LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth = nullptr, int32* OutHeight = nullptr);
+
+	static FAvatarTexture LoadAvatarTexture(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, const char* ActionName, int32 FrameIndex, const char* EmotionName = "default", int32 EmotionFrameIndex = 0);
+
+private:
+	static ID3D11ShaderResourceView* UploadBGRATexture(FDXDevice& Device, const uint8_t* Pixels, int32 Width, int32 Height);
 };
 

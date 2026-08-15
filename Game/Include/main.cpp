@@ -5,12 +5,17 @@
 #include "Render/RenderQueue.h"
 #include "Render/FCamera2D.h"
 #include "Render/WzTextureLoader.h"
+#include "Render/FHitFlash.h"
+#include "Render/FDamagePopup.h"
+#include "Render/FDamageFont.h"
+#include "Render/FScreenFade.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
+#include "Timer/FTimerManager.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
-static const uint32 WINDOW_WIDTH = 1368;
+static const uint32 WINDOW_WIDTH = 1366;
 static const uint32 WINDOW_HEIGHT = 768;
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -50,7 +55,19 @@ static HWND CreateAppWindow(HINSTANCE hInstance, uint32 Width, uint32 Height)
 	RECT Rect = { 0, 0, (LONG)Width, (LONG)Height };
 	AdjustWindowRect(&Rect, Style, FALSE);
 
-	HWND hWnd = CreateWindowExW(0, WINDOW_CLASS_NAME, L"MapleStory", Style, CW_USEDEFAULT, CW_USEDEFAULT, Rect.right - Rect.left, Rect.bottom - Rect.top, nullptr, nullptr, hInstance, nullptr);
+	HWND hWnd = CreateWindowExW(
+		0,
+		WINDOW_CLASS_NAME,
+		L"MapleStory",
+		Style,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		Rect.right - Rect.left,
+		Rect.bottom - Rect.top,
+		nullptr,
+		nullptr,
+		hInstance,
+		nullptr);
 
 	check(hWnd != nullptr);
 	return hWnd;
@@ -80,7 +97,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		return -1;
 	}
-
 	GDXDevice = pDevice;
 
 	FDXSwapChain* pSwapChain = new FDXSwapChain();
@@ -110,21 +126,45 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	pCamera->SetViewportSize((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
 	GCamera2D = pCamera;
 
-	// 실제 WZ 리소스 경로 — 로컬 환경에 맞게 바꿔서 테스트한다.
-	// WzTextureLoader.h 상단 주석 참고: WzNativeLib.dll을 이 exe와 같은 폴더(Game/Bin/)에 둬야 한다.
+	FTimerManager* pTimerManager = new FTimerManager();
+	GTimerManager = pTimerManager;
+
 	static const char* TestWzPath = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
-	static const char* TestCanvasNodePath = R"(Mob\_Canvas\0100200.img\stand\0)";
+	static const char* TestCanvasNodePath = R"(Mob\_Canvas\0100100.img\stand\0)";
 
 	ID3D11ShaderResourceView* pTestTexture = FWzTextureLoader::LoadCanvasTexture(*pDevice, TestWzPath, TestCanvasNodePath);
 	if (!pTestTexture)
 	{
-		// DLL/WZ 파일이 아직 준비되지 않았거나 경로가 로컬 환경과 다르면,
-		// Resource Manager(Phase 14) 이전까지 쓰던 체커보드 placeholder로 폴백한다.
 		pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
 	}
 
+	check(pTestTexture != nullptr);
+
+	FDamageFont DamageFont;
+	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
+
+	static const char* TestLoadoutSpec = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
+	FAvatarTexture TestAvatar = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "swingT2", 1);
+	bool bAvatarLoaded = TestAvatar.m_pTexture != nullptr;
+
 	MSG Msg = {};
 	bool bRunning = true;
+
+	FHitFlash HitFlash;
+	constexpr float FLASH_INTERVAL = 1.0f;
+	float TimeSinceLastFlash = 0.0f;
+
+	// TODO: 데미지 숫자 팝업(FDamagePopup/FDamageFont) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+	FDamagePopup DamagePopup;
+	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
+	float TimeSinceLastPopup = 0.0f;
+
+	ID3D11ShaderResourceView* pBlackTexture = FSpriteBatch::CreateSolidColorTexture(*pDevice, FColor::Black);
+	FScreenFade ScreenFade;
+	constexpr float FADE_CYCLE = 4.0f;
+	constexpr float FADE_DURATION = 0.5f;
+	float TimeSinceCycleStart = 0.0f;
+	bool bFadedInThisCycle = true;
 
 	while (bRunning)
 	{
@@ -144,7 +184,78 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0);
+		TickGlobalClock();
+		float DeltaTime = GetDeltaTime();
+		GTimerManager->Tick(DeltaTime);
+
+		TimeSinceLastFlash += DeltaTime;
+
+		if (TimeSinceLastFlash >= FLASH_INTERVAL)
+		{
+			HitFlash.Trigger();
+			TimeSinceLastFlash = 0.0f;
+		}
+
+		HitFlash.Update(DeltaTime);
+
+		TimeSinceLastPopup += DeltaTime;
+
+		if (TimeSinceLastPopup >= DAMAGE_POPUP_INTERVAL)
+		{
+			// 흰색(White) 틴트 — NoRed0 글리프 자체가 이미 빨간 데미지 색 그림이라
+			// 틴트를 곱하면 색이 바뀌므로, 알파(페이드)만 영향 주도록 흰색을 쓴다.
+			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor::White);
+			TimeSinceLastPopup = 0.0f;
+		}
+
+		DamagePopup.Update(DeltaTime);
+
+		if (DamagePopup.IsActive())
+		{
+			if (bDamageFontLoaded)
+			{
+				DamageFont.SubmitNumber(*pRenderQueue, 1234, DamagePopup.GetPosition(), /*ZOrder=*/ 0, DamagePopup.GetTint(), ELayer::Effect);
+			}
+
+			else
+			{
+				pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
+			}
+		}
+
+		TimeSinceCycleStart += DeltaTime;
+
+		if (TimeSinceCycleStart >= FADE_CYCLE)
+		{
+			TimeSinceCycleStart -= FADE_CYCLE; // 초과분 이월 — 다음 사이클도 정확한 간격 유지(drift 방지)
+			ScreenFade.FadeOut(FADE_DURATION);
+			bFadedInThisCycle = false;
+		}
+
+		if (!bFadedInThisCycle && TimeSinceCycleStart >= FADE_DURATION * 2.0f) // 아웃(0.5) + 유지(0.5) 후 인 시작
+		{
+			ScreenFade.FadeIn(FADE_DURATION);
+			bFadedInThisCycle = true;
+		}
+
+		ScreenFade.Update(DeltaTime);
+
+		if (ScreenFade.GetAlpha() > 0.0f)
+		{
+			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
+		}
+
+		if (bAvatarLoaded)
+		{
+			pRenderQueue->SubmitSprite(TestAvatar.m_pTexture, FVector2D(-300.0f, 100.0f) - TestAvatar.m_Origin, /*ZOrder=*/ 0);
+		}
+
+		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(50.0f, 50.0f), 0, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::UI);
+
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(-200.0f, 0.0f), -1, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::Background, 0.3f);
+
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, HitFlash.GetTint());
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
@@ -152,10 +263,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		pRenderQueue->Flush(*pSpriteBatch);
 		pSpriteBatch->End();
 
+		pSpriteBatch->Begin(); // 항등 변환 — UI는 카메라와 무관하게 화면 좌표에 고정
+		pRenderQueue->FlushUI(*pSpriteBatch);
+		pSpriteBatch->End();
+
 		pSwapChain->Present(1);
 	}
 
 	pTestTexture->Release();
+	pBlackTexture->Release();
+
+	if (TestAvatar.m_pTexture) 
+	{
+		TestAvatar.m_pTexture->Release();
+	}
+
+	delete pTimerManager;
+	GTimerManager = nullptr;
 
 	delete pCamera;
 	GCamera2D = nullptr;

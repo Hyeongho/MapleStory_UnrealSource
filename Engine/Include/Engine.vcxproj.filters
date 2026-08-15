@@ -249,6 +249,18 @@
     <ClInclude Include="Render\WzTextureLoader.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Render\FHitFlash.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FDamagePopup.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FScreenFade.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FDamageFont.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -375,6 +387,18 @@
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\WzTextureLoader.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FHitFlash.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FDamagePopup.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FScreenFade.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FDamageFont.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
   </ItemGroup>

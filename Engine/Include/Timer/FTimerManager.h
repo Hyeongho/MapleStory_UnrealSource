@@ -44,3 +44,7 @@ private:
 };
 
 extern FTimerManager* GTimerManager;
+
+void TickGlobalClock();
+float GetDeltaTime();
+float GetTimeSeconds();

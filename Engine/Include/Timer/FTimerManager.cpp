@@ -6,6 +6,43 @@ FTimerManager* GTimerManager = nullptr;
 FTimerManager::FTimerManager() = default;
 FTimerManager::~FTimerManager() = default;
 
+static LARGE_INTEGER s_ClockFrequency = {};
+static LARGE_INTEGER s_ClockLastCounter = {};
+static bool s_bClockInitialized = false;
+static float s_DeltaTime = 0.f;
+static float s_TimeSeconds = 0.f;
+
+void TickGlobalClock()
+{
+    if (!s_bClockInitialized)
+    {
+        QueryPerformanceFrequency(&s_ClockFrequency);
+        QueryPerformanceCounter(&s_ClockLastCounter);
+        s_bClockInitialized = true;
+        s_DeltaTime = 0.f;
+        s_TimeSeconds = 0.f;
+        return;
+    }
+
+    LARGE_INTEGER CurrentCounter;
+    QueryPerformanceCounter(&CurrentCounter);
+
+    s_DeltaTime = (float)(CurrentCounter.QuadPart - s_ClockLastCounter.QuadPart) / (float)s_ClockFrequency.QuadPart;
+    s_ClockLastCounter = CurrentCounter;
+
+    s_TimeSeconds += s_DeltaTime;
+}
+
+float GetDeltaTime()
+{
+    return s_DeltaTime;
+}
+
+float GetTimeSeconds()
+{
+    return s_TimeSeconds;
+}
+
 void FTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& Delegate, float Rate, bool bLoop)
 {
     if (OutHandle.IsValid())

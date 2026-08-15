@@ -8,6 +8,14 @@
 
 class FSpriteBatch;
 
+enum class ELayer : uint8
+{
+	Background = 0,
+	Object = 1,
+	Effect = 2,
+	UI = 3,
+};
+
 struct FRenderQueueEntry
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr; // non-owning
@@ -16,6 +24,8 @@ struct FRenderQueueEntry
 	float m_RotationRadians = 0.0f;
 	FLinearColor m_Tint = FLinearColor::White;
 	int32 m_ZOrder = 0;
+	ELayer m_Layer = ELayer::Object;
+	float m_ParallaxFactor = 1.0f; // 1.0 = 카메라와 완전히 같이 움직임(기본). 0에 가까울수록
 };
 
 class FRenderQueue
@@ -25,9 +35,10 @@ public:
 	~FRenderQueue();
 
 	void Submit(const FRenderQueueEntry& Entry);
-	void SubmitSprite(ID3D11ShaderResourceView* pTexture, const FVector2D& Position, int32 ZOrder, const FVector2D& Scale = FVector2D(1.0f, 1.0f), float RotationRadians = 0.0f, const FLinearColor& Tint = FLinearColor::White);
+	void SubmitSprite(ID3D11ShaderResourceView* pTexture, const FVector2D& Position, int32 ZOrder, const FVector2D& Scale = FVector2D(1.0f, 1.0f), float RotationRadians = 0.0f, const FLinearColor& Tint = FLinearColor::White, ELayer Layer = ELayer::Object, float ParallaxFactor = 1.0f);
 
 	void Flush(FSpriteBatch& SpriteBatch);
+	void FlushUI(FSpriteBatch& SpriteBatch);
 	void Clear();
 
 	int32 Num() const 
@@ -36,6 +47,8 @@ public:
 	}
 
 private:
+	void SortEntries();
+
 	TArray<FRenderQueueEntry> m_Entries;
 };
 

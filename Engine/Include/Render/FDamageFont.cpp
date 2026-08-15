@@ -1,0 +1,135 @@
+﻿#include "EnginePCH.h"
+#include "Render/FDamageFont.h"
+#include "Render/WzTextureLoader.h"
+#include "Render/RenderQueue.h"
+#include "Core/Math/FMath.h"
+
+namespace
+{
+	const char* GDigitNodePaths[10] =
+	{
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\0",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\1",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\2",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\3",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\4",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\5",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\6",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\7",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\8",
+		"Etc\\_Canvas\\DamageSkin.img\\0\\effect\\NoRed0\\9",
+	};
+
+	const FVector2D GDigitOrigins[10] =
+	{
+		FVector2D(15.0f, 32.0f), // 0
+		FVector2D(11.0f, 31.0f), // 1
+		FVector2D(14.0f, 32.0f), // 2
+		FVector2D(14.0f, 31.0f), // 3
+		FVector2D(15.0f, 32.0f), // 4
+		FVector2D(14.0f, 31.0f), // 5
+		FVector2D(15.0f, 32.0f), // 6
+		FVector2D(14.0f, 31.0f), // 7
+		FVector2D(15.0f, 32.0f), // 8
+		FVector2D(15.0f, 32.0f), // 9
+	};
+}
+
+FDamageFont::FDamageFont()
+{
+}
+
+FDamageFont::~FDamageFont()
+{
+	for (int32 i = 0; i < 10; i++)
+	{
+		if (m_Glyphs[i].m_pTexture)
+		{
+			m_Glyphs[i].m_pTexture->Release();
+			m_Glyphs[i].m_pTexture = nullptr;
+		}
+	}
+}
+
+bool FDamageFont::Load(FDXDevice& Device, const char* WzPath)
+{
+	for (int32 i = 0; i < 10; i++)
+	{
+		int32 Width = 0, Height = 0;
+		ID3D11ShaderResourceView* pTexture = FWzTextureLoader::LoadCanvasTexture(Device, WzPath, GDigitNodePaths[i], &Width, &Height);
+		if (!pTexture)
+		{
+			for (int32 j = 0; j < i; j++)
+			{
+				m_Glyphs[j].m_pTexture->Release();
+				m_Glyphs[j].m_pTexture = nullptr;
+			}
+
+			m_bLoaded = false;
+
+			return false;
+		}
+
+		m_Glyphs[i].m_pTexture = pTexture;
+		m_Glyphs[i].m_Origin = GDigitOrigins[i];
+		m_Glyphs[i].m_Width = (float)Width;
+	}
+
+	m_bLoaded = true;
+
+	return true;
+}
+
+void FDamageFont::SubmitNumber(FRenderQueue& Queue, int32 Value, const FVector2D& BasePosition, int32 ZOrder, const FLinearColor& Tint, ELayer Layer) const
+{
+	if (!m_bLoaded)
+	{
+		return;
+	}
+
+	int32 AbsValue = FMath::Abs(Value);
+
+	int32 Digits[10];
+	int32 DigitCount = 0;
+
+	if (AbsValue == 0)
+	{
+		Digits[DigitCount++] = 0;
+	}
+
+	else
+	{
+		int32 Remaining = AbsValue;
+
+		while (Remaining > 0 && DigitCount < 10)
+		{
+			Digits[DigitCount++] = Remaining % 10;
+			Remaining /= 10;
+		}
+	}
+
+	for (int32 i = 0; i < DigitCount / 2; i++)
+	{
+		int32 Temp = Digits[i];
+		Digits[i] = Digits[DigitCount - 1 - i];
+		Digits[DigitCount - 1 - i] = Temp;
+	}
+
+	float TotalWidth = 0.0f;
+	for (int32 i = 0; i < DigitCount; i++)
+	{
+		TotalWidth += m_Glyphs[Digits[i]].m_Width;
+	}
+
+	float CursorX = -TotalWidth * 0.5f;
+
+	for (int32 i = 0; i < DigitCount; i++)
+	{
+		const FDigitGlyph& Glyph = m_Glyphs[Digits[i]];
+
+		FVector2D DrawPosition = BasePosition + FVector2D(CursorX, -Glyph.m_Origin.m_Y);
+		Queue.SubmitSprite(Glyph.m_pTexture, DrawPosition, ZOrder, FVector2D(1.0f, 1.0f), 0.0f, Tint, Layer);
+
+		CursorX += Glyph.m_Width;
+	}
+}
