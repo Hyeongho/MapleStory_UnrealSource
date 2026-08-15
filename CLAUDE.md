@@ -408,7 +408,12 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 - [x] `FCamera2D.h / .cpp` — 월드↔스크린 좌표 변환, `GetViewMatrix()`
   (플레이어 추적 스크롤은 아직 미구현 — `SetLocation`만 있고 자동 추적
   로직 없음)
-- [ ] Parallax Scrolling — 배경 원근 스크롤링
+- [x] Parallax Scrolling — 배경 원근 스크롤링 (`FRenderQueueEntry::m_ParallaxFactor`
+  추가 — 기본 1.0은 카메라와 완전히 같이 움직이는 기존 동작 그대로,
+  1보다 작으면 `Flush()`가 `GCamera2D->GetLocation() * (1 - ParallaxFactor)`만큼만
+  덜 움직여서 더 멀리 있는 배경처럼 느리게 스크롤됨. 여러 렌더 패스
+  없이 기존 `Flush()` 안에서 위치만 보정하는 방식이라 배경 레이어를
+  여러 겹(하늘/먼 산/가까운 산 등) 깔아도 한 번에 그려짐)
 - [x] 레이어 렌더링 — 배경 / 오브젝트 / 이펙트 / UI (`RenderQueue.h`에
   `ELayer` enum 추가, 정렬 키를 `(Layer, ZOrder)` 2단으로 변경.
   `Flush()`는 월드 좌표 레이어(Background/Object/Effect)만, 신규

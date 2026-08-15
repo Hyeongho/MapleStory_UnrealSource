@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "Render/RenderQueue.h"
 #include "Render/SpriteBatch.h"
+#include "Render/FCamera2D.h"
 
 FRenderQueue* GRenderQueue = nullptr;
 
@@ -19,7 +20,8 @@ void FRenderQueue::SubmitSprite(
 	const FVector2D& Scale,
 	float RotationRadians,
 	const FLinearColor& Tint,
-	ELayer Layer)
+	ELayer Layer,
+	float ParallaxFactor)
 {
 	FRenderQueueEntry Entry;
 	Entry.m_pTexture = pTexture;
@@ -29,6 +31,7 @@ void FRenderQueue::SubmitSprite(
 	Entry.m_Tint = Tint;
 	Entry.m_ZOrder = ZOrder;
 	Entry.m_Layer = Layer;
+	Entry.m_ParallaxFactor = ParallaxFactor;
 
 	m_Entries.Add(Entry);
 }
@@ -58,7 +61,12 @@ void FRenderQueue::Flush(FSpriteBatch& SpriteBatch)
 		{
 			continue; // UI는 화면 좌표라 FlushUI()에서 항등 변환으로 따로 그린다.
 		}
-		SpriteBatch.DrawSprite(Entry.m_pTexture, Entry.m_Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
+
+		// Parallax — ParallaxFactor가 1보다 작을수록 카메라 이동량 중 일부만 반영해
+		// 더 멀리 있는 배경처럼 느리게 스크롤되도록 만든다(기본값 1.0은 카메라와
+		// 완전히 같이 움직이는 기존 동작 그대로).
+		FVector2D DrawPosition = Entry.m_Position + GCamera2D->GetLocation() * (1.0f - Entry.m_ParallaxFactor);
+		SpriteBatch.DrawSprite(Entry.m_pTexture, DrawPosition, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
 	}
 }
 

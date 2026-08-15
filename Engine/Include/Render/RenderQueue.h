@@ -26,6 +26,8 @@ struct FRenderQueueEntry
 	FLinearColor m_Tint = FLinearColor::White;
 	int32 m_ZOrder = 0;
 	ELayer m_Layer = ELayer::Object;
+	float m_ParallaxFactor = 1.0f; // 1.0 = 카메라와 완전히 같이 움직임(기본). 0에 가까울수록
+	                                // 카메라 이동량 중 일부만 반영해 더 멀리 있는 배경처럼 느리게 스크롤됨.
 };
 
 // 매 프레임 그릴 스프라이트를 모았다가 (Layer, ZOrder) 순으로 정렬해 그리는 큐.
@@ -46,7 +48,8 @@ public:
 		const FVector2D& Scale = FVector2D(1.0f, 1.0f),
 		float RotationRadians = 0.0f,
 		const FLinearColor& Tint = FLinearColor::White,
-		ELayer Layer = ELayer::Object);
+		ELayer Layer = ELayer::Object,
+		float ParallaxFactor = 1.0f);
 
 	void Flush(FSpriteBatch& SpriteBatch);
 	void FlushUI(FSpriteBatch& SpriteBatch);
