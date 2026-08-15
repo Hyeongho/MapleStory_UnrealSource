@@ -6,6 +6,7 @@
 #include "Render/FCamera2D.h"
 #include "Render/WzTextureLoader.h"
 #include "Render/FHitFlash.h"
+#include "Render/FDamagePopup.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
@@ -145,6 +146,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	constexpr float FLASH_INTERVAL = 1.0f; // 1초마다 한 번씩 트리거해서 육안으로 비교
 	float TimeSinceLastFlash = 0.0f;
 
+	// TODO: 데미지 숫자 팝업(FDamagePopup) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+	// 실제 숫자 글리프를 그릴 SpriteFont 에셋이 아직 없어서(Phase 14 UFont), 기존
+	// placeholder 텍스처(pTestTexture)를 그대로 재사용해 "떠오르며 페이드아웃" 생명주기만 검증한다.
+	FDamagePopup DamagePopup;
+	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
+	float TimeSinceLastPopup = 0.0f;
+
 	while (bRunning)
 	{
 		while (PeekMessageW(&Msg, nullptr, 0, 0, PM_REMOVE))
@@ -174,6 +182,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			TimeSinceLastFlash = 0.0f;
 		}
 		HitFlash.Update(DeltaTime);
+
+		TimeSinceLastPopup += DeltaTime;
+		if (TimeSinceLastPopup >= DAMAGE_POPUP_INTERVAL)
+		{
+			// 노란색 placeholder — 실제 크리티컬/일반 데미지 색 분기는 Phase 12(UI)에서 정의.
+			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor(1.0f, 1.0f, 0.0f, 1.0f));
+			TimeSinceLastPopup = 0.0f;
+		}
+		DamagePopup.Update(DeltaTime);
+		if (DamagePopup.IsActive())
+		{
+			pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
+		}
 
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
 		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
