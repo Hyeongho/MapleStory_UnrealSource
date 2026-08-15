@@ -157,6 +157,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
 		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
 		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(50.0f, 50.0f), 0, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::UI);
+		// Parallax 테스트 — ParallaxFactor 0.3이라 카메라가 100px 움직여도 70px만큼만
+		// 덜 따라가야 정상(= 카메라와 같은 방향으로 30px만 이동, 나머지는 화면에 남는 느낌).
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(-200.0f, 0.0f), -1, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::Background, 0.3f);
 
 		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0);
 
