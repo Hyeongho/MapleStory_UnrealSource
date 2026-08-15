@@ -9,6 +9,7 @@
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
+#include "Timer/FTimerManager.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
@@ -118,6 +119,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	pCamera->SetViewportSize((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
 	GCamera2D = pCamera;
 
+	FTimerManager* pTimerManager = new FTimerManager();
+	GTimerManager = pTimerManager;
+
 	// 실제 WZ 리소스 경로 — 로컬 환경에 맞게 바꿔서 테스트한다.
 	// WzTextureLoader.h 상단 주석 참고: WzNativeLib.dll을 이 exe와 같은 폴더(Game/Bin/)에 둬야 한다.
 	static const char* TestWzPath = R"(C:\Nexon\MapleStory\Data\Character.wz)";
@@ -136,16 +140,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool bRunning = true;
 
 	// TODO: 피격 깜빡임(FHitFlash) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	// 전역 GetDeltaTime()/GTimerManager가 아직 게임 루프에 안 붙어있어서(별도 이슈로 남겨둠),
-	// 이 데모에서만 QueryPerformanceCounter로 델타타임을 직접 잰다.
+	// 델타타임은 이제 TickGlobalClock()/GetDeltaTime()으로 전역 공급된다 (Timer/FTimerManager.h).
 	FHitFlash HitFlash;
 	constexpr float FLASH_INTERVAL = 1.0f; // 1초마다 한 번씩 트리거해서 육안으로 비교
 	float TimeSinceLastFlash = 0.0f;
-
-	LARGE_INTEGER Frequency;
-	QueryPerformanceFrequency(&Frequency);
-	LARGE_INTEGER LastCounter;
-	QueryPerformanceCounter(&LastCounter);
 
 	while (bRunning)
 	{
@@ -165,10 +163,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
-		LARGE_INTEGER CurrentCounter;
-		QueryPerformanceCounter(&CurrentCounter);
-		float DeltaTime = (float)(CurrentCounter.QuadPart - LastCounter.QuadPart) / (float)Frequency.QuadPart;
-		LastCounter = CurrentCounter;
+		TickGlobalClock();
+		float DeltaTime = GetDeltaTime();
+		GTimerManager->Tick(DeltaTime);
 
 		TimeSinceLastFlash += DeltaTime;
 		if (TimeSinceLastFlash >= FLASH_INTERVAL)
@@ -203,6 +200,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	pTestTexture->Release();
+
+	delete pTimerManager;
+	GTimerManager = nullptr;
 
 	delete pCamera;
 	GCamera2D = nullptr;

@@ -266,9 +266,16 @@ using uint64 = uint64_t;
 - [x] `FTimerHandle.h / .cpp` — 개별 타이머 식별자
 - [x] `FTimerManager.h / .cpp` — SetTimer / ClearTimer / PauseTimer / ResumeTimer
 - [x] `SetTimerNextFrame` — 지연 실행 (사망 후 N초 뒤 리스폰)
-- [x] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근
+- [x] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근 (`FTimerManager.h/.cpp`에
+  `TickGlobalClock()`과 함께 자유 함수로 구현 — `FTimerManager` 클래스와는
+  무관한 파일 스코프 QueryPerformanceCounter 기반 클럭. `Game/Include/main.cpp`
+  게임 루프에 실제로 연결 완료: 매 프레임 `TickGlobalClock()` 호출 후
+  `GetDeltaTime()`으로 읽은 값을 `GTimerManager->Tick(DeltaTime)`에 그대로
+  전달하며, 기존에 루프 안에서 직접 하던 QueryPerformanceCounter 호출은
+  제거됨)
 
-완료 기준: 3초 뒤 콜백 정확히 호출 확인 ✅
+완료 기준: 3초 뒤 콜백 정확히 호출 확인 ✅, `main.cpp` 게임 루프에서
+매 프레임 `TickGlobalClock()`/`GetDeltaTime()`로 델타타임 공급 확인 ✅
 
 ---
 

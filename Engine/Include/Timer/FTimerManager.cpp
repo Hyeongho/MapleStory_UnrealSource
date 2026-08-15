@@ -160,3 +160,46 @@ void FTimerManager::PurgePending()
         }
     }
 }
+
+// -----------------------------------------------------------------------
+// 전역 클럭 구현 — FTimerManager 클래스와 무관한 파일 스코프 상태.
+// FTimerManager::Tick()은 여전히 순수하게 외부에서 넘겨준 DeltaTime만
+// 사용하므로(단위 테스트가 리터럴 값으로 직접 구동함) 이 클럭 상태를
+// 클래스 멤버로 넣지 않는다 — 여기 static 변수로만 존재한다.
+// -----------------------------------------------------------------------
+static LARGE_INTEGER s_ClockFrequency = {};
+static LARGE_INTEGER s_ClockLastCounter = {};
+static bool s_bClockInitialized = false;
+static float s_DeltaTime = 0.f;
+static float s_TimeSeconds = 0.f;
+
+void TickGlobalClock()
+{
+    if (!s_bClockInitialized)
+    {
+        QueryPerformanceFrequency(&s_ClockFrequency);
+        QueryPerformanceCounter(&s_ClockLastCounter);
+        s_bClockInitialized = true;
+        s_DeltaTime = 0.f;
+        s_TimeSeconds = 0.f;
+        return;
+    }
+
+    LARGE_INTEGER CurrentCounter;
+    QueryPerformanceCounter(&CurrentCounter);
+
+    s_DeltaTime = (float)(CurrentCounter.QuadPart - s_ClockLastCounter.QuadPart) / (float)s_ClockFrequency.QuadPart;
+    s_ClockLastCounter = CurrentCounter;
+
+    s_TimeSeconds += s_DeltaTime;
+}
+
+float GetDeltaTime()
+{
+    return s_DeltaTime;
+}
+
+float GetTimeSeconds()
+{
+    return s_TimeSeconds;
+}
