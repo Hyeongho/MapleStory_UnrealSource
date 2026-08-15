@@ -17,7 +17,10 @@ public:
 	// WzPath: WZ 파일 경로 또는 WZ 폴더 경로
 	// NodePath: IMG 내부 Canvas 노드까지의 백슬래시 구분 경로
 	//           (예: "Face.img\\00020000\\face\\0")
+	// OutWidth/OutHeight: 널이 아니면 로드된 텍스처의 픽셀 크기를 채워준다
+	//           (예: 비트맵 폰트 글리프 폭 계산용 — wz_read_canvas가 이미
+	//           계산해서 돌려주는 값을 그대로 노출할 뿐 추가 비용 없음).
 	// 실패 시(DLL 없음/노드 없음/디코딩 오류) nullptr 반환 — 호출자가
 	// placeholder 텍스처로 폴백할 것.
-	static ID3D11ShaderResourceView* LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath);
+	static ID3D11ShaderResourceView* LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth = nullptr, int32* OutHeight = nullptr);
 };

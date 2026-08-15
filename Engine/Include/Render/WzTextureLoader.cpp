@@ -49,7 +49,7 @@ namespace
 	}
 }
 
-ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath)
+ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth, int32* OutHeight)
 {
 	FWzDllState& DllState = GetDllState();
 	if (!DllState.ReadCanvas)
@@ -62,6 +62,15 @@ ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device,
 	if (!Pixels || Len == 0 || Width <= 0 || Height <= 0)
 	{
 		return nullptr;
+	}
+
+	if (OutWidth)
+	{
+		*OutWidth = Width;
+	}
+	if (OutHeight)
+	{
+		*OutHeight = Height;
 	}
 
 	D3D11_TEXTURE2D_DESC TexDesc = {};
