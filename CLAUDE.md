@@ -453,7 +453,18 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   베이스라인을, 전체 폭 절반만큼 밀어서 가운데 정렬을 맞춰 나란히
   제출한다. 크리티컬 색 분기(`NoCri0` 등 다른 스타일)·다른 스킨 선택은
   Phase 12(UI)에서 게임플레이 훅과 함께 다룰 예정)
-- [ ] 화면 페이드인·아웃 (맵 이동 연출)
+- [x] 화면 페이드인·아웃 (맵 이동 연출) (`FScreenFade` — `FadeOut()`/`FadeIn()`
+  이후 매 프레임 `Update(DeltaTime)`을 거치면 `GetAlpha()`가 서서히
+  변한다. `FHitFlash`/`FDamagePopup`과 달리 `IsActive()`(지금 변하는
+  중인지)와 `GetAlpha()`(현재 표시할 값, 페이드 끝나도 도착값 유지)를
+  분리 — 화면 페이드는 아웃이 끝나도 다음 인이 호출되기 전까지 계속
+  검게 덮여있어야 해서, 렌더링 여부는 `GetAlpha() > 0`으로 판단한다.
+  실제 렌더링은 `FSpriteBatch::CreateSolidColorTexture`로 만든 1x1
+  단색 텍스처를 화면 크기로 Scale해서 `ELayer::UI` +
+  `FScreenFade::SCREEN_FADE_ZORDER`(INT32_MAX로 예약)로 제출 — 다른
+  UI 요소가 몰라도 항상 최상단에 그려지도록 구조적으로 보장)
+
+Phase 8 렌더러 항목 전체 완료.
 
 ★ WZ 병행 작업 (Phase 8 시작 시, 아직 미착수):
 - [x] Canvas → 픽셀 변환 (WzPng) 구현 — **C# DLL 브리지 확장 방식**으로 완료  
