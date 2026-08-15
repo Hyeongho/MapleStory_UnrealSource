@@ -439,12 +439,20 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
 - [x] 데미지 숫자 팝업 렌더링 (`FDamagePopup` — `FHitFlash`와 같은 패턴의
   독립 시간 기반 유틸리티. `Spawn()` 이후 `Update(DeltaTime)`을 거치면
   `GetPosition()`이 위로 떠오르는 좌표를, `GetTint()`가 서서히 투명해지는
-  알파를 돌려줌. 실제 숫자 글리프는 DirectXTK::SpriteFont + `.spritefont`
-  에셋이 필요한데 그건 Phase 14 `UFont.h/.cpp` 몫이라 지금은 placeholder
-  텍스처로 "스폰/상승/페이드 + 큐 제출" 메커니즘만 구현 — 실제 숫자
-  렌더링·크리티컬 색 분기는 Phase 12/14 이후 이 위에 얹는다. 여러 개
-  동시 표시용 풀링은 아직 아무도 안 써서 만들지 않음, 호출자(나중의
-  몹 액터) 책임)
+  알파를 돌려줌. 여러 개 동시 표시용 풀링은 아직 아무도 안 써서 만들지
+  않음, 호출자(나중의 몹 액터) 책임)
+  — 실제 숫자 글리프는 `FDamageFont`(신규)가 담당: 처음엔 DirectXTK
+  SpriteFont(`.spritefont` 에셋 필요, Phase 14 `UFont.h/.cpp` 몫)로
+  미루려 했는데, 사용자가 실제 `Etc.wz/DamageSkin.img` XML을 확인해준
+  덕에 몹 프레임 로딩 때와 같은 `_outlink`/`_Canvas` 패턴임을 알게 돼
+  이미 검증된 `wz_read_canvas`로 진짜 데미지 숫자 이미지(스킨 0
+  기본 "NoRed0" 스타일 0~9)를 그대로 로드하는 쪽으로 바꿈 — 별도 폰트
+  에셋/도구 없이 완료. `WzTextureLoader::LoadCanvasTexture`에
+  optional Width/Height out 파라미터를 추가해 글리프 폭을 얻고,
+  `SubmitNumber()`가 정수를 자릿수로 쪼개 각 글리프의 `origin.y`로
+  베이스라인을, 전체 폭 절반만큼 밀어서 가운데 정렬을 맞춰 나란히
+  제출한다. 크리티컬 색 분기(`NoCri0` 등 다른 스타일)·다른 스킨 선택은
+  Phase 12(UI)에서 게임플레이 훅과 함께 다룰 예정)
 - [ ] 화면 페이드인·아웃 (맵 이동 연출)
 
 ★ WZ 병행 작업 (Phase 8 시작 시, 아직 미착수):
