@@ -8,6 +8,7 @@
 #include "Render/FHitFlash.h"
 #include "Render/FDamagePopup.h"
 #include "Render/FDamageFont.h"
+#include "Render/FScreenFade.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
@@ -160,6 +161,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
 	float TimeSinceLastPopup = 0.0f;
 
+	// TODO: 화면 페이드인·아웃(FScreenFade) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+	// 4초 주기로 FadeOut(0.5초) -> 유지(0.5초) -> FadeIn(0.5초)을 반복해서
+	// 화면이 검게 덮였다 다시 밝아지는지 육안으로 비교한다.
+	ID3D11ShaderResourceView* pBlackTexture = FSpriteBatch::CreateSolidColorTexture(*pDevice, FColor::Black);
+	FScreenFade ScreenFade;
+	constexpr float FADE_CYCLE = 4.0f;
+	constexpr float FADE_DURATION = 0.5f;
+	float TimeSinceCycleStart = 0.0f;
+	bool bFadedInThisCycle = true;
+
 	while (bRunning)
 	{
 		while (PeekMessageW(&Msg, nullptr, 0, 0, PM_REMOVE))
@@ -211,6 +222,26 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 		}
 
+		TimeSinceCycleStart += DeltaTime;
+		if (TimeSinceCycleStart >= FADE_CYCLE)
+		{
+			TimeSinceCycleStart -= FADE_CYCLE; // 초과분 이월 — 다음 사이클도 정확한 간격 유지(drift 방지)
+			ScreenFade.FadeOut(FADE_DURATION);
+			bFadedInThisCycle = false;
+		}
+		if (!bFadedInThisCycle && TimeSinceCycleStart >= FADE_DURATION * 2.0f) // 아웃(0.5) + 유지(0.5) 후 인 시작
+		{
+			ScreenFade.FadeIn(FADE_DURATION);
+			bFadedInThisCycle = true;
+		}
+		ScreenFade.Update(DeltaTime);
+		if (ScreenFade.GetAlpha() > 0.0f)
+		{
+			// GetAlpha() > 0 — IsActive()가 아니라 이걸로 판단해야 함(FadeOut 완료 후에도
+			// FadeIn 전까지는 계속 화면을 덮고 있어야 하므로, FScreenFade.h 주석 참고).
+			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
+		}
+
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
 		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
 		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
@@ -236,6 +267,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	pTestTexture->Release();
+	pBlackTexture->Release();
 
 	delete pTimerManager;
 	GTimerManager = nullptr;
