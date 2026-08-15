@@ -152,6 +152,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
+		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
+		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
+		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
+		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
+		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(50.0f, 50.0f), 0, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::UI);
+
 		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0);
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
