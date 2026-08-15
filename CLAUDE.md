@@ -420,7 +420,15 @@ LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에
   `FlushUI()`는 UI 레이어만 화면 좌표(항등 변환)로 그림 — `main.cpp`가
   프레임마다 `Begin(카메라 행렬)/Flush/End` 다음에
   `Begin()/FlushUI/End`를 추가로 호출)
-- [ ] 스프라이트 틴트 / 피격 깜빡임
+- [x] 스프라이트 틴트 / 피격 깜빡임 (틴트 파이프라인 자체는 이미
+  `SubmitSprite`→`FRenderQueueEntry::m_Tint`→`SpriteBatch::DrawSprite`
+  로 다 연결돼 있어서, 시간에 따라 틴트를 바꿔주는 `FHitFlash`
+  유틸리티만 추가. `Trigger(Duration, FlashColor)` 이후 매 프레임
+  `Update(DeltaTime)` → `GetTint()`가 `FlashColor`에서 `White`로
+  서서히 Lerp — DirectXTK 틴트가 곱연산이라 완전한 흰색 실루엣 플래시는
+  안 되고 색이 옅어지며 돌아오는 방식만 가능. 아직 게임 루프에 Actor가
+  없어서 `UActorComponent`가 아니라 독립 클래스로 만듦 — 나중에 몹
+  액터가 생기면 그 컴포넌트가 그대로 갖다 쓰면 됨)
 - [ ] 데미지 숫자 팝업 렌더링
 - [ ] 화면 페이드인·아웃 (맵 이동 연출)
 

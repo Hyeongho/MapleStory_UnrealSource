@@ -201,6 +201,9 @@
     <ClInclude Include="Render\FCamera2D.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Render\FHitFlash.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
     <ClInclude Include="Render\RenderQueue.h">
       <Filter>05. Render</Filter>
     </ClInclude>
@@ -342,6 +345,9 @@
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\FCamera2D.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FHitFlash.cpp">
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="Render\RenderQueue.cpp">

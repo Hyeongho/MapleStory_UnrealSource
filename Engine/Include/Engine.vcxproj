@@ -219,6 +219,7 @@
     <ClInclude Include="Render\DXDevice.h" />
     <ClInclude Include="Render\DXSwapChain.h" />
     <ClInclude Include="Render\FCamera2D.h" />
+    <ClInclude Include="Render\FHitFlash.h" />
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Render\WzTextureLoader.h" />
@@ -268,6 +269,7 @@
     <ClCompile Include="Render\DXDevice.cpp" />
     <ClCompile Include="Render\DXSwapChain.cpp" />
     <ClCompile Include="Render\FCamera2D.cpp" />
+    <ClCompile Include="Render\FHitFlash.cpp" />
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Render\WzTextureLoader.cpp" />
