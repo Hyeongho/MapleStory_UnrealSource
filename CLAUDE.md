@@ -748,6 +748,20 @@ Phase 8(렌더러)에서 만든 것들(`SpriteBatch`/`RenderQueue`/`WzTextureLoa
   두 줄이면 끝 — 앞으로 몬스터/이펙트 액터가 늘어나도 `main.cpp`를 더
   안 건드리고 `pWorld->SpawnActor<T>()`만 호출하면 됨.
 
+**`ACharacter`는 플레이어/몬스터/NPC 공통 베이스로 설계됐다** — 언리얼도
+`ACharacter` 자체는 "누가 조종하든 상관없는" 범용 캐릭터 껍데기이고,
+플레이어냐 몬스터냐는 어떤 `AController`(`APlayerController`/
+`AAIController`)가 빙의(Possess)하는지로 갈린다(조종 주체와 물리적
+실체를 별개 클래스 축으로 분리). 지금 엔진엔 Controller/Input
+시스템(Phase 13)이 아직 없어서 그 구분이 필요 없으므로, 나중에
+플레이어 전용 서브클래스(`APlayerCharacter`)나 몬스터 전용 서브클래스
+(`AMonster`)가 필요해지는 시점은 각각 Phase 13(입력)과 Phase 18(AI)
+— 그 전까지는 `ACharacter`를 그대로 상속(또는 직접 사용)해서 쓴다.
+`AActor`→`APawn`→`ACharacter` 3단 구조 중 `APawn` 계층(Controller가
+빙의할 수 있다는 개념)도 지금은 `ACharacter`가 겸하고 있고, Controller
+개념이 실제로 필요해지는 Phase 13에서 `AActor`와 `ACharacter` 사이에
+끼워 넣을 예정 — 지금 미리 만들지 않음(투기적 코드 방지).
+
 ---
 
 ### [LAYER 3] Gameplay Framework — Phase 16~22 (15~22주)
