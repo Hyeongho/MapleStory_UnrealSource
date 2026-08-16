@@ -5,6 +5,7 @@
 #include "Object/CastTemplates.h"
 
 class UActorComponent;
+class FRenderQueue; // 전방 선언만 — Object 폴더가 Render 폴더를 몰라도 되게 한다.
 
 class AActor : public UObject
 {
@@ -12,6 +13,14 @@ class AActor : public UObject
 public:
     AActor();
     virtual ~AActor() override;
+
+    // 로컬 전용 순증 ID — 지금은 UWorld::FindActorById()용이지만, 나중에
+    // 네트워크 리플리케이션을 붙일 때 액터를 가리키는 안정적인 식별자로
+    // 그대로 쓸 수 있게 미리 넣어둔다(값 자체는 지금은 의미 없음).
+    uint32 GetActorId() const
+    {
+        return m_ActorId;
+    }
 
     template<typename T>
     T* AddComponent()
@@ -47,6 +56,11 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;
 
+    // Tick과 동일한 패턴 — 렌더 패스 시점에 UWorld::Render()가 호출하면
+    // 모든 컴포넌트의 Render()로 전파한다.
+    void Render(FRenderQueue& Queue);
+
 private:
     TArray<UActorComponent*> m_Components;
+    uint32 m_ActorId = 0;
 };

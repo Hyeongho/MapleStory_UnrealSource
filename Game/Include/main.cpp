@@ -13,6 +13,8 @@
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
 #include "Timer/FTimerManager.h"
+#include "World/UWorld.h"
+#include "Object/ACharacter.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
@@ -125,6 +127,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	FTimerManager* pTimerManager = new FTimerManager();
 	GTimerManager = pTimerManager;
 
+	// 게임 루프 프레임워크 — 액터를 스폰·Tick·렌더링하는 컨테이너.
+	// 다른 전역 싱글턴(GRenderQueue/GCamera2D/GTimerManager)과 동일하게
+	// plain new/delete로 관리한다(UWorld 자체는 AActor가 소유하는
+	// 컴포넌트가 아니라 최상위 싱글턴이라 FMemory::Malloc+placement-new
+	// 패턴 대상이 아님).
+	UWorld* pWorld = new UWorld();
+	GWorld = pWorld;
+
 	// 실제 WZ 리소스 경로 — 로컬 환경에 맞게 바꿔서 테스트한다.
 	// WzTextureLoader.h 상단 주석 참고: WzNativeLib.dll을 이 exe와 같은 폴더(Game/Bin/)에 둬야 한다.
 	static const char* TestWzPath = R"(C:\Nexon\MapleStory\Data\Character.wz)";
@@ -150,9 +160,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// (콤마 구분 29칸 위치 기반, WzTextureLoader.h 주석 참고) — 나중에 직업별
 	// CSV에서 이 형식 그대로 조립하게 될 예정이고, 지금은 하드코딩된 예시로
 	// 파이프라인만 검증한다.
+	// 게임 오브젝트 그릇(ACharacter) 하나를 pWorld에 스폰해서 아바타를 그
+	// 컴포넌트(USpriteComponent)에 싣는다 — BeginPlay()는 SpawnActor 내부에서
+	// 이미 호출됨.
 	static const char* TestLoadoutSpec = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
-	FAvatarTexture TestAvatar = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
-	bool bAvatarLoaded = TestAvatar.m_pTexture != nullptr;
+	ACharacter* pPlayerCharacter = pWorld->SpawnActor<ACharacter>();
+	pPlayerCharacter->LoadAvatar(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
+	pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
 
 	MSG Msg = {};
 	bool bRunning = true;
@@ -201,6 +215,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		TickGlobalClock();
 		float DeltaTime = GetDeltaTime();
 		GTimerManager->Tick(DeltaTime);
+		pWorld->Tick(DeltaTime);
 
 		TimeSinceLastFlash += DeltaTime;
 		if (TimeSinceLastFlash >= FLASH_INTERVAL)
@@ -251,13 +266,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
 		}
 
-		// TODO: 아바타 합성 렌더링(wz_read_avatar) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-		// TestAvatar.m_Origin만큼 빼서, 합성 결과의 기준점(발밑)이 지정한 월드
-		// 좌표에 오도록 정렬한다(FDamageFont의 origin 보정과 같은 방식).
-		if (bAvatarLoaded)
-		{
-			pRenderQueue->SubmitSprite(TestAvatar.m_pTexture, FVector2D(-300.0f, 100.0f) - TestAvatar.m_Origin, /*ZOrder=*/ 0);
-		}
+		// pWorld->Render()가 스폰된 모든 액터(지금은 pPlayerCharacter 하나)의
+		// 컴포넌트를 순회하며 렌더 큐에 제출한다 — USpriteComponent::Render()가
+		// 원점 보정(GetWorldTransform().m_Location - Origin)까지 알아서 처리하므로
+		// 예전처럼 main.cpp가 직접 SubmitSprite를 호출할 필요가 없다. 앞으로
+		// 몬스터/이펙트 액터가 늘어나도 이 줄은 더 안 건드려도 됨.
+		pWorld->Render(*pRenderQueue);
 
 		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
 		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
@@ -285,7 +299,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	pTestTexture->Release();
 	pBlackTexture->Release();
-	if (TestAvatar.m_pTexture) TestAvatar.m_pTexture->Release();
+
+	// pWorld 소멸자가 아직 안 지워진 액터(pPlayerCharacter 포함)를
+	// EndPlay+소멸자+FMemory::Free로 정리하고, ~ACharacter() -> ~AActor()가
+	// USpriteComponent까지 연쇄로 정리하면서 그 안의 텍스처 Release()도
+	// 함께 처리된다 — 별도 해제 코드 불필요.
+	delete pWorld;
+	GWorld = nullptr;
 
 	delete pTimerManager;
 	GTimerManager = nullptr;

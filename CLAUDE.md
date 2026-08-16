@@ -700,7 +700,18 @@ struct FModifierKeyState {
 
 파일 위치: `Engine/World/`
 
-- [ ] `UWorld.h / .cpp` / `ULevel.h / .cpp` / `UGameMode.h / .cpp` / `UGameInstance.h / .cpp`
+- [x] `UWorld.h / .cpp` — **게임 루프 프레임워크 부분만 앞당겨 완료**
+  (아래 "게임 루프 프레임워크 + 게임 오브젝트 그릇" 메모 참고). 스폰된
+  액터를 `TArray<AActor*>`로 들고 있다가 `Tick(DeltaTime)`/`Render(FRenderQueue&)`
+  한 번 호출로 전부 순회·전파하는 최소 컨테이너 — 언리얼의 `SpawnActor<T>()`처럼
+  `AActor::AddComponent<T>()`와 동일한 Malloc+placement-new 패턴으로
+  `SpawnActor<T>()`를 제공하고, 스폰 직후 `BeginPlay()`까지 자동 호출.
+  `FindActorById(uint32)`는 지금 쓰는 곳은 없지만 나중에 네트워크
+  리플리케이션을 붙일 때 "메시지 ID → 로컬 액터" 역참조 자리로 미리
+  만들어둠(`AActor::GetActorId()`도 같은 이유로 Phase 7의 `AActor`에
+  이번에 추가됨, 순증 카운터).
+- [ ] `ULevel.h / .cpp` / `UGameMode.h / .cpp` / `UGameInstance.h / .cpp` —
+  아직 미착수(멀티 레벨 전환, 세이브 연동 등은 지금 필요 없어서 보류)
 - [ ] 타일맵 로더 / 포털 시스템 / 스폰 포인트 / 낙사 구역
 
 ★ WZ 병행:
@@ -710,10 +721,43 @@ struct FModifierKeyState {
 
 ---
 
+### 게임 루프 프레임워크(UWorld) + 게임 오브젝트 그릇(ACharacter/USpriteComponent) ★선행 완료
+
+Phase 8(렌더러)에서 만든 것들(`SpriteBatch`/`RenderQueue`/`WzTextureLoader`/
+아바타 합성)이 전부 `main.cpp`가 전역 변수로 직접 호출하는 테스트
+코드였고, Phase 7에서 만들어둔 `AActor`/`UActorComponent`/`USceneComponent`
+프레임워크는 실제로 쓰이지 않고 있었다. Phase 16(캐릭터) 본 작업(스탯/
+스킬/인벤토리)을 통째로 앞당기는 대신, 지금 있는 렌더링을 담을 최소한의
+"그릇"만 먼저 만들었다:
+
+- `USpriteComponent`(`Engine/Include/Render/`) — `USceneComponent` 상속,
+  텍스처 하나(`ID3D11ShaderResourceView*`, 소유)+Origin/ZOrder/Layer/Tint/
+  ParallaxFactor를 들고 있다가 `Render(FRenderQueue&)`가
+  `GetWorldTransform().m_Location - Origin`으로 발밑 정렬해서 제출한다.
+  `Cast<USpriteComponent>(comp)`(Phase 7 완료 기준에서 이미 예시로 든
+  이름)로 실제 존재하는 클래스가 됨.
+- `ACharacter`(`Engine/Include/Object/`) — `AActor` 상속, 생성자에서
+  `AddComponent<USpriteComponent>()`. `LoadAvatar(...)`가
+  `FWzTextureLoader::LoadAvatarTexture(...)` 결과를 그 컴포넌트에 싣는다.
+- `UActorComponent`/`AActor`에 `virtual void Render(FRenderQueue&)` 가상
+  함수 추가 — `Tick()`과 같은 전파 패턴(`AActor::Render`가 `m_Components`를
+  순회). `Object/` 폴더가 `Render/` 폴더(d3d11.h 등)를 몰라도 되도록
+  `class FRenderQueue;` 전방 선언만 사용.
+- `main.cpp`는 이제 `pWorld->SpawnActor<ACharacter>()`로 캐릭터를 만들고,
+  매 프레임 `pWorld->Tick(DeltaTime)` / `pWorld->Render(*pRenderQueue)`
+  두 줄이면 끝 — 앞으로 몬스터/이펙트 액터가 늘어나도 `main.cpp`를 더
+  안 건드리고 `pWorld->SpawnActor<T>()`만 호출하면 됨.
+
+---
+
 ### [LAYER 3] Gameplay Framework — Phase 16~22 (15~22주)
 
 Phase 16 캐릭터, Phase 17 스킬, Phase 18 몬스터/AI, Phase 19 인벤토리,  
 Phase 20 퀘스트/NPC, Phase 21 Save/Load, Phase 22 디자인 패턴
+
+(위 "게임 루프 프레임워크 + 게임 오브젝트 그릇"이 `ACharacter`라는
+이름과 렌더링 컴포넌트 하나만 앞당겨 만든 것 — 스탯/스킬/인벤토리 등
+Phase 16 본 작업은 아직 미착수.)
 
 ---
 

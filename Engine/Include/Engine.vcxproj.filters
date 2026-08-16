@@ -49,6 +49,9 @@
     <Filter Include="05. Render">
       <UniqueIdentifier>{6f3d8b2a-7e4c-4a1b-9c5d-2f8e1a6b3d40}</UniqueIdentifier>
     </Filter>
+    <Filter Include="06. World">
+      <UniqueIdentifier>{a13f7c5e-9d2b-4e6a-8c1f-5b0d3e7a9f24}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -183,6 +186,9 @@
     <ClInclude Include="Object\AActor.h">
       <Filter>02. Object</Filter>
     </ClInclude>
+    <ClInclude Include="Object\ACharacter.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
     <ClInclude Include="Object\USceneComponent.h">
       <Filter>02. Object</Filter>
     </ClInclude>
@@ -221,6 +227,12 @@
     </ClInclude>
     <ClInclude Include="Render\WzTextureLoader.h">
       <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\USpriteComponent.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="World\UWorld.h">
+      <Filter>06. World</Filter>
     </ClInclude>
     <ClInclude Include="Timer\FTimerDelegate.h">
       <Filter>03. Timer</Filter>
@@ -335,6 +347,9 @@
     <ClCompile Include="Object\AActor.cpp">
       <Filter>02. Object</Filter>
     </ClCompile>
+    <ClCompile Include="Object\ACharacter.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
     <ClCompile Include="Object\UActorComponent.cpp">
       <Filter>02. Object</Filter>
     </ClCompile>
@@ -376,6 +391,12 @@
     </ClCompile>
     <ClCompile Include="Render\WzTextureLoader.cpp">
       <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\USpriteComponent.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="World\UWorld.cpp">
+      <Filter>06. World</Filter>
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
       <Filter>03. Timer</Filter>

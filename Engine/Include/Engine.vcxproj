@@ -209,6 +209,7 @@
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnginePCH.h" />
     <ClInclude Include="Object\AActor.h" />
+    <ClInclude Include="Object\ACharacter.h" />
     <ClInclude Include="Object\CastTemplates.h" />
     <ClInclude Include="Object\ObjectMacros.h" />
     <ClInclude Include="Object\TSubclassOf.h" />
@@ -225,10 +226,12 @@
     <ClInclude Include="Render\FScreenFade.h" />
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
+    <ClInclude Include="Render\USpriteComponent.h" />
     <ClInclude Include="Render\WzTextureLoader.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
+    <ClInclude Include="World\UWorld.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Ability\FGameplayTag.cpp" />
@@ -265,6 +268,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Object\AActor.cpp" />
+    <ClCompile Include="Object\ACharacter.cpp" />
     <ClCompile Include="Object\UActorComponent.cpp" />
     <ClCompile Include="Object\UClass.cpp" />
     <ClCompile Include="Object\UObject.cpp" />
@@ -278,8 +282,10 @@
     <ClCompile Include="Render\FScreenFade.cpp" />
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
+    <ClCompile Include="Render\USpriteComponent.cpp" />
     <ClCompile Include="Render\WzTextureLoader.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
+    <ClCompile Include="World\UWorld.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Copy.bat" />
