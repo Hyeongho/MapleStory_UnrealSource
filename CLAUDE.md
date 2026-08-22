@@ -633,6 +633,27 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 버그였어서 `main.cpp` 개별 호출 지점이 아니라 `AActor.h/.cpp`에서
 근본 수정.
 
+**버그 노트 — 아바타 파츠 레이어 순서(z/ZIndex)가 실제로는 항상 깨져서
+그려지고 있던 문제 (WzComparerR2 저장소)**: 무기가 팔 앞에 그려져야
+할지 뒤에 그려져야 할지가 스윙 계열 액션에서 항상 반대로 나온다는
+리포트로 발견. `WzTest/WzNativeLib/WzExports.cs`의
+`canvas.LoadZ(root.FindNodeByPath(@"Base\zmap.img"))` 호출이
+`extractImage` 인자를 안 넘겨서(기본값 `false`) `zmap.img`의 자식
+노드(z-순서 이름 목록)가 하나도 파싱 안 된 채로 넘어가고 있었다 —
+노드 자체는 `null`이 아니라서 `AvatarCanvas.LoadZ()`는 성공(`true`)을
+반환하지만, 실제로는 `this.ZMap`이 빈 리스트로 남는다.
+`AvatarCanvas.GenerateLayer()`가 각 파츠의 문자열 `Skin.Z` 값을
+`ZMap.IndexOf()`로 찾는데 `ZMap`이 비어있으면 전부 못 찾아서(`-1`)
+거의 모든 문자열 Z 레이어가 같은 `ZIndex`로 뭉개지고, 그 상태로
+정렬하면 사실상 원래 삽입 순서에 가깝게 무너진다 — 이게 파츠별
+레이어 순서가 깨지는 증상의 근본 원인이었다. 아바타 Body/Head/Face/Hair
+파츠 로딩에서 이미 한 번 겪었던 것과 정확히 같은 클래스의 버그
+(`FindNodeByPath`의 `extractImage` 기본값이 `false`라 `.img` 경계에서
+내부 트리가 안 열림)인데, 그때는 `zmap.img` 쪽을 놓쳤다.
+`root.FindNodeByPath(@"Base\zmap.img", true)`로 수정(WzComparerR2
+`claude/dx11-2d-engine-fr8yv` 브랜치, 커밋 `a7e356e`) — **역시 DLL
+재빌드 필요**.
+
 ---
 
 ### Phase 10 — Physics / Collision (1주)
