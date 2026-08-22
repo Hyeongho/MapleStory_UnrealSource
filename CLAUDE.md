@@ -654,6 +654,28 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 `claude/dx11-2d-engine-fr8yv` 브랜치, 커밋 `a7e356e`) — **역시 DLL
 재빌드 필요**.
 
+**후속 — 위 수정만으로는 부족했음, 근본 원인 최종 확정**: `extractImage`
+수정 후 재빌드해도 무기가 여전히 프레임에 상관없이 항상 같은 자리에
+그려진다는 재보고를 받아 진단 로그(`wz_avatar_debug.log`, 무기
+`Skin.Z`/`ZIndex`/`ZMap` 크기를 매 호출마다 기록)를 추가해서 원인을
+더 파봤다. 로그 결과 `ZMap.Count=0`이 여전히 100% 재현됐는데, 이번엔
+`"Base\zmap.img"`라는 **경로 자체**가 이 브리지 구조와 안 맞았을
+가능성을 의심했다 — 실제 WzComparerR2 GUI의
+`PluginManager.FindWz("Base\\...")`는 `"Base"`를 트리 안 폴더가
+아니라 개별 .wz 파일이 등록된 레지스트리 키로 취급하는데, 우리
+`PluginManagerShim`은 경로 전체를 `CurrentRoot` 하나의 트리 안 폴더
+경로로 취급하기 때문에, KMST 병합 WZ 구조에서는 안 맞을 수 있었다.
+`"Base\zmap.img"`가 실패하면 접두사 없이 `"zmap.img"`로 재시도하는
+폴백 + 정밀 진단 로그를 추가(커밋 `731a685`)한 뒤 사용자가 재빌드·
+재실행해서 받은 로그로 **최종 확정**: `triedPath=zmap.img (Base\
+접두사 실패 후 폴백) ... ZMap.Count=184`, `resolvedZMapIndex`가
+`swingT3` 프레임마다 실제로 다름(68/81/106). 즉 `"Base\zmap.img"`는
+이 사용자의 KMST 병합 WZ 구조(원본 파일명 폴더 계층 없이 `zmap.img`가
+루트에 바로 있는 형태)에서 **애초에 틀린 경로**였고, `extractImage`
+수정은 필요조건이었지만 그것만으로는 부족했다 — 접두사 없는 폴백이
+진짜 결정타. 화면에서도 스윙 프레임에 따라 무기가 팔 앞/뒤로 정상
+전환되는 것까지 사용자가 육안 확인 완료.
+
 ---
 
 ### Phase 10 — Physics / Collision (1주)
