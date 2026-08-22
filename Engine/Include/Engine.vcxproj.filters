@@ -52,6 +52,9 @@
     <Filter Include="06. World">
       <UniqueIdentifier>{a13f7c5e-9d2b-4e6a-8c1f-5b0d3e7a9f24}</UniqueIdentifier>
     </Filter>
+    <Filter Include="07. Animation">
+      <UniqueIdentifier>{c58b4e21-3f6a-4d19-b7e5-1a9c6d2f8e37}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -234,6 +237,9 @@
     <ClInclude Include="World\UWorld.h">
       <Filter>06. World</Filter>
     </ClInclude>
+    <ClInclude Include="Animation\UFlipbookComponent.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Timer\FTimerDelegate.h">
       <Filter>03. Timer</Filter>
     </ClInclude>
@@ -397,6 +403,9 @@
     </ClCompile>
     <ClCompile Include="World\UWorld.cpp">
       <Filter>06. World</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UFlipbookComponent.cpp">
+      <Filter>07. Animation</Filter>
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
       <Filter>03. Timer</Filter>
