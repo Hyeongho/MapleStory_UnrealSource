@@ -4,14 +4,18 @@
 #include "Core/Math/FVector2D.h"
 #include <d3d11.h>
 
-// 로드된 아바타 합성 텍스처 + 그리기 기준점(피벗).
+// 로드된 아바타 합성 텍스처 + 그리기 기준점(피벗) + 이 프레임을 표시할 시간.
 // m_Origin은 wz_read_avatar가 돌려주는 AvatarCanvas::DrawFrame()의
 // -rect.X/-rect.Y — SubmitSprite에 넘길 Position에서 이만큼 빼면
 // 캐릭터가 원래 서있어야 할 지점(발밑)에 맞게 그려진다.
+// m_DelayMs는 AvatarCanvas.GetActionFrames(ActionName)의 FrameIndex번째
+// ActionFrame.AbsoluteDelay(WZ "delay" 프로퍼티) — 실패/누락 시 120(WZ
+// 쪽 기본 폴백과 동일).
 struct FAvatarTexture
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr;
 	FVector2D m_Origin = FVector2D::Zero;
+	int32 m_DelayMs = 120;
 };
 
 // WzNativeLib.dll(WzComparerR2 저장소, claude/dx11-2d-engine-fr8yv 브랜치의

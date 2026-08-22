@@ -154,8 +154,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// 비고, 위에서 이미 실어둔 stand1 정적 프레임이 그대로 유지된다(조용한 폴백).
 	// LoadAvatarTexture는 프레임 "개수"를 미리 알려주지 않으므로, nullptr이 나오는
 	// 지점까지가 실제 프레임 수라고 런타임에 추론한다.
-	// 프레임 딜레이(0.15초)는 하드코딩 — 실제 WZ per-frame delay 연동은 별도 작업
-	// (CLAUDE.md Phase 9 "WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동").
+	// 프레임 표시 시간은 Frame.m_DelayMs(실제 WZ "delay" 프로퍼티,
+	// AvatarCanvas.GetActionFrames()가 채워주는 값 — WzTextureLoader.h 참고)를
+	// 그대로 초 단위로 환산해서 쓴다. m_DelayMs가 0 이하로 들어오는 경우의 방어는
+	// UFlipbookComponent::SetFrames()가 처리.
 	TArray<FFlipbookFrame> WalkFrames;
 	for (int32 i = 0; ; i++)
 	{
@@ -165,7 +167,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			break;
 		}
 
-		WalkFrames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, 0.15f });
+		WalkFrames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, Frame.m_DelayMs / 1000.0f });
 	}
 
 	// 진단용 — 0이 찍히면 로컬 WZ에 이 아바타 조합의 "walk1" 액션 자체가

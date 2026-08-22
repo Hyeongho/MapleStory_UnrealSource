@@ -583,13 +583,30 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
 - [ ] 스킬 이펙트 애니메이션 클립
 
 ★ WZ 병행 작업:
-- [ ] FrameAnimator (딜레이 기반 프레임 전환)
-- [ ] WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동 —
-  `LoadAvatarTexture`/`wz_read_avatar`가 프레임별 실제 딜레이 값을
-  아직 반환하지 않음(`WzTextureLoader.h` 확인). 지금은
-  `UFlipbookComponent`가 호출자가 넘긴 고정 `Duration`(main.cpp
-  데모는 0.15초)으로만 재생 — 실제 딜레이 노출은 `wz_read_avatar` DLL
-  export 확장이 필요한 별도 작업.
+- [ ] FrameAnimator (딜레이 기반 프레임 전환) — 지금은 `UFlipbookComponent`가
+  이 역할을 겸하고 있어서 별도 클래스는 미착수(아래 항목으로 충분히
+  커버됨).
+- [x] WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동 —
+  `wz_read_avatar`(`WzTest/WzNativeLib/WzExports.cs`)에 `int* outDelayMs`
+  출력 파라미터를 추가했다. `AvatarCanvas.CreateFrame()`이 내부적으로
+  쓰는 `ActionFrame`(딜레이 포함)은 그 메서드 밖으로 안 나오므로,
+  별도로 `AvatarCanvas.GetActionFrames(actionName)`(`AvatarCanvas.cs:667`,
+  액션 전체 프레임을 다시 훑어서 각각의 WZ `"delay"` 프로퍼티를
+  `LoadActionFrameDesc`로 채워 돌려주는 기존 public 메서드 — 새로
+  만들 필요 없이 그대로 재사용)를 호출해 `[frameIndex].AbsoluteDelay`
+  (`ActionFrame.cs:22-26`, 음수 delay 값을 `Math.Abs`로 정규화한 것)를
+  꺼내 넘긴다. 프레임 인덱스가 범위를 벗어나면 WZ 쪽 기본 폴백과 동일한
+  120ms를 유지.
+  C++ 쪽 `FAvatarTexture`(`WzTextureLoader.h`)에 `int32 m_DelayMs = 120`
+  필드 추가, `main.cpp`의 walk1 로딩 루프가 하드코딩했던 `0.15f` 대신
+  `Frame.m_DelayMs / 1000.0f`를 그대로 `FFlipbookFrame::m_Duration`에
+  사용하도록 교체. `UFlipbookComponent::SetFrames()`에는 방어 코드
+  추가 — WZ 딜레이가 0 이하로 들어오면 `Tick()`의 프레임 전환
+  `while` 루프가 절대 안 끝나는 무한 루프가 되므로, 그런 경우만
+  화면에 안 티 나는 최소값(0.001초)으로 클램프.
+  **로컬 재빌드 필요**: DLL export 시그니처가 바뀌었으므로
+  `WzNativeLib.dll`을 다시 `dotnet publish`해서 `Game/Bin/`에
+  교체해야 함 — Phase 8에 적어둔 빌드 절차와 동일.
 
 완료 기준: 캐릭터 이동 시 Walk 애니메이션 자동 전환 — `UFlipbookComponent`
 자체는 완료(위 데모로 프레임 순환 재생 확인 가능), "이동 시"(Input

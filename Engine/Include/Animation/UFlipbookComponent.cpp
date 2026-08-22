@@ -26,7 +26,17 @@ void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bL
 	for (int32 i = 0; i < Frames.Num(); i++)
 	{
 		Frames[i].m_pTexture->AddRef();
-		m_Frames.Add(Frames[i]);
+
+		FFlipbookFrame Frame = Frames[i];
+		if (Frame.m_Duration <= 0.0f)
+		{
+			// WZ 딜레이(외부 데이터) 값이 0/음수로 들어올 가능성에 대한 방어 —
+			// Duration이 0 이하로 남으면 Tick()의 프레임 전환 while 루프가
+			// 절대 안 끝나는 무한 루프가 된다(m_ElapsedInFrame이 매 반복 그대로라
+			// 조건이 계속 참). 화면에 티도 안 날 만큼 짧은 최소값으로만 올려둔다.
+			Frame.m_Duration = 0.001f;
+		}
+		m_Frames.Add(Frame);
 	}
 
 	m_bLoop = bLoop;
