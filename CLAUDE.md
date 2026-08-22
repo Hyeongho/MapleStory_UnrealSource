@@ -494,12 +494,18 @@ Phase 8 렌더러 항목 전체 완료.
   4. 1차 검증은 엔진 빌드 전에 `wz_test.exe`로 먼저 해볼 수 있음 —
      `wz_test.exe WzNativeLib.dll "<wz경로>" "" "" "<canvas 노드 경로>" canvas.bmp`
      실행 후 생성된 `canvas.bmp`를 이미지 뷰어로 열어 디코딩 결과 확인.
-- [ ] STL → 엔진 컨테이너 교체 (wz_test.cpp)  
-  std::vector → TArray / std::string → FString / std::unordered_map → TMap / std::unique_ptr → TSharedPtr
+- [x] STL → 엔진 컨테이너 교체 (wz_test.cpp) — **조사 결과 해당 없음으로
+  판명, 실제 교체는 하지 않음.** `wz_test.cpp`(`WzComparerR2` 저장소
+  `WzTest/wz_test.cpp`)는 자기 자신의 CMake 타겟(`WzTest/CMakeLists.txt`)
+  으로만 빌드되는 독립 진단 실행 파일이라 `Engine.lib`/`Game.exe`(이
+  엔진의 "STL 금지" 정책이 적용되는 범위)에 전혀 링크되지 않는다.
+  실제 STL 사용도 `std::vector`/`std::unordered_map`/`std::unique_ptr`는
+  0건이고 `std::string`만 CLI 인자·파일 경로 처리용으로 소량 쓰인다 —
+  애초에 정책 적용 대상이 아니었다.
 
-완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — 코드 작성 완료,
-**Windows/Visual Studio에서 사용자 빌드·시각 검증 대기 중** (DirectXTK를
-별도로 빌드해 결과물을 넣는 등 로컬 환경 설정 필요, 아래 참고)
+완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — **Windows/Visual
+Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래 로컬 환경
+설정을 거쳐 정상 출력 확인됨)
 
 **DirectXTK 설치 방식**: NuGet 패키지(`directxtk_desktop_2019`,
 `directxtk_desktop_win10`)는 둘 다 deprecated 상태였고, vcpkg는 사용자
@@ -543,9 +549,32 @@ Phase 8 렌더러 항목 전체 완료.
 
 ### Phase 9 — Animation 시스템 (1주)
 
-파일 위치: `Engine/Animation/`
+파일 위치: `Engine/Include/Animation/` (다른 Phase와 동일하게 로드맵
+문서의 `Engine/Animation/`이 아니라 실제 스캐폴딩된 `Engine/Include/`
+하위 경로 사용)
 
-- [ ] `UFlipbookComponent.h / .cpp` — 스프라이트 시트 프레임 재생
+- [x] `UFlipbookComponent.h / .cpp` — 스프라이트 시트(정확히는 지금은
+  WZ 아바타 합성 텍스처 시퀀스) 프레임 재생. `UActorComponent` 상속,
+  `SetFrames(TArray<FFlipbookFrame>, bLoop)`로 프레임 목록을 받아
+  `Tick(DeltaTime)`이 경과 시간에 따라 프레임을 넘기면서 형제
+  `USpriteComponent`(`GetOwner()->GetComponent<USpriteComponent>()`로
+  `BeginPlay()`에서 캐싱)의 텍스처를 교체한다. `FFlipbookFrame`은
+  텍스처(`ID3D11ShaderResourceView*`)+원점+프레임당 표시 시간(초)
+  묶음 — 딜레이는 아직 호출자가 지정(아래 "WZ 애니메이션 프레임 딜레이
+  → UFlipbookComponent 연동" 참고, 이번엔 미착수).
+  **소유권 규칙**: `ID3D11ShaderResourceView`는 COM 레퍼런스 카운트
+  객체이고 `USpriteComponent::SetTexture()`는 넘겨받은 레퍼런스를
+  소유권째 가져가 다음 교체 시 `Release()`를 소비한다 — 같은 프레임을
+  루프마다 반복해서 넘겨야 하므로, `SetFrames()`는 각 텍스처를
+  `AddRef()`해서 컴포넌트 수명 동안 자체 보관하고, `Tick()`이 매번
+  프레임을 넘기기 직전에 그 프레임 텍스처를 한 번 더 `AddRef()`한다
+  (`AddRef` 없이 그대로 넘기면 두 번째 루프에서 이미 해제된 포인터를
+  다시 쓰는 use-after-free가 됨).
+  `Game/Include/main.cpp`에서 실제 사용 데모: `pPlayerCharacter`에
+  `"walk1"` 액션의 프레임을 `FrameIndex` 0부터 실패(`nullptr`)할
+  때까지 순차 로드해(`LoadAvatarTexture`가 프레임 개수를 미리 알려주지
+  않아서 런타임 추론) `UFlipbookComponent`에 태우고 `Play()` — WZ에
+  `walk1` 데이터가 없으면 조용히 폴백(기존 `stand1` 정적 프레임 유지).
 - [ ] `UAnimStateMachine.h / .cpp` — Idle→Move→Attack→Dead 상태 전환
 - [ ] `UAnimNotify.h / .cpp` — 특정 프레임에 이벤트 발생
 - [ ] 스프라이트 시트 JSON 파싱 (TexturePacker 포맷)
@@ -555,9 +584,17 @@ Phase 8 렌더러 항목 전체 완료.
 
 ★ WZ 병행 작업:
 - [ ] FrameAnimator (딜레이 기반 프레임 전환)
-- [ ] WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동
+- [ ] WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동 —
+  `LoadAvatarTexture`/`wz_read_avatar`가 프레임별 실제 딜레이 값을
+  아직 반환하지 않음(`WzTextureLoader.h` 확인). 지금은
+  `UFlipbookComponent`가 호출자가 넘긴 고정 `Duration`(main.cpp
+  데모는 0.15초)으로만 재생 — 실제 딜레이 노출은 `wz_read_avatar` DLL
+  export 확장이 필요한 별도 작업.
 
-완료 기준: 캐릭터 이동 시 Walk 애니메이션 자동 전환
+완료 기준: 캐릭터 이동 시 Walk 애니메이션 자동 전환 — `UFlipbookComponent`
+자체는 완료(위 데모로 프레임 순환 재생 확인 가능), "이동 시"(Input
+연동)는 Phase 13(입력 시스템)이 아직 없어서 이번 범위 밖 — 지금은
+스폰 직후부터 계속 반복 재생하는 상태로 대체 검증.
 
 ---
 

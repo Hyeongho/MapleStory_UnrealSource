@@ -5,16 +5,13 @@
 #include "Render/RenderQueue.h"
 #include "Render/FCamera2D.h"
 #include "Render/WzTextureLoader.h"
-#include "Render/FHitFlash.h"
-#include "Render/FDamagePopup.h"
-#include "Render/FDamageFont.h"
-#include "Render/FScreenFade.h"
 #include "Core/Math/FVector2D.h"
-#include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
 #include "Timer/FTimerManager.h"
 #include "World/UWorld.h"
 #include "Object/ACharacter.h"
+#include "Animation/UFlipbookComponent.h"
+#include "Core/Containers/TArray.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
@@ -138,22 +135,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// 실제 WZ 리소스 경로 — 로컬 환경에 맞게 바꿔서 테스트한다.
 	// WzTextureLoader.h 상단 주석 참고: WzNativeLib.dll을 이 exe와 같은 폴더(Game/Bin/)에 둬야 한다.
 	static const char* TestWzPath = R"(C:\Nexon\MapleStory\Data\Character.wz)";
-	static const char* TestCanvasNodePath = R"(00002000.img\face\0)";
-
-	ID3D11ShaderResourceView* pTestTexture = FWzTextureLoader::LoadCanvasTexture(*pDevice, TestWzPath, TestCanvasNodePath);
-	if (!pTestTexture)
-	{
-		// DLL/WZ 파일이 아직 준비되지 않았거나 경로가 로컬 환경과 다르면,
-		// Resource Manager(Phase 14) 이전까지 쓰던 체커보드 placeholder로 폴백한다.
-		pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
-	}
-	check(pTestTexture != nullptr);
-
-	// 실제 데미지 숫자 이미지 폰트(Etc.wz/DamageSkin.img, 스킨 0 기본 "NoRed0" 스타일).
-	// Etc.wz도 KMST 병합 포맷 덕에 위 TestWzPath(Base.wz 루트)로 접근 가능하다.
-	// 실패 시(DLL/경로 없음) IsLoaded()가 false를 반환 — 아래 데모에서 placeholder로 폴백.
-	FDamageFont DamageFont;
-	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
 
 	// 아바타 합성 렌더링(wz_read_avatar) — 바디/페이스/헤어/장비를 하나로 합성한
 	// 캐릭터 텍스처. loadoutSpec은 WzComparerR2 GUI의 "아바타 코드"와 같은 포맷
@@ -168,31 +149,41 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	pPlayerCharacter->LoadAvatar(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
 	pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
 
+	// Phase 9 — 걷기(walk1) 프레임을 0부터 순서대로 하나씩 로드해본다. WZ 데이터가
+	// 없거나 "walk1" 액션 자체가 없으면 첫 호출부터 nullptr이 나와서 WalkFrames가
+	// 비고, 위에서 이미 실어둔 stand1 정적 프레임이 그대로 유지된다(조용한 폴백).
+	// LoadAvatarTexture는 프레임 "개수"를 미리 알려주지 않으므로, nullptr이 나오는
+	// 지점까지가 실제 프레임 수라고 런타임에 추론한다.
+	// 프레임 딜레이(0.15초)는 하드코딩 — 실제 WZ per-frame delay 연동은 별도 작업
+	// (CLAUDE.md Phase 9 "WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동").
+	TArray<FFlipbookFrame> WalkFrames;
+	for (int32 i = 0; ; i++)
+	{
+		FAvatarTexture Frame = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "walk1", i);
+		if (!Frame.m_pTexture)
+		{
+			break;
+		}
+
+		WalkFrames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, 0.15f });
+	}
+
+	if (WalkFrames.Num() > 0)
+	{
+		// SetFrames()가 각 텍스처를 AddRef해서 자체 배열에 옮겨 담으므로, 여기서 갖고
+		// 있던 로컬 레퍼런스(LoadAvatarTexture가 돌려준 것)는 그대로 반납해도 된다.
+		UFlipbookComponent* pFlipbook = pPlayerCharacter->AddComponent<UFlipbookComponent>();
+		pFlipbook->SetFrames(WalkFrames, /*bLoop=*/ true);
+		pFlipbook->Play();
+
+		for (int32 i = 0; i < WalkFrames.Num(); i++)
+		{
+			WalkFrames[i].m_pTexture->Release();
+		}
+	}
+
 	MSG Msg = {};
 	bool bRunning = true;
-
-	// TODO: 피격 깜빡임(FHitFlash) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	// 델타타임은 이제 TickGlobalClock()/GetDeltaTime()으로 전역 공급된다 (Timer/FTimerManager.h).
-	FHitFlash HitFlash;
-	constexpr float FLASH_INTERVAL = 1.0f; // 1초마다 한 번씩 트리거해서 육안으로 비교
-	float TimeSinceLastFlash = 0.0f;
-
-	// TODO: 데미지 숫자 팝업(FDamagePopup/FDamageFont) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	// bDamageFontLoaded면 실제 WZ 데미지 숫자 이미지로, 아니면 기존 placeholder 텍스처로
-	// "떠오르며 페이드아웃" 생명주기를 검증한다.
-	FDamagePopup DamagePopup;
-	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
-	float TimeSinceLastPopup = 0.0f;
-
-	// TODO: 화면 페이드인·아웃(FScreenFade) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	// 4초 주기로 FadeOut(0.5초) -> 유지(0.5초) -> FadeIn(0.5초)을 반복해서
-	// 화면이 검게 덮였다 다시 밝아지는지 육안으로 비교한다.
-	ID3D11ShaderResourceView* pBlackTexture = FSpriteBatch::CreateSolidColorTexture(*pDevice, FColor::Black);
-	FScreenFade ScreenFade;
-	constexpr float FADE_CYCLE = 4.0f;
-	constexpr float FADE_DURATION = 0.5f;
-	float TimeSinceCycleStart = 0.0f;
-	bool bFadedInThisCycle = true;
 
 	while (bRunning)
 	{
@@ -217,72 +208,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		GTimerManager->Tick(DeltaTime);
 		pWorld->Tick(DeltaTime);
 
-		TimeSinceLastFlash += DeltaTime;
-		if (TimeSinceLastFlash >= FLASH_INTERVAL)
-		{
-			HitFlash.Trigger();
-			TimeSinceLastFlash = 0.0f;
-		}
-		HitFlash.Update(DeltaTime);
-
-		TimeSinceLastPopup += DeltaTime;
-		if (TimeSinceLastPopup >= DAMAGE_POPUP_INTERVAL)
-		{
-			// 흰색(White) 틴트 — NoRed0 글리프 자체가 이미 빨간 데미지 색 그림이라
-			// 틴트를 곱하면 색이 바뀌므로, 알파(페이드)만 영향 주도록 흰색을 쓴다.
-			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor::White);
-			TimeSinceLastPopup = 0.0f;
-		}
-		DamagePopup.Update(DeltaTime);
-		if (DamagePopup.IsActive())
-		{
-			if (bDamageFontLoaded)
-			{
-				DamageFont.SubmitNumber(*pRenderQueue, 1234, DamagePopup.GetPosition(), /*ZOrder=*/ 0, DamagePopup.GetTint(), ELayer::Effect);
-			}
-			else
-			{
-				pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
-			}
-		}
-
-		TimeSinceCycleStart += DeltaTime;
-		if (TimeSinceCycleStart >= FADE_CYCLE)
-		{
-			TimeSinceCycleStart -= FADE_CYCLE; // 초과분 이월 — 다음 사이클도 정확한 간격 유지(drift 방지)
-			ScreenFade.FadeOut(FADE_DURATION);
-			bFadedInThisCycle = false;
-		}
-		if (!bFadedInThisCycle && TimeSinceCycleStart >= FADE_DURATION * 2.0f) // 아웃(0.5) + 유지(0.5) 후 인 시작
-		{
-			ScreenFade.FadeIn(FADE_DURATION);
-			bFadedInThisCycle = true;
-		}
-		ScreenFade.Update(DeltaTime);
-		if (ScreenFade.GetAlpha() > 0.0f)
-		{
-			// GetAlpha() > 0 — IsActive()가 아니라 이걸로 판단해야 함(FadeOut 완료 후에도
-			// FadeIn 전까지는 계속 화면을 덮고 있어야 하므로, FScreenFade.h 주석 참고).
-			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
-		}
-
 		// pWorld->Render()가 스폰된 모든 액터(지금은 pPlayerCharacter 하나)의
 		// 컴포넌트를 순회하며 렌더 큐에 제출한다 — USpriteComponent::Render()가
 		// 원점 보정(GetWorldTransform().m_Location - Origin)까지 알아서 처리하므로
 		// 예전처럼 main.cpp가 직접 SubmitSprite를 호출할 필요가 없다. 앞으로
 		// 몬스터/이펙트 액터가 늘어나도 이 줄은 더 안 건드려도 됨.
 		pWorld->Render(*pRenderQueue);
-
-		// TODO: 레이어 렌더링 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-		// 카메라를 오른쪽으로 옮겨서, 월드 스프라이트는 화면에서 왼쪽으로 밀려나고
-		// UI 스프라이트는 (50,50)에 고정돼 있는지 눈으로 비교한다.
-		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(50.0f, 50.0f), 0, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::UI);
-		// Parallax 테스트 — ParallaxFactor 0.3이라 카메라가 100px 움직여도 70px만큼만
-		// 덜 따라가야 정상(= 카메라와 같은 방향으로 30px만 이동, 나머지는 화면에 남는 느낌).
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(-200.0f, 0.0f), -1, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::Background, 0.3f);
-
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, HitFlash.GetTint());
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
@@ -296,9 +227,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		pSwapChain->Present(1);
 	}
-
-	pTestTexture->Release();
-	pBlackTexture->Release();
 
 	// pWorld 소멸자가 아직 안 지워진 액터(pPlayerCharacter 포함)를
 	// EndPlay+소멸자+FMemory::Free로 정리하고, ~ACharacter() -> ~AActor()가
