@@ -9,6 +9,7 @@ struct FAvatarTexture
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr;
 	FVector2D m_Origin = FVector2D::Zero;
+	int32 m_DelayMs = 120;
 };
 
 class FWzTextureLoader

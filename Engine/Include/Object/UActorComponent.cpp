@@ -21,3 +21,8 @@ void UActorComponent::Tick(float DeltaTime)
 void UActorComponent::EndPlay()
 {
 }
+
+void UActorComponent::Render(FRenderQueue& Queue)
+{
+    (void)Queue;
+}

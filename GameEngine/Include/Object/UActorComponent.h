@@ -2,6 +2,7 @@
 #include "Object/UObject.h"
 
 class AActor;
+class FRenderQueue;
 
 class UActorComponent : public UObject
 {
@@ -23,6 +24,8 @@ public:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;
+
+    virtual void Render(FRenderQueue& Queue);
 
 private:
     AActor* m_pOwner;

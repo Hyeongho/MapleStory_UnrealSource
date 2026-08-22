@@ -7,7 +7,7 @@ namespace
 {
 	using FnReadCanvas = const uint8_t* (*)(const char* WzPath, const char* NodePath, int* OutWidth, int* OutHeight, int* OutLen);
 
-	using FnReadAvatar = const uint8_t* (*)(const char* WzPath, const char* LoadoutSpec, const char* ActionName, int FrameIndex, const char* EmotionName, int EmotionFrameIndex, int* OutWidth, int* OutHeight, int* OutOriginX, int* OutOriginY, int* OutLen);
+	using FnReadAvatar = const uint8_t* (*)(const char* WzPath, const char* LoadoutSpec, const char* ActionName, int FrameIndex, const char* EmotionName, int EmotionFrameIndex, int* OutWidth, int* OutHeight, int* OutOriginX, int* OutOriginY, int* OutLen, int* OutDelayMs);
 
 	using FnFree = void(*)(const char* Ptr);
 
@@ -151,8 +151,9 @@ FAvatarTexture FWzTextureLoader::LoadAvatarTexture(FDXDevice& Device, const char
 	int OriginX = 0;
 	int OriginY = 0;
 	int Len = 0;
+	int DelayMs = 120;
 
-	const uint8_t* Pixels = DllState.ReadAvatar(WzPath, LoadoutSpec, ActionName, FrameIndex, EmotionName, EmotionFrameIndex, &Width, &Height, &OriginX, &OriginY, &Len);
+	const uint8_t* Pixels = DllState.ReadAvatar(WzPath, LoadoutSpec, ActionName, FrameIndex, EmotionName, EmotionFrameIndex, &Width, &Height, &OriginX, &OriginY, &Len, &DelayMs);
 	if (!Pixels || Len == 0 || Width <= 0 || Height <= 0)
 	{
 		return Result;
@@ -160,6 +161,7 @@ FAvatarTexture FWzTextureLoader::LoadAvatarTexture(FDXDevice& Device, const char
 
 	Result.m_pTexture = UploadBGRATexture(Device, Pixels, Width, Height);
 	Result.m_Origin = FVector2D((float)OriginX, (float)OriginY);
+	Result.m_DelayMs = DelayMs;
 
 	DllState.Free((const char*)Pixels);
 

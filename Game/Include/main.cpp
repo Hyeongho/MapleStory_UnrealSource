@@ -13,6 +13,10 @@
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
 #include "Timer/FTimerManager.h"
+#include "World/UWorld.h"
+#include "Object/ACharacter.h"
+#include "Animation/UFlipbookComponent.h"
+#include "Core/Containers/TArray.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
@@ -92,7 +96,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	FDXDevice* pDevice = new FDXDevice();
 	bool bDeviceOK = pDevice->Initialize();
 	verify(bDeviceOK);
-
 	if (!bDeviceOK)
 	{
 		return -1;
@@ -102,18 +105,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	FDXSwapChain* pSwapChain = new FDXSwapChain();
 	bool bSwapChainOK = pSwapChain->Initialize(*pDevice, hWnd, WINDOW_WIDTH, WINDOW_HEIGHT);
 	verify(bSwapChainOK);
-
 	if (!bSwapChainOK)
 	{
 		return -1;
 	}
-
 	GDXSwapChain = pSwapChain;
 
 	FSpriteBatch* pSpriteBatch = new FSpriteBatch();
 	bool bSpriteBatchOK = pSpriteBatch->Initialize(*pDevice);
 	verify(bSpriteBatchOK);
-
 	if (!bSpriteBatchOK)
 	{
 		return -1;
@@ -129,42 +129,41 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	FTimerManager* pTimerManager = new FTimerManager();
 	GTimerManager = pTimerManager;
 
+	UWorld* pWorld = new UWorld();
+	GWorld = pWorld;
+
 	static const char* TestWzPath = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
 	static const char* TestCanvasNodePath = R"(Mob\_Canvas\0100100.img\stand\0)";
 
-	ID3D11ShaderResourceView* pTestTexture = FWzTextureLoader::LoadCanvasTexture(*pDevice, TestWzPath, TestCanvasNodePath);
-	if (!pTestTexture)
+	static const char* TestLoadoutSpec = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
+	ACharacter* pPlayerCharacter = pWorld->SpawnActor<ACharacter>();
+	pPlayerCharacter->LoadAvatar(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
+	pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
+
+	TArray<FFlipbookFrame> WalkFrames;
+	for (int32 i = 0; ; i++)
 	{
-		pTestTexture = FSpriteBatch::CreateCheckerboardTexture(*pDevice, 64, 64, 8, FColor::Red, FColor::White);
+		FAvatarTexture Frame = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "swingT3", i);
+		if (!Frame.m_pTexture)
+		{
+			break;
+		}
+
+		WalkFrames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, Frame.m_DelayMs / 1000.0f });
 	}
 
-	check(pTestTexture != nullptr);
-
-	FDamageFont DamageFont;
-	bool bDamageFontLoaded = DamageFont.Load(*pDevice, TestWzPath);
-
-	static const char* TestLoadoutSpec = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
-	FAvatarTexture TestAvatar = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "swingT2", 1);
-	bool bAvatarLoaded = TestAvatar.m_pTexture != nullptr;
+	if (WalkFrames.Num() > 0)
+	{
+		// SetFrames()가 각 텍스처를 AddRef해서 자체 배열에 옮겨 담으므로, 여기서 갖고
+		// 있던 로컬 레퍼런스(LoadAvatarTexture가 돌려준 것)는 그대로 반납해도 된다.
+		UFlipbookComponent* pFlipbook = pPlayerCharacter->AddComponent<UFlipbookComponent>();
+		pFlipbook->SetFrames(WalkFrames, /*bLoop=*/ true);
+		pFlipbook->Play();
+	}
 
 	MSG Msg = {};
 	bool bRunning = true;
 
-	FHitFlash HitFlash;
-	constexpr float FLASH_INTERVAL = 1.0f;
-	float TimeSinceLastFlash = 0.0f;
-
-	// TODO: 데미지 숫자 팝업(FDamagePopup/FDamageFont) 스모크 테스트용 임시 코드 — 확인 끝나면 이 블록 통째로 제거할 것.
-	FDamagePopup DamagePopup;
-	constexpr float DAMAGE_POPUP_INTERVAL = 1.5f; // 1.5초마다 한 번씩 스폰해서 육안으로 비교
-	float TimeSinceLastPopup = 0.0f;
-
-	ID3D11ShaderResourceView* pBlackTexture = FSpriteBatch::CreateSolidColorTexture(*pDevice, FColor::Black);
-	FScreenFade ScreenFade;
-	constexpr float FADE_CYCLE = 4.0f;
-	constexpr float FADE_DURATION = 0.5f;
-	float TimeSinceCycleStart = 0.0f;
-	bool bFadedInThisCycle = true;
 
 	while (bRunning)
 	{
@@ -187,75 +186,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		TickGlobalClock();
 		float DeltaTime = GetDeltaTime();
 		GTimerManager->Tick(DeltaTime);
+		pWorld->Tick(DeltaTime);
 
-		TimeSinceLastFlash += DeltaTime;
-
-		if (TimeSinceLastFlash >= FLASH_INTERVAL)
-		{
-			HitFlash.Trigger();
-			TimeSinceLastFlash = 0.0f;
-		}
-
-		HitFlash.Update(DeltaTime);
-
-		TimeSinceLastPopup += DeltaTime;
-
-		if (TimeSinceLastPopup >= DAMAGE_POPUP_INTERVAL)
-		{
-			// 흰색(White) 틴트 — NoRed0 글리프 자체가 이미 빨간 데미지 색 그림이라
-			// 틴트를 곱하면 색이 바뀌므로, 알파(페이드)만 영향 주도록 흰색을 쓴다.
-			DamagePopup.Spawn(FVector2D(300.0f, 300.0f), 40.0f, 1.0f, FLinearColor::White);
-			TimeSinceLastPopup = 0.0f;
-		}
-
-		DamagePopup.Update(DeltaTime);
-
-		if (DamagePopup.IsActive())
-		{
-			if (bDamageFontLoaded)
-			{
-				DamageFont.SubmitNumber(*pRenderQueue, 1234, DamagePopup.GetPosition(), /*ZOrder=*/ 0, DamagePopup.GetTint(), ELayer::Effect);
-			}
-
-			else
-			{
-				pRenderQueue->SubmitSprite(pTestTexture, DamagePopup.GetPosition(), /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, DamagePopup.GetTint(), ELayer::Effect);
-			}
-		}
-
-		TimeSinceCycleStart += DeltaTime;
-
-		if (TimeSinceCycleStart >= FADE_CYCLE)
-		{
-			TimeSinceCycleStart -= FADE_CYCLE; // 초과분 이월 — 다음 사이클도 정확한 간격 유지(drift 방지)
-			ScreenFade.FadeOut(FADE_DURATION);
-			bFadedInThisCycle = false;
-		}
-
-		if (!bFadedInThisCycle && TimeSinceCycleStart >= FADE_DURATION * 2.0f) // 아웃(0.5) + 유지(0.5) 후 인 시작
-		{
-			ScreenFade.FadeIn(FADE_DURATION);
-			bFadedInThisCycle = true;
-		}
-
-		ScreenFade.Update(DeltaTime);
-
-		if (ScreenFade.GetAlpha() > 0.0f)
-		{
-			pRenderQueue->SubmitSprite(pBlackTexture, FVector2D::Zero, FScreenFade::SCREEN_FADE_ZORDER, FVector2D((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT), 0.0f, FLinearColor(0.0f, 0.0f, 0.0f, ScreenFade.GetAlpha()), ELayer::UI);
-		}
-
-		if (bAvatarLoaded)
-		{
-			pRenderQueue->SubmitSprite(TestAvatar.m_pTexture, FVector2D(-300.0f, 100.0f) - TestAvatar.m_Origin, /*ZOrder=*/ 0);
-		}
+		pWorld->Render(*pRenderQueue);
 
 		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(50.0f, 50.0f), 0, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::UI);
-
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D(-200.0f, 0.0f), -1, FVector2D(1.0f, 1.0f), 0.0f, FLinearColor::White, ELayer::Background, 0.3f);
-
-		pRenderQueue->SubmitSprite(pTestTexture, FVector2D::Zero, /*ZOrder=*/ 0, FVector2D(1.0f, 1.0f), 0.0f, HitFlash.GetTint());
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
@@ -270,13 +205,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		pSwapChain->Present(1);
 	}
 
-	pTestTexture->Release();
-	pBlackTexture->Release();
-
-	if (TestAvatar.m_pTexture) 
+	for (int32 i = 0; i < WalkFrames.Num(); i++)
 	{
-		TestAvatar.m_pTexture->Release();
+		WalkFrames[i].m_pTexture->Release();
 	}
+
+	// pWorld 소멸자가 아직 안 지워진 액터(pPlayerCharacter 포함)를
+	// EndPlay+소멸자+FMemory::Free로 정리하고, ~ACharacter() -> ~AActor()가
+	// USpriteComponent까지 연쇄로 정리하면서 그 안의 텍스처 Release()도
+	// 함께 처리된다 — 별도 해제 코드 불필요.
+	delete pWorld;
+	GWorld = nullptr;
 
 	delete pTimerManager;
 	GTimerManager = nullptr;

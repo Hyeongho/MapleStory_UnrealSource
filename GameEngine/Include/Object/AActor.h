@@ -5,6 +5,7 @@
 #include "Object/CastTemplates.h"
 
 class UActorComponent;
+class FRenderQueue;
 
 class AActor : public UObject
 {
@@ -12,6 +13,11 @@ class AActor : public UObject
 public:
     AActor();
     virtual ~AActor() override;
+
+    uint32 GetActorId() const
+    {
+        return m_ActorId;
+    }
 
     template<typename T>
     T* AddComponent()
@@ -22,6 +28,11 @@ public:
         T* Comp = new (Mem) T();
         Comp->SetOwner(this);
         m_Components.Add(static_cast<UActorComponent*>(Comp));
+
+        if (m_bHasBegunPlay)
+        {
+            Comp->BeginPlay();
+        }
 
         return Comp;
     }
@@ -47,6 +58,10 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;
 
+    void Render(FRenderQueue& Queue);
+
 private:
     TArray<UActorComponent*> m_Components;
+    uint32 m_ActorId = 0;
+    bool m_bHasBegunPlay = false;
 };

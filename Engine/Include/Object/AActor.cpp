@@ -2,6 +2,12 @@
 #include "Object/AActor.h"
 #include "Object/UActorComponent.h"
 
+namespace
+{
+    // 0은 GetActorId()가 "없음"을 뜻하는 값으로 예약돼 있어서 1부터 시작한다.
+    uint32 GNextActorId = 1;
+}
+
 AActor::AActor() 
 {
 
@@ -35,6 +41,8 @@ void AActor::RemoveComponent(UActorComponent* Comp)
 
 void AActor::BeginPlay()
 {
+    m_bHasBegunPlay = true;
+
     for (int32 i = 0; i < m_Components.Num(); i++)
     {
         m_Components[i]->BeginPlay();
@@ -54,5 +62,13 @@ void AActor::EndPlay()
     for (int32 i = 0; i < m_Components.Num(); i++)
     {
         m_Components[i]->EndPlay();
+    }
+}
+
+void AActor::Render(FRenderQueue& Queue)
+{
+    for (int32 i = 0; i < m_Components.Num(); i++)
+    {
+        m_Components[i]->Render(Queue);
     }
 }

@@ -49,6 +49,12 @@
     <Filter Include="05. Render">
       <UniqueIdentifier>{77f3b3ab-8b52-4a66-aba9-0f0cd6920790}</UniqueIdentifier>
     </Filter>
+    <Filter Include="06. World">
+      <UniqueIdentifier>{59ea4ce2-3b93-43f0-bc50-4a8cd902762c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Animation">
+      <UniqueIdentifier>{c5d89ebf-30f5-40b6-9e88-91fd8095149e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -261,6 +267,18 @@
     <ClInclude Include="Render\FDamageFont.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Object\ACharacter.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\USpriteComponent.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="World\UWorld.h">
+      <Filter>06. World</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UFlipbookComponent.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -400,6 +418,18 @@
     </ClCompile>
     <ClCompile Include="Render\FDamageFont.cpp">
       <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\ACharacter.cpp">
+      <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\USpriteComponent.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="World\UWorld.cpp">
+      <Filter>06. World</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UFlipbookComponent.cpp">
+      <Filter>07. Animation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
