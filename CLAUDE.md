@@ -596,6 +596,26 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
 연동)는 Phase 13(입력 시스템)이 아직 없어서 이번 범위 밖 — 지금은
 스폰 직후부터 계속 반복 재생하는 상태로 대체 검증.
 
+**버그 노트 — `AddComponent<T>()`가 스폰 후 추가된 컴포넌트에
+`BeginPlay()`를 안 부르던 문제**: 위 데모를 처음 붙였을 때 캐릭터가
+전혀 안 걸었다. 원인은 `AActor::AddComponent<T>()`(`Engine/Include/Object/AActor.h`)가
+컴포넌트를 만들기만 하고 `BeginPlay()`는 안 불러준다는 것 —
+`ACharacter` 생성자에서 붙는 `USpriteComponent`는 `SpawnActor`가
+액터 생성 직후 한 번 돌리는 `BeginPlay()` 일괄 전파(`AActor::BeginPlay()`)를
+받지만, `UFlipbookComponent`처럼 그 이후(스폰 뒤)에
+`AddComponent<T>()`로 추가된 컴포넌트는 그 일괄 전파를 받을 기회 자체가
+없어서 `BeginPlay()`가 영원히 안 불렸다 — `UFlipbookComponent::BeginPlay()`가
+캐싱해야 할 `m_pTargetSprite`가 계속 `nullptr`이라 `Tick()`이 내부
+프레임 인덱스는 넘기면서도 실제 `SetTexture()`는 절대 안 불렀던 것.
+`AActor`에 `bool m_bHasBegunPlay`를 추가해서, `AddComponent<T>()`가
+액터가 이미 `BeginPlay`를 마친 상태면 새 컴포넌트에 즉시
+`BeginPlay()`를 호출해주도록 수정(생성자 시점에 붙는 컴포넌트는
+기존 일괄 전파 경로 그대로라 이중 호출 없음). 스폰 이후에 컴포넌트를
+런타임으로 붙이는 모든 미래 호출 지점(Phase 10 피격 반응 컴포넌트,
+Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공용 API
+버그였어서 `main.cpp` 개별 호출 지점이 아니라 `AActor.h/.cpp`에서
+근본 수정.
+
 ---
 
 ### Phase 10 — Physics / Collision (1주)

@@ -168,6 +168,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		WalkFrames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, 0.15f });
 	}
 
+	// 진단용 — 0이 찍히면 로컬 WZ에 이 아바타 조합의 "walk1" 액션 자체가
+	// 없다는 뜻(코드 버그가 아니라 데이터 문제). N > 0인데도 캐릭터가 여전히
+	// 안 걸으면 그건 별개의 코드 버그.
+	wchar_t DebugMsg[128];
+	swprintf_s(DebugMsg, L"[Animation] walk1 frames loaded: %d\n", WalkFrames.Num());
+	OutputDebugStringW(DebugMsg);
+
 	if (WalkFrames.Num() > 0)
 	{
 		// SetFrames()가 각 텍스처를 AddRef해서 자체 배열에 옮겨 담으므로, 여기서 갖고

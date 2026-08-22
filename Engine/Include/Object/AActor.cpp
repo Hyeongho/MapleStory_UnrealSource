@@ -42,6 +42,8 @@ void AActor::RemoveComponent(UActorComponent* Comp)
 
 void AActor::BeginPlay()
 {
+    m_bHasBegunPlay = true;
+
     for (int32 i = 0; i < m_Components.Num(); i++)
     {
         m_Components[i]->BeginPlay();

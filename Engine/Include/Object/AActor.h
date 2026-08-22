@@ -32,6 +32,17 @@ public:
         Comp->SetOwner(this);
         m_Components.Add(static_cast<UActorComponent*>(Comp));
 
+        // 액터가 이미 BeginPlay를 마친 뒤(런타임 중) 추가된 컴포넌트는
+        // AActor::BeginPlay()의 일괄 전파를 받을 기회가 없으므로 즉시
+        // BeginPlay()를 호출한다. 생성자 안에서 붙는 컴포넌트(예: ACharacter의
+        // USpriteComponent)는 이 시점에 m_bHasBegunPlay가 아직 false라 여기선
+        // 건너뛰고, SpawnActor -> BeginPlay()의 기존 일괄 전파가 대신 한 번만
+        // 호출해준다 — 두 경로가 겹치지 않아 이중 호출 없음.
+        if (m_bHasBegunPlay)
+        {
+            Comp->BeginPlay();
+        }
+
         return Comp;
     }
 
@@ -63,4 +74,5 @@ public:
 private:
     TArray<UActorComponent*> m_Components;
     uint32 m_ActorId = 0;
+    bool m_bHasBegunPlay = false;
 };
