@@ -167,6 +167,8 @@
     <ClInclude Include="Ability\UAttributeSet.h" />
     <ClInclude Include="Ability\UGameplayAbility.h" />
     <ClInclude Include="Ability\UGameplayEffect.h" />
+    <ClInclude Include="Animation\UAnimNotify.h" />
+    <ClInclude Include="Animation\UAnimStateMachine.h" />
     <ClInclude Include="Animation\UFlipbookComponent.h" />
     <ClInclude Include="Core\Containers\HashFunctions.h" />
     <ClInclude Include="Core\Containers\TArray.h" />
@@ -241,6 +243,8 @@
     <ClCompile Include="Ability\UAttributeSet.cpp" />
     <ClCompile Include="Ability\UGameplayAbility.cpp" />
     <ClCompile Include="Ability\UGameplayEffect.cpp" />
+    <ClCompile Include="Animation\UAnimNotify.cpp" />
+    <ClCompile Include="Animation\UAnimStateMachine.cpp" />
     <ClCompile Include="Animation\UFlipbookComponent.cpp" />
     <ClCompile Include="Core\Logging\FLogger.cpp" />
     <ClCompile Include="Core\Math\FColor.cpp" />

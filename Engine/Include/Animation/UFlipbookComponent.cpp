@@ -2,6 +2,7 @@
 #include "Animation/UFlipbookComponent.h"
 #include "Object/AActor.h"
 #include "Render/USpriteComponent.h"
+#include "Animation/UAnimNotify.h"
 
 UFlipbookComponent::UFlipbookComponent()
 {
@@ -89,6 +90,17 @@ void UFlipbookComponent::Tick(float DeltaTime)
 		}
 
 		pCurrent = &m_Frames[m_CurrentFrameIndex];
+
+		// 이 프레임으로 "전환되는" 순간 정확히 한 번 발동. 이 while 루프 바디는
+		// 위 두 분기(++ 또는 0으로 wrap) 중 하나를 실제로 거쳐야만 여기 도달하므로
+		// (정지 분기는 이 줄 전에 break) — 한 Tick 안에서 DeltaTime이 커서 여러
+		// 프레임을 건너뛰면 건너뛴 프레임 각각의 Notify가 빠짐없이 발동하고,
+		// 반대로 같은 프레임에 계속 머무르는 Tick에서는 while 조건 자체가 거짓이라
+		// 이 줄이 전혀 실행되지 않아 반복 발동하지 않는다.
+		if (pCurrent->m_pNotify)
+		{
+			pCurrent->m_pNotify->Notify(GetOwner());
+		}
 	}
 
 	if (m_pTargetSprite)

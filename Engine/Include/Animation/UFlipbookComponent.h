@@ -5,16 +5,16 @@
 #include <d3d11.h>
 
 class USpriteComponent;
+class UAnimNotify;
 
 // 재생 프레임 하나 — 텍스처(AddRef해서 컴포넌트가 보관)+원점(WzTextureLoader가
-// 돌려주는 발밑 정렬 피벗)+이 프레임을 보여줄 시간(초). WZ 실제 프레임 딜레이
-// 연동 전까지는 호출자가 Duration을 직접 지정한다(CLAUDE.md Phase 9 "WZ 애니메이션
-// 프레임 딜레이 → UFlipbookComponent 연동" 항목 — 이번 범위 밖).
+// 돌려주는 발밑 정렬 피벗)+이 프레임을 보여줄 시간(초)+선택적 프레임 알림.
 struct FFlipbookFrame
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr; // 소유 — SetFrames()가 AddRef해서 보관
 	FVector2D m_Origin = FVector2D::Zero;
 	float m_Duration = 0.1f;
+	UAnimNotify* m_pNotify = nullptr; // 비소유 — 이 프레임으로 "전환되는 순간" 한 번 Notify() 호출. nullptr이면 아무 일도 안 함. 수명은 호출자 책임.
 };
 
 // 프레임 시퀀스를 시간에 따라 넘기면서 형제 USpriteComponent의 텍스처를
