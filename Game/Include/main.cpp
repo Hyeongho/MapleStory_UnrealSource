@@ -8,14 +8,38 @@
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
 #include "Timer/FTimerManager.h"
+#include "Timer/FTimerHandle.h"
+#include "Timer/FTimerDelegate.h"
 #include "World/UWorld.h"
 #include "Object/ACharacter.h"
 #include "Animation/UFlipbookComponent.h"
+#include "Animation/UAnimStateMachine.h"
 #include "Core/Containers/TArray.h"
+#include "Core/String/FName.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
 static const uint32 WINDOW_HEIGHT = 768;
+
+// Phase 9 데모 전용 — Idle/Move 토글 컨텍스트. FTimerDelegate::CreateStatic()은
+// void(*)(void*) 형태의 함수 포인터 + 컨텍스트만 받으므로, 토글해야 할 상태를
+// 여기 담아 컨텍스트로 넘긴다. Input 시스템(Phase 13)이 생기면 이 타이머 토글
+// 블록만 실제 키 입력 → SetState() 호출로 교체하면 되고, UAnimStateMachine
+// 자체의 등록/구성 코드는 그대로 유지된다.
+struct FAnimDemoToggleContext
+{
+	UAnimStateMachine* m_pStateMachine = nullptr;
+	bool m_bMoving = false;
+};
+static FAnimDemoToggleContext GAnimDemoToggle;
+static FTimerHandle GAnimDemoToggleHandle;
+
+static void ToggleAnimDemoState(void* Ctx)
+{
+	FAnimDemoToggleContext* pCtx = static_cast<FAnimDemoToggleContext*>(Ctx);
+	pCtx->m_bMoving = !pCtx->m_bMoving;
+	pCtx->m_pStateMachine->SetState(pCtx->m_bMoving ? FName(L"Move") : FName(L"Idle"));
+}
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -179,15 +203,50 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (WalkFrames.Num() > 0)
 	{
-		// SetFrames()가 각 텍스처를 AddRef해서 자체 배열에 옮겨 담으므로, 여기서 갖고
-		// 있던 로컬 레퍼런스(LoadAvatarTexture가 돌려준 것)는 그대로 반납해도 된다.
+		// UFlipbookComponent를 먼저 붙인다 — UAnimStateMachine::BeginPlay()가
+		// GetComponent<UFlipbookComponent>()로 형제를 찾으므로 반드시 이 순서.
+		// (AddComponent<T>()는 액터가 이미 BeginPlay를 마쳤으면 즉시 BeginPlay()를
+		// 부르므로, UAnimStateMachine을 먼저 붙이면 그 시점엔 아직
+		// UFlipbookComponent가 m_Components에 없어서 캐시가 nullptr로 굳어버린다.)
 		UFlipbookComponent* pFlipbook = pPlayerCharacter->AddComponent<UFlipbookComponent>();
-		pFlipbook->SetFrames(WalkFrames, /*bLoop=*/ true);
-		pFlipbook->Play();
+		UAnimStateMachine* pAnimStateMachine = pPlayerCharacter->AddComponent<UAnimStateMachine>();
+		(void)pFlipbook; // UAnimStateMachine이 SetState()를 통해 간접적으로 제어 — 직접 SetFrames/Play 호출 불필요
 
+		// "Idle" 상태 — stand1 프레임 1장. 위 LoadAvatar()가 이미 스프라이트에
+		// 직접 밀어넣은 것과 별개로, 상태 머신에 등록하려면 원시 FAvatarTexture가
+		// 따로 필요해서 한 번 더 로드한다(이중 로드지만 Resource Manager(Phase 14)
+		// 이전까지는 어쩔 수 없음).
+		TArray<FFlipbookFrame> IdleFrames;
+		FAvatarTexture StandFrame = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
+		if (StandFrame.m_pTexture)
+		{
+			IdleFrames.Add(FFlipbookFrame{ StandFrame.m_pTexture, StandFrame.m_Origin, StandFrame.m_DelayMs / 1000.0f });
+		}
+
+		if (IdleFrames.Num() > 0)
+		{
+			pAnimStateMachine->RegisterState(FName(L"Idle"), IdleFrames, /*bLoop=*/ true);
+			IdleFrames[0].m_pTexture->Release(); // RegisterState()가 자체 몫을 AddRef했으니 로컬 참조 반납
+		}
+
+		pAnimStateMachine->RegisterState(FName(L"Move"), WalkFrames, /*bLoop=*/ true);
 		for (int32 i = 0; i < WalkFrames.Num(); i++)
 		{
-			WalkFrames[i].m_pTexture->Release();
+			WalkFrames[i].m_pTexture->Release(); // 위와 동일한 이유
+		}
+
+		pAnimStateMachine->SetState(IdleFrames.Num() > 0 ? FName(L"Idle") : FName(L"Move"));
+
+		// Input이 없어서 SetState()를 타이머로 토글한다 — 위 주석 참고,
+		// Phase 13에서 이 블록만 실제 입력으로 교체.
+		if (IdleFrames.Num() > 0)
+		{
+			GAnimDemoToggle.m_pStateMachine = pAnimStateMachine;
+			GAnimDemoToggle.m_bMoving = false;
+
+			GTimerManager->SetTimer(GAnimDemoToggleHandle,
+				FTimerDelegate::CreateStatic(&ToggleAnimDemoState, &GAnimDemoToggle),
+				/*Rate=*/ 2.0f, /*bLoop=*/ true);
 		}
 	}
 

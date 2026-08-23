@@ -575,8 +575,42 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
   때까지 순차 로드해(`LoadAvatarTexture`가 프레임 개수를 미리 알려주지
   않아서 런타임 추론) `UFlipbookComponent`에 태우고 `Play()` — WZ에
   `walk1` 데이터가 없으면 조용히 폴백(기존 `stand1` 정적 프레임 유지).
-- [ ] `UAnimStateMachine.h / .cpp` — Idle→Move→Attack→Dead 상태 전환
-- [ ] `UAnimNotify.h / .cpp` — 특정 프레임에 이벤트 발생
+- [x] `UAnimStateMachine.h / .cpp` — Idle→Move→Attack→Dead 상태 전환.
+  `UFlipbookComponent`의 형제 컴포넌트(`GetComponent<UFlipbookComponent>()`로
+  `BeginPlay()`에서 캐싱 — `UFlipbookComponent`가 `USpriteComponent`를
+  찾는 것과 동일한 패턴), `TMap<FName, FAnimStateData>`(프레임 배열+루프
+  여부)로 상태를 등록해두고 `SetState(FName)` 한 번으로 형제의
+  `SetFrames()`+`Play()`를 대신 호출해준다. 같은 상태로 다시
+  `SetState()`하면 no-op(매번 애니메이션 재시작 방지), 미등록 이름이면
+  `ensure()` 경고 후 무시.
+  **소유권 규칙**: `RegisterState()`가 넘겨받은 텍스처를 `AddRef()`해서
+  "지금 활성 상태인지와 무관하게, 등록된 모든 상태에 대해 동시에"
+  컴포넌트 수명 동안 보관한다 — `SetState()`는 이 보관본을 그대로
+  `UFlipbookComponent::SetFrames()`에 넘길 뿐이고, `SetFrames()`가 자기
+  예전 프레임을 알아서 `Release()`하므로 "떠나는 상태"를 위한 해제
+  로직이 따로 필요 없다.
+  **`AddComponent` 순서 주의**: `UFlipbookComponent`를 `UAnimStateMachine`보다
+  먼저 붙여야 한다 — 반대 순서면 `UAnimStateMachine::BeginPlay()`
+  시점에 형제가 아직 없어서 캐시가 영구히 `nullptr`로 굳는다(이전
+  라운드에 고친 "스폰 후 `AddComponent`는 즉시 `BeginPlay()` 호출"
+  버그와 맞물리는 지점 — `main.cpp`에 주석으로 명시).
+  `main.cpp` 데모: `"Idle"`(stand1 1프레임)/`"Move"`(walk1 시퀀스) 두
+  상태를 등록하고, Input(Phase 13)이 아직 없어서 `FTimerManager`로
+  2초마다 토글 — Phase 13에서 이 타이머 트리거 블록만 실제 입력으로
+  바꾸면 되고 `SetState()` API 자체는 그대로 재사용(걷기 애니메이션
+  데모와 마찬가지로 삭제 대상 스모크 테스트가 아니라 영구 데모).
+- [x] `UAnimNotify.h / .cpp` — 특정 프레임에 이벤트 발생. 실제 언리얼과
+  동일하게 `UObject`를 상속해 `Notify(AActor*)`를 오버라이드하는
+  서브클래스 방식(이미 있는 `UClass`/`Cast<T>` 인프라 재사용, Phase 7.7의
+  `UGameplayEffect`/`UGameplayAbility`와 같은 선례) — 멀티캐스트 큐나
+  AnimInstance 개념 없이 가상 함수 하나뿐(소비할 전투/피격 판정
+  시스템이 아직 없어서 그 이상은 투기적 코드). `FFlipbookFrame`에
+  비소유 `UAnimNotify* m_pNotify` 필드 추가, `UFlipbookComponent::Tick()`이
+  프레임 전환 `while` 루프에서 새 프레임으로 넘어가는 시점(루프
+  랩어라운드 포함)마다 정확히 한 번 `Notify()`를 호출 — 같은 프레임에
+  머무르는 틱에서는 `while` 조건 자체가 거짓이라 재호출 없음. 이번
+  세션 데모에는 등록한 알림이 없음(콤보/공격 판정 등 실제 소비처가
+  생기면 그때 서브클래스를 만들어 씀) — 인프라만 갖춰둠.
 - [ ] 스프라이트 시트 JSON 파싱 (TexturePacker 포맷)
 - [ ] 애니메이션 블렌딩 (이동 중 공격 전환)
 - [ ] 역방향 재생 (Reverse)
