@@ -28,6 +28,13 @@ public:
 	void SetTint(const FLinearColor& Tint) { m_Tint = Tint; }
 	void SetParallaxFactor(float Factor) { m_ParallaxFactor = Factor; }
 
+	// 좌우 반전 — WZ 아바타 원본 아트는 한쪽 방향(관찰상 왼쪽)만 갖고 있어서,
+	// 반대 방향은 렌더러가 직접 미러링해야 한다(WZ 데이터 쪽엔 이걸 위한
+	// 스위치가 없음 — AvatarCanvas 조사 완료). Render()가 이 값에 따라
+	// Scale.X 부호와 피벗 보정 방향을 바꾼다.
+	void SetFlipHorizontal(bool bFlip) { m_bFlipHorizontal = bFlip; }
+	bool IsFlippedHorizontal() const { return m_bFlipHorizontal; }
+
 	bool HasTexture() const { return m_pTexture != nullptr; }
 
 	// 이 컴포넌트가 소유한 텍스처를 RenderQueue에 제출한다. UActorComponent::Render()를
@@ -42,4 +49,5 @@ private:
 	ELayer m_Layer = ELayer::Object;
 	FLinearColor m_Tint = FLinearColor::White;
 	float m_ParallaxFactor = 1.0f;
+	bool m_bFlipHorizontal = false;
 };

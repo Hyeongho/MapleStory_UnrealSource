@@ -22,6 +22,12 @@ public:
 
 	void SetLocation(const FVector2D& Location);
 
+	// 좌우 반전 — WZ 아바타 원본 아트는 왼쪽만 보고 있다(관찰된 기본 동작),
+	// bFacingRight=true면 USpriteComponent를 좌우 반전해서 오른쪽을 보게 한다.
+	// Phase 13(Input)에서 이동 방향에 따라 실제로 호출하게 될 예정 — 지금은
+	// main.cpp 데모가 타이머로 대신 호출한다.
+	void SetFacingRight(bool bFacingRight);
+
 	USpriteComponent* GetSpriteComponent() const { return m_pSpriteComponent; }
 
 private:
