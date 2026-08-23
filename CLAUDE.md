@@ -611,6 +611,25 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
   머무르는 틱에서는 `while` 조건 자체가 거짓이라 재호출 없음. 이번
   세션 데모에는 등록한 알림이 없음(콤보/공격 판정 등 실제 소비처가
   생기면 그때 서브클래스를 만들어 씀) — 인프라만 갖춰둠.
+- [x] `USpriteComponent` 좌우 반전(FlipHorizontal) ★추가 — Phase 8/Renderer
+  소속이지만 "오른쪽으로 걸어갈 때 오른쪽을 봐야 하는데 지금은 항상
+  왼쪽만 보고 있다"는 질문으로 이번에 같이 처리. 조사 결과 WZ 아바타
+  데이터는 한쪽 방향만 원본으로 갖고 있고(`ActionFrame.Flip`은 좌우
+  방향 스위치가 아니라 같은 프레임 안 파츠 재사용용 저작 힌트 —
+  `AvatarCanvas`에 "반대 방향으로 그려줘" 스위치 자체가 없음, 조사
+  완료), 좌우 반전은 원래부터 렌더러 몫이라는 게 확정됐다.
+  `SpriteBatch::DrawSprite`가 DirectXTK `Draw()`를 항상 `Scale` 벡터를
+  그대로 흘려보내며 호출하고 있어서(`SpriteBatch.cpp`), 별도 배관 없이
+  `USpriteComponent`에 `bool m_bFlipHorizontal`+`SetFlipHorizontal(bool)`만
+  추가하면 됐다. 단, `Render()`가 DirectXTK 쪽 Origin을 항상 `(0,0)`으로
+  고정해서 피벗 보정을 Position 쪽에서 미리 하고 있었기 때문에(`Location - m_Origin`),
+  단순히 `Scale.X`만 `-1`로 뒤집으면 피벗이 어긋나 반전할 때마다 캐릭터가
+  옆으로 튀는 버그가 된다 — 반전 시엔 `Position.X = Location.X + Origin.X`
+  (빼기 대신 더하기)로 보정 방향도 같이 뒤집어야 피벗이 월드 좌표에
+  고정된다(`USpriteComponent.cpp` 주석에 유도 과정 기록). `ACharacter::SetFacingRight(bool)`가
+  이 위로 얇게 얹힘 — 실제 이동 방향에 따라 호출하는 건 Phase 13(Input)
+  몫, 지금은 `main.cpp`의 Idle/Move 타이머 데모가 같이 토글해서 육안
+  확인.
 - [ ] 스프라이트 시트 JSON 파싱 (TexturePacker 포맷)
 - [ ] 애니메이션 블렌딩 (이동 중 공격 전환)
 - [ ] 역방향 재생 (Reverse)

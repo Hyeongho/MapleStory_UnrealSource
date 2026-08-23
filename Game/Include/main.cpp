@@ -21,14 +21,17 @@ static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
 static const uint32 WINDOW_HEIGHT = 768;
 
-// Phase 9 데모 전용 — Idle/Move 토글 컨텍스트. FTimerDelegate::CreateStatic()은
-// void(*)(void*) 형태의 함수 포인터 + 컨텍스트만 받으므로, 토글해야 할 상태를
-// 여기 담아 컨텍스트로 넘긴다. Input 시스템(Phase 13)이 생기면 이 타이머 토글
-// 블록만 실제 키 입력 → SetState() 호출로 교체하면 되고, UAnimStateMachine
-// 자체의 등록/구성 코드는 그대로 유지된다.
+// Phase 9 데모 전용 — Idle/Move + 좌우 반전 토글 컨텍스트. FTimerDelegate::
+// CreateStatic()은 void(*)(void*) 형태의 함수 포인터 + 컨텍스트만 받으므로,
+// 토글해야 할 상태를 여기 담아 컨텍스트로 넘긴다. Input 시스템(Phase 13)이
+// 생기면 이 타이머 토글 블록만 실제 키 입력 → SetState()/SetFacingRight() 호출로
+// 교체하면 되고, UAnimStateMachine/좌우 반전 자체의 API는 그대로 유지된다.
+// "이동 상태 = 오른쪽을 본다"는 방향-이동 연동 자체에 의미는 없음(실제 이동이
+// 없으니) — 좌우 반전이 눈에 보이게 확인하려고 같은 타이머에 얹었을 뿐.
 struct FAnimDemoToggleContext
 {
 	UAnimStateMachine* m_pStateMachine = nullptr;
+	ACharacter* m_pCharacter = nullptr;
 	bool m_bMoving = false;
 };
 static FAnimDemoToggleContext GAnimDemoToggle;
@@ -39,6 +42,7 @@ static void ToggleAnimDemoState(void* Ctx)
 	FAnimDemoToggleContext* pCtx = static_cast<FAnimDemoToggleContext*>(Ctx);
 	pCtx->m_bMoving = !pCtx->m_bMoving;
 	pCtx->m_pStateMachine->SetState(pCtx->m_bMoving ? FName(L"Move") : FName(L"Idle"));
+	pCtx->m_pCharacter->SetFacingRight(pCtx->m_bMoving);
 }
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -242,6 +246,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (IdleFrames.Num() > 0)
 		{
 			GAnimDemoToggle.m_pStateMachine = pAnimStateMachine;
+			GAnimDemoToggle.m_pCharacter = pPlayerCharacter;
 			GAnimDemoToggle.m_bMoving = false;
 
 			GTimerManager->SetTimer(GAnimDemoToggleHandle,
