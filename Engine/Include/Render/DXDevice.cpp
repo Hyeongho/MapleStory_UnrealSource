@@ -80,6 +80,25 @@ void FDXDevice::Shutdown()
 		m_pContext = nullptr;
 	}
 
+#ifdef _DEBUG
+	// 이 함수가 main.cpp 종료 순서상 제일 마지막(다른 모든 D3D11 리소스 —
+	// 텍스처/뷰/스왑체인 등 — 해제 이후)에 불리므로, 여기서도 뭔가 살아있다고
+	// 나오면 어딘가 AddRef/Release 짝이 안 맞는 진짜 릭이라는 뜻이다.
+	// Initialize()가 D3D11_CREATE_DEVICE_DEBUG 없이(디버그 레이어 미설치)
+	// 폴백 생성됐으면 QueryInterface가 실패하므로 조용히 건너뛴다.
+	// 리포트는 Visual Studio의 출력(Output) 창에만 찍힌다 — Game.exe는 콘솔
+	// 없는 창 프로그램이라 디버거로 실행해야(F5) 보인다.
+	if (m_pDevice)
+	{
+		ID3D11Debug* pDebug = nullptr;
+		if (SUCCEEDED(m_pDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&pDebug)) && pDebug)
+		{
+			pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+			pDebug->Release();
+		}
+	}
+#endif
+
 	if (m_pDevice)
 	{
 		m_pDevice->Release();

@@ -20,19 +20,22 @@ void FMemoryTracker::OnFree()
 
 void FMemoryTracker::ReportLeaks()
 {
+	// OutputDebugStringW는 두 분기 모두에서 부른다 — wprintf만으로는 콘솔이
+	// 없는 GUI 서브시스템 앱(Game.exe, WinMain)에서 "릭 없음" 결과가 아무
+	// 데도 안 찍혀서, 호출 자체가 안 된 건지 정상인지 구분이 안 된다.
 	int64 leaked = m_AllocCount - m_FreeCount;
+	wchar_t buf[256];
 	if (leaked > 0)
 	{
-		wchar_t buf[256];
 		swprintf_s(buf, L"[MemoryTracker] LEAK detected: %lld alloc, %lld free, %lld leaked, %lld bytes total\n", m_AllocCount, m_FreeCount, leaked, m_TotalAllocBytes);
-		OutputDebugStringW(buf);
-		wprintf(buf);
 	}
-
 	else
 	{
-		wprintf(L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
+		swprintf_s(buf, L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
 	}
+
+	OutputDebugStringW(buf);
+	wprintf(buf);
 }
 
 #endif
