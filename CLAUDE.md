@@ -630,6 +630,29 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
   이 위로 얇게 얹힘 — 실제 이동 방향에 따라 호출하는 건 Phase 13(Input)
   몫, 지금은 `main.cpp`의 Idle/Move 타이머 데모가 같이 토글해서 육안
   확인.
+- [x] 메모리/D3D11 릭 진단 장치 실제 연결 ★추가 — "메모리 릭 없는지
+  확인하세요" 조언이 실행 불가능한 조언이었다는 지적으로 발견.
+  `FMemoryTracker`(Phase 1)는 `operator new`/`delete`(`MemoryOverride.cpp`)에
+  이미 걸려있어 자동으로 집계는 되고 있었지만, `ReportLeaks()` 호출이
+  `Test/Include/main.cpp`에만 있고 `Game/Include/main.cpp`엔 없어서
+  실제 게임 실행 시 결과를 볼 방법이 없었다 — `wWinMain` 종료 직전,
+  다른 모든 엔진 싱글턴(`pWorld`~`pDevice`)이 이미 다 정리된 시점에
+  `#ifdef _DEBUG`로 감싼 `FMemoryTracker::ReportLeaks()` 호출을 추가.
+  `FMemoryTracker.cpp`의 "릭 없음" 분기가 `wprintf`만 부르고
+  `OutputDebugStringW`는 안 불러서, 콘솔 없는 `Game.exe`(WinMain)에선
+  "릭 없음" 결과가 아무 데도 안 찍히는 버그도 같이 발견돼 수정 —
+  이제 두 분기 다 `OutputDebugStringW` 호출.
+  **더 중요한 발견**: `FMemoryTracker`는 `FMemory`/`new`/`delete` 힙
+  할당만 세고, 이번 세션 내내 신경 써온 `ID3D11ShaderResourceView`의
+  COM `AddRef`/`Release`(텍스처 참조 카운트)는 전혀 못 잡는다 — 그래서
+  `FDXDevice::Shutdown()`에 D3D11 디버그 레이어 기반 진단을 별도로
+  추가했다: 컨텍스트 해제 후·디바이스 해제 전(다른 모든 D3D11 리소스가
+  이미 해제된 시점) `ID3D11Debug::ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL)`
+  호출. `DXDevice::Initialize()`가 디버그 레이어 없이(Graphics Tools 옵션
+  미설치) 폴백 생성됐으면 `QueryInterface`가 실패하므로 조용히
+  건너뜀. 두 진단 다 `OutputDebugStringW` 기반이라 **Visual Studio
+  출력(Output) 창에서 디버거로 실행(F5)해야** 보인다 — `Game.exe`를
+  그냥 더블클릭 실행하면 결과를 볼 수 없음.
 - [ ] 스프라이트 시트 JSON 파싱 (TexturePacker 포맷)
 - [ ] 애니메이션 블렌딩 (이동 중 공격 전환)
 - [ ] 역방향 재생 (Reverse)

@@ -16,6 +16,7 @@
 #include "Animation/UAnimStateMachine.h"
 #include "Core/Containers/TArray.h"
 #include "Core/String/FName.h"
+#include "Core/Memory/FMemoryTracker.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
@@ -329,6 +330,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	GDXDevice = nullptr;
 
 	UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
+
+	// Tests 프로젝트(Test/Include/main.cpp)와 동일한 지점 — 여기까지 오면
+	// 위에서 delete한 모든 엔진 싱글턴(pWorld/pTimerManager/.../pDevice)의
+	// 해제가 이미 다 끝난 뒤라, 이 시점에 릭이 있다면 진짜 릭이다.
+	// FMemoryTracker는 Debug 빌드에서만 존재하는 클래스라 #ifdef로 감싼다.
+	// 리포트는 Game.exe에 콘솔이 없어서 wprintf가 아니라 OutputDebugStringW로만
+	// 나가므로(FMemoryTracker.cpp 참고), Visual Studio 출력(Output) 창에서
+	// 디버거로 실행(F5)해야 보인다.
+#ifdef _DEBUG
+	FMemoryTracker::ReportLeaks();
+#endif
 
 	return (int)Msg.wParam;
 }
