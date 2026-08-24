@@ -1018,6 +1018,115 @@ C++ 구현 위치: `WzTest/wz_test.cpp`
 
 ---
 
+## 알려진 기술 부채 (외부 코드 리뷰 검증 결과, 2026-08-22)
+
+사용자가 다른 AI 도구("Codex")로 전체 코드베이스 리뷰를 받아왔고, Claude Code가
+각 항목을 Explore 에이전트 7개로 병렬 검증했다. 아직 아무것도 고치지 않음 —
+Phase 9(`UAnimStateMachine`/`UAnimNotify`) 테스트부터 마무리한 뒤 착수 예정.
+나중에 다시 참고할 수 있도록 검증 결과만 기록.
+
+### 반박됨 — Codex가 틀렸던 항목
+
+- **파생 Actor/Component 소멸자가 안 불린다는 주장** — 틀림. `UObject`부터
+  `ACharacter`/`UFlipbookComponent`/`UAnimStateMachine` 등 전 계층이 이미
+  `virtual ~X() override`로 선언돼 있어서, `Actor->~AActor()`처럼 명시적으로
+  베이스 소멸자를 호출하는 문법도 `delete`와 똑같이 vtable을 타고 파생
+  소멸자부터 정상 실행된다("명시적 소멸자 호출은 가상 디스패치를 우회한다"는
+  건 소멸자가 non-virtual일 때만 해당하는 흔한 오해).
+- **전역 `operator new`가 정적 초기화 순서에 취약하다는 주장** — 틀림.
+  `FMemory::Malloc/Realloc/Free`가 이미 `if (!GMalloc) InitMemory();`로
+  lazy-init하고, `InitMemory()` 내부도 함수 지역 `static` 싱글턴(C++11부터
+  스레드 안전 초기화 보장)이라 정적 초기화 순서 문제 자체가 없음.
+
+### 확인됨 — 실제 문제 (우선순위 높은 순, Codex의 자체 순위와는 다름)
+
+- **`FTimerManager::Tick()` 콜백 재진입 시 dangling reference**
+  (`FTimerManager.cpp`) — `FTimerData& Data = m_Timers[i];`를 콜백
+  실행(`Data.m_Delegate.Execute();`) 이후까지 그대로 들고 읽고 쓴다. 콜백이
+  `SetTimer()`를 불러서 `m_Timers.Add()`가 용량 초과로 재할당되면 `Data`는
+  해제된 옛 버퍼를 가리키는 댕글링 레퍼런스가 되고, 그 뒤 `Data.m_bLoop`/
+  `Data.m_Remaining` 접근이 use-after-free. `SetTimer()`가 `Rate <= 0`도
+  거르지 않아서, 반복 타이머에 0 이하 Rate를 주면 매 프레임 재발동하는
+  것도 막지 않음.
+- **`TWeakPtr::Pin()` 멀티스레드 레이스(TOCTOU)** — `IsValid()` 체크와
+  `AddShared()` 증가가 원자적 하나로 묶여있지 않다. 다른 스레드가 그 사이에
+  마지막 strong reference를 해제해서 객체를 파괴하면, `Pin()`의
+  `AddShared()`가 이미 파괴된 객체의 카운트를 0→1로 되살려서(resurrection)
+  use-after-free로 이어질 수 있음. 필요한 건 "0이 아닐 때만 증가"하는
+  compare-exchange 기반 조건부 증가인데, 지금 `AddShared()`는 무조건 증가만
+  함. 싱글스레드로만 쓰는 동안은 재현 안 되지만, CLAUDE.md가 "원자적 참조
+  카운트"를 스레드 안전으로 소개하고 있어 주장과 실제가 다름.
+- **Release 빌드 테스트가 사실상 아무것도 검증 안 함** — `check(expr)`는
+  `assert(expr)` 그대로라 Release(`NDEBUG`)에서 완전히 사라진다.
+  `Test/Include/main.cpp`는 결과 검증에 `check()`를 338번 쓰고 `verify()`는
+  0번 써서, Release "PASSED"는 "크래시 안 하고 끝까지 실행됐다"만 의미하고
+  계산 결과가 실제로 맞았는지는 거의 검증하지 못함. Release에서도 항상
+  평가되는 실패 카운터/매크로가 없음.
+- **문서(C++17/`/W4`/예외 비활성) vs 실제 vcxproj 설정 불일치** — 실제
+  x64 빌드는 `stdcpp20`(문서는 17), `WarningLevel: Level3`(문서는 `/W4`),
+  `Game.vcxproj`는 `ExceptionHandling: Sync`로 예외가 켜져 있음(`Engine.vcxproj`는
+  명시적 비활성 설정 자체가 없어 MSVC 기본값인 활성 상태). RTTI 비활성
+  (`/GR-`)만 문서와 일치. 단, 예외 활성화 건은 Phase 8에 "DirectXTK 호환을
+  위해 켰다"고 이미 자체 기록돼 있어 완전히 숨겨진 불일치는 아니고, 최상단
+  "핵심 원칙" 문단만 그 사실을 반영하도록 갱신이 안 된 상태.
+- **Over-aligned `new`(`alignas(32)` 이상) 미지원** — `MemoryOverride.cpp`엔
+  일반 `operator new`/`new[]`/`delete`/`delete[]`/sized-delete 6개뿐,
+  `operator new(size_t, std::align_val_t)` 계열이 하나도 없음. 그런 타입을
+  `new`로 만들면 `GMalloc`/`FMallocBinned`를 완전히 우회해서 CRT의 기본
+  `_aligned_malloc` 경로로 빠짐 — 렌더링/SIMD 수학 타입이 늘어나면 실제로
+  부딪힐 수 있음.
+- **`FMallocBinned` 멀티스레드 미지원** — `Core/Memory/` 전체에 mutex/
+  atomic/critical section이 전혀 없음(grep 0건). free-list head, 페이지
+  목록(`m_pAllPages`) 갱신이 전부 무보호 read-modify-write라 두 스레드가
+  동시에 `Malloc()`/`Free()`하면 free-list 손상·이중 할당 가능. 사실상
+  메인 스레드 전용 할당자.
+- **GAS periodic effect가 큰 DeltaTime에서 틱을 누락함**
+  (`UAbilitySystemComponent::TickActiveEffects()`) — 주기 타이머가 0 이하로
+  내려가면 `while`이 아니라 `if` 한 번만 modifier를 적용하고 `PeriodTimer`에
+  Period를 한 번만 더한다. 디버거 중단·프레임 히치처럼 DeltaTime이 Period
+  여러 배로 커지면 논리적으로 여러 번 발동해야 할 게 1번만 발동하고 나머지는
+  다음 프레임들에 하나씩 뒤늦게 새어나온다. `UFlipbookComponent::Tick()`은
+  이미 `while`로 이걸 정확히 따라잡고 있어서(놓친 프레임의 `AnimNotify`까지
+  전부 발동) 같은 엔진 안에서 두 시스템의 정책이 다름.
+- **Gameplay Tag가 참조 카운트 없는 단순 배열이라 중복 소유권을
+  못 다룸** — `FGameplayTagContainer::m_Tags`가 그냥 dedup되는
+  `TArray<FGameplayTag>`라 "몇 개의 소스가 이 태그를 부여했는지"를 모른다.
+  이펙트 A와 B가 둘 다 같은 태그(예: `State.Buff`)를 부여한 상태에서 A만
+  만료돼도, 제거 경로(`RemoveEffectsWithTag`/`RemoveEffectsOfClass`/자연
+  만료)가 다른 활성 이펙트가 같은 태그를 아직 부여 중인지 확인 없이
+  무조건 태그를 지운다 — B가 여전히 살아있는데 태그만 사라짐.
+- **`MakeShared<T>()`가 실제로는 2번 할당함** — 객체용
+  `FMemory::Malloc(sizeof(T))` 한 번, 그다음 위임하는 raw-pointer 생성자
+  안에서 컨트롤 블록용 `FMemory::Malloc(sizeof(FRefCountBlock))` 한 번 더 —
+  `std::make_shared`/언리얼의 `MakeShared`가 하는 "객체+컨트롤 블록 한
+  번에 할당" 최적화가 아님. 기능적으로 틀린 건 아니지만 이름이 주는 기대와
+  다름.
+- **저장소에 `GameEngine/` 스테일 미러(68개 파일) + 추적된 빌드 산출물
+  28개** — `GameEngine/Include/`가 `Engine/Include/`의 오래된 복사본으로
+  존재하고(둘 다 각각 존재 확인, vcxproj 어디에서도 참조 안 됨), 단순히
+  오래된 정도가 아니라 **이번 세션의 `AddComponent`/`BeginPlay` 버그
+  수정을 포함해 지난 2주간 실제 엔진 변경사항이 전혀 반영 안 된 채 계속
+  갈라지고 있음**(예: `AActor.h`가 51줄 vs 77줄로 실제 내용이 다름).
+  `.exe`/`.lib`/`.idb`/`.pdf`/`.obj` 등 빌드 산출물도 정확히 28개 파일이
+  git에 추적돼 있고, `.gitignore`는 있지만 이미 추적된 파일엔 소급 적용
+  안 됨(레포 용량 `.git` 78MB).
+
+### 부분 확인
+
+- **`UFlipbookComponent`/`UAnimStateMachine`의 null 텍스처 방어 부족** —
+  `AddRef`/`Release` 호출부에 null 체크가 전혀 없는 건 사실이지만, 현재
+  유일한 호출부인 `main.cpp`가 이미 `Frame.m_pTexture`가 non-null일
+  때만 배열에 넣고 있어서 지금 당장 재현되는 크래시는 아님 — 강제되지
+  않은 불변조건(계약)일 뿐.
+- **`TSharedPtr`의 다른 타입 변환 생성자에 타입 안전 제약이 없음** —
+  `TIsBaseOf`/`is_convertible` 같은 SFINAE 제약 없이 `static_cast`만
+  해서 위험한 다운캐스트가 컴파일될 수 있는 건 사실. 다만 "그래서
+  deleter가 파생 타입을 못 찾아 소멸이 깨진다"는 우려는 틀림 — deleter는
+  `MakeShared`/raw-pointer 생성자 시점의 원래 타입에 이미 바인딩돼 있어서
+  나중에 `TSharedPtr<Base>`로 들고 있어도 소멸 자체는 안전함.
+
+---
+
 ## Claude Code 작업 지침
 
 ### Git 운영 규칙
