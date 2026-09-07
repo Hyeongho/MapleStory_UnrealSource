@@ -22,18 +22,10 @@ UAnimStateMachine::~UAnimStateMachine()
 void UAnimStateMachine::RegisterState(FName StateName, const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
 #ifdef _DEBUG
-	// 진단용 — Idle<->Move 반복 전환 중 발생하는 크래시 원인 규명 임시 코드.
 	{
 		wchar_t Buf[256];
-		swprintf_s(Buf, L"[AnimSM] RegisterState(idx=%u): Frames=%d개\n", StateName.GetIndex(), Frames.Num());
+		swprintf_s(Buf, L"[AnimSM] RegisterState 진입(idx=%u): Frames=%d개\n", StateName.GetIndex(), Frames.Num());
 		OutputDebugStringW(Buf);
-		for (int32 i = 0; i < Frames.Num(); i++)
-		{
-			ULONG Ref = Frames[i].m_pTexture->AddRef();
-			Frames[i].m_pTexture->Release();
-			swprintf_s(Buf, L"[AnimSM]   등록 전 incoming[%d] tex=%p 현재refcount=%lu\n", i, (void*)Frames[i].m_pTexture, Ref);
-			OutputDebugStringW(Buf);
-		}
 	}
 #endif
 
@@ -43,13 +35,24 @@ void UAnimStateMachine::RegisterState(FName StateName, const TArray<FFlipbookFra
 	// TArray::Reset()은 COM 레퍼런스를 모르므로 직접 해제해야 한다.
 	for (int32 i = 0; i < Data.m_Frames.Num(); i++)
 	{
-		Data.m_Frames[i].m_pTexture->Release();
+		ID3D11ShaderResourceView* pTex = Data.m_Frames[i].m_pTexture;
+		ULONG After = pTex->Release();
+#ifdef _DEBUG
+		wchar_t Buf[256];
+		swprintf_s(Buf, L"[AnimSM]   재등록 기존분 실제 Release[%d] tex=%p 이 Release 후 refcount=%lu\n", i, (void*)pTex, After);
+		OutputDebugStringW(Buf);
+#endif
 	}
 	Data.m_Frames.Reset();
 
 	for (int32 i = 0; i < Frames.Num(); i++)
 	{
-		Frames[i].m_pTexture->AddRef(); // 이 컴포넌트가 수명 동안 보관할 몫
+		ULONG After = Frames[i].m_pTexture->AddRef(); // 이 컴포넌트가 수명 동안 보관할 몫
+#ifdef _DEBUG
+		wchar_t Buf[256];
+		swprintf_s(Buf, L"[AnimSM]   영구보관 실제 AddRef[%d] tex=%p 이 AddRef 후 refcount=%lu\n", i, (void*)Frames[i].m_pTexture, After);
+		OutputDebugStringW(Buf);
+#endif
 		Data.m_Frames.Add(Frames[i]);
 	}
 

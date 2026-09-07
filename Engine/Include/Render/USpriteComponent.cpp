@@ -18,7 +18,16 @@ void USpriteComponent::SetTexture(ID3D11ShaderResourceView* Texture, const FVect
 {
 	if (m_pTexture)
 	{
+#ifdef _DEBUG
+		// 진단용 — Idle<->Move 반복 전환 크래시 원인 규명 임시 코드. 실제
+		// Release() 반환값(=이 호출 직후의 진짜 참조 카운트)을 그대로 찍는다.
+		ULONG After = m_pTexture->Release();
+		wchar_t Buf[256];
+		swprintf_s(Buf, L"[Sprite] 실제 Release(이전 텍스처 교체) tex=%p 이 Release 후 refcount=%lu\n", (void*)m_pTexture, After);
+		OutputDebugStringW(Buf);
+#else
 		m_pTexture->Release();
+#endif
 	}
 
 	m_pTexture = Texture;
