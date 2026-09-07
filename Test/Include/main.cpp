@@ -2113,6 +2113,6 @@ int main()
 		return 1;
 	}
 
-	wprintf(L"[Tests] ALL CHECKS PASSED (Debug/Release 공통 검증)\n");
+	wprintf(L"[Tests] ALL CHECKS PASSED\n");
 	return 0;
 }
