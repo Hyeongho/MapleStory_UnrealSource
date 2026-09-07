@@ -1021,9 +1021,14 @@ C++ 구현 위치: `WzTest/wz_test.cpp`
 ## 알려진 기술 부채 (외부 코드 리뷰 검증 결과, 2026-08-22)
 
 사용자가 다른 AI 도구("Codex")로 전체 코드베이스 리뷰를 받아왔고, Claude Code가
-각 항목을 Explore 에이전트 7개로 병렬 검증했다. 아직 아무것도 고치지 않음 —
-Phase 9(`UAnimStateMachine`/`UAnimNotify`) 테스트부터 마무리한 뒤 착수 예정.
-나중에 다시 참고할 수 있도록 검증 결과만 기록.
+각 항목을 Explore 에이전트 7개로 병렬 검증해 검증 결과만 먼저 기록해뒀다.
+그 직후 Idle/Move 애니메이션 데모에서 D3D11 텍스처 크래시(Heisenbug)를
+디버깅하던 중, 진단 코드를 바꿨더니 크래시가 재현되지 않는 일이 있었다 —
+애니메이션 refcounting 로직 자체는 내부적으로 일관성이 확인됐으므로, 엔진
+어딘가의 진짜 UB(가장 유력한 후보였던 `FTimerManager::Tick()` 댕글링
+레퍼런스)가 메모리 레이아웃에 민감하게 반응한 결과라는 신호로 보고,
+"버그 먼저 수정하자"는 결정에 따라 아래 "수정 완료" 5개를 이 세션에서
+바로 고쳤다(나머지는 정확성에 직접 영향이 적어 다음 라운드로 보류).
 
 ### 반박됨 — Codex가 틀렸던 항목
 
@@ -1038,24 +1043,53 @@ Phase 9(`UAnimStateMachine`/`UAnimNotify`) 테스트부터 마무리한 뒤 착�
   lazy-init하고, `InitMemory()` 내부도 함수 지역 `static` 싱글턴(C++11부터
   스레드 안전 초기화 보장)이라 정적 초기화 순서 문제 자체가 없음.
 
-### 확인됨 — 실제 문제 (우선순위 높은 순, Codex의 자체 순위와는 다름)
+### 수정 완료 (2026-09-07) — 핵심 정확성 버그 5개
 
-- **`FTimerManager::Tick()` 콜백 재진입 시 dangling reference**
-  (`FTimerManager.cpp`) — `FTimerData& Data = m_Timers[i];`를 콜백
-  실행(`Data.m_Delegate.Execute();`) 이후까지 그대로 들고 읽고 쓴다. 콜백이
-  `SetTimer()`를 불러서 `m_Timers.Add()`가 용량 초과로 재할당되면 `Data`는
-  해제된 옛 버퍼를 가리키는 댕글링 레퍼런스가 되고, 그 뒤 `Data.m_bLoop`/
-  `Data.m_Remaining` 접근이 use-after-free. `SetTimer()`가 `Rate <= 0`도
-  거르지 않아서, 반복 타이머에 0 이하 Rate를 주면 매 프레임 재발동하는
-  것도 막지 않음.
-- **`TWeakPtr::Pin()` 멀티스레드 레이스(TOCTOU)** — `IsValid()` 체크와
-  `AddShared()` 증가가 원자적 하나로 묶여있지 않다. 다른 스레드가 그 사이에
-  마지막 strong reference를 해제해서 객체를 파괴하면, `Pin()`의
-  `AddShared()`가 이미 파괴된 객체의 카운트를 0→1로 되살려서(resurrection)
-  use-after-free로 이어질 수 있음. 필요한 건 "0이 아닐 때만 증가"하는
-  compare-exchange 기반 조건부 증가인데, 지금 `AddShared()`는 무조건 증가만
-  함. 싱글스레드로만 쓰는 동안은 재현 안 되지만, CLAUDE.md가 "원자적 참조
-  카운트"를 스레드 안전으로 소개하고 있어 주장과 실제가 다름.
+아래 5개는 "버그 먼저 수정하자" 결정 이후 이 세션에서 바로 고쳤다. 모두
+소유권 규칙·공개 API 시그니처는 그대로 두고 내부 구현만 수정 —
+`Test/Include/main.cpp`에 각각 회귀 테스트를 추가해뒀다(사용자의 로컬
+Visual Studio Debug/Release 빌드로 검증 필요, 이 세션은 Linux라 직접
+컴파일 불가).
+
+- **`FTimerManager::Tick()` 콜백 재진입 시 dangling reference** — ✅ 수정.
+  `Tick()`이 `Execute()` 호출 이후에는 예전에 잡아둔 `FTimerData&`를 더
+  쓰지 않고 `m_Timers[i]`를 다시 인덱싱해서 읽도록 변경(`FTimerManager.cpp`).
+  `SetTimer()`도 `bLoop=true`이면서 `Rate<=0`이면 `0.001f`로 클램프(1회성
+  타이머는 그대로 둠). 회귀 테스트: `Test/Include/main.cpp` Phase 7.5-8
+  (콜백 안에서 `SetTimer()` 64회 재진입시켜 재할당 유발), 7.5-9(Rate<=0
+  루프 타이머).
+- **`TWeakPtr::Pin()` 멀티스레드 레이스(TOCTOU)** — ✅ 수정.
+  `FRefCountBlock`에 `ConditionallyAddShared()`(compare-exchange 기반
+  "0이 아닐 때만 증가")를 추가하고, `TWeakPtr::Pin()`이 기존
+  `IsValid()`+무조건 `AddShared()` 두 단계를 이 단일 원자적 연산으로
+  교체(`SharedPointerInternals.h`, `TWeakPtr.h`). `FSmartPtrAtomics`에
+  `CompareExchange`(MSVC `_InterlockedCompareExchange` / 그 외
+  `__atomic_compare_exchange_n`)를 새로 추가. 기존 Phase 6-2 `TWeakPtr`
+  테스트가 단일 스레드 시나리오(살아있을 때 Pin 성공 / 파괴 후 Pin 무효)를
+  그대로 커버.
+- **GAS periodic effect가 큰 DeltaTime에서 틱을 누락함** — ✅ 수정.
+  `TickActiveEffects()`의 Infinite/Duration 두 분기 모두 `if`를 `while`로
+  교체해 `UFlipbookComponent::Tick()`과 같은 캐치업 패턴 적용
+  (`UAbilitySystemComponent.cpp`). 회귀 테스트: Phase 7.7-7b(Period 1초
+  효과에 DeltaTime 3.5초를 한 번에 줘서 3번 발동하는지 확인).
+- **Gameplay Tag가 참조 카운트 없는 단순 배열이라 중복 소유권을 못 다룸**
+  — ✅ 수정. `FGameplayTagContainer`에 `m_Tags`와 인덱스 정렬된
+  `TArray<int32> m_TagCounts`를 추가해 `AddTag`/`RemoveTag`를 참조
+  카운트 방식으로 변경 — 카운트가 0이 됐을 때만 실제로 제거
+  (`FGameplayTagContainer.h/.cpp`). `HasTag`/`GetTags()` 등 조회 API는
+  기존과 동일. 회귀 테스트: Phase 7.7-2b(같은 태그를 두 소스가 부여한 뒤
+  하나만 제거해도 남아있는지 확인).
+- **`MakeShared<T>()`가 실제로는 2번 할당함** — ✅ 수정. 객체를 컨트롤
+  블록 안에 인라인으로 저장하는 `FInlineRefCountBlock<T>`를 추가해
+  `FMemory::Malloc()` 1회로 통합(`TSharedPtr.h`) — 전용 `InlineDeleter`는
+  소멸자만 호출하고 메모리는 해제하지 않으며, 실제 해제는
+  `ReleaseShared()`가 WeakCount 0일 때 `FMemory::Free(this)`로 통합
+  블록 전체를 한 번에 수행. 이 델타를 재는 `FMemoryTracker::GetLiveAllocCount()`
+  getter를 새로 추가하고, Phase 6-1b 회귀 테스트로 `MakeShared` 호출
+  전후 살아있는 할당 개수가 정확히 1만 늘고 주는지 확인.
+
+### 확인됨 — 실제 문제, 아직 미수정 (다음 라운드로 보류)
+
 - **Release 빌드 테스트가 사실상 아무것도 검증 안 함** — `check(expr)`는
   `assert(expr)` 그대로라 Release(`NDEBUG`)에서 완전히 사라진다.
   `Test/Include/main.cpp`는 결과 검증에 `check()`를 338번 쓰고 `verify()`는
@@ -1080,27 +1114,6 @@ Phase 9(`UAnimStateMachine`/`UAnimNotify`) 테스트부터 마무리한 뒤 착�
   목록(`m_pAllPages`) 갱신이 전부 무보호 read-modify-write라 두 스레드가
   동시에 `Malloc()`/`Free()`하면 free-list 손상·이중 할당 가능. 사실상
   메인 스레드 전용 할당자.
-- **GAS periodic effect가 큰 DeltaTime에서 틱을 누락함**
-  (`UAbilitySystemComponent::TickActiveEffects()`) — 주기 타이머가 0 이하로
-  내려가면 `while`이 아니라 `if` 한 번만 modifier를 적용하고 `PeriodTimer`에
-  Period를 한 번만 더한다. 디버거 중단·프레임 히치처럼 DeltaTime이 Period
-  여러 배로 커지면 논리적으로 여러 번 발동해야 할 게 1번만 발동하고 나머지는
-  다음 프레임들에 하나씩 뒤늦게 새어나온다. `UFlipbookComponent::Tick()`은
-  이미 `while`로 이걸 정확히 따라잡고 있어서(놓친 프레임의 `AnimNotify`까지
-  전부 발동) 같은 엔진 안에서 두 시스템의 정책이 다름.
-- **Gameplay Tag가 참조 카운트 없는 단순 배열이라 중복 소유권을
-  못 다룸** — `FGameplayTagContainer::m_Tags`가 그냥 dedup되는
-  `TArray<FGameplayTag>`라 "몇 개의 소스가 이 태그를 부여했는지"를 모른다.
-  이펙트 A와 B가 둘 다 같은 태그(예: `State.Buff`)를 부여한 상태에서 A만
-  만료돼도, 제거 경로(`RemoveEffectsWithTag`/`RemoveEffectsOfClass`/자연
-  만료)가 다른 활성 이펙트가 같은 태그를 아직 부여 중인지 확인 없이
-  무조건 태그를 지운다 — B가 여전히 살아있는데 태그만 사라짐.
-- **`MakeShared<T>()`가 실제로는 2번 할당함** — 객체용
-  `FMemory::Malloc(sizeof(T))` 한 번, 그다음 위임하는 raw-pointer 생성자
-  안에서 컨트롤 블록용 `FMemory::Malloc(sizeof(FRefCountBlock))` 한 번 더 —
-  `std::make_shared`/언리얼의 `MakeShared`가 하는 "객체+컨트롤 블록 한
-  번에 할당" 최적화가 아님. 기능적으로 틀린 건 아니지만 이름이 주는 기대와
-  다름.
 - **저장소에 `GameEngine/` 스테일 미러(68개 파일) + 추적된 빌드 산출물
   28개** — `GameEngine/Include/`가 `Engine/Include/`의 오래된 복사본으로
   존재하고(둘 다 각각 존재 확인, vcxproj 어디에서도 참조 안 됨), 단순히
