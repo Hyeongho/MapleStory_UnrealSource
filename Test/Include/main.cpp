@@ -165,6 +165,26 @@ static DWORD WINAPI AtomicStressWorker(LPVOID pParam)
 	return 0;
 }
 
+// Release 빌드에서 check()==assert()가 NDEBUG에 완전히 사라져서 테스트
+// 결과를 실제로 검증하지 못하는 문제(CLAUDE.md 기술 부채) 대응 — 이
+// 파일(Test 전용) 안에서만 check()를 재정의한다. Engine/Game 코드에 있는
+// 진짜 엔진 불변조건용 check()(TArray.h 등 헤더에 인라인으로 들어있는 것들)는
+// 이 #include들이 이미 위에서 원래 정의로 전개를 마쳤으므로 영향받지 않고,
+// 이 지점 아래 main() 본문에 직접 쓰인 호출부에만 적용된다.
+// Debug 동작은 그대로(실패 시 여전히 assert()로 즉시 중단) — Release에서는
+// 지금까지 아무 일도 안 하던 것과 달리 실패를 카운트하고 위치를 출력한다.
+static int32 g_TestFailCount = 0;
+
+#undef check
+#define check(expr) \
+	do { \
+		if (!(expr)) { \
+			g_TestFailCount++; \
+			wprintf(L"[Tests] CHECK FAILED: %hs (%hs:%d)\n", #expr, __FILE__, __LINE__); \
+			assert(expr); \
+		} \
+	} while (0)
+
 int main()
 {
 	FMemory::InitMemory();
@@ -176,6 +196,13 @@ int main()
 	check(obj->y == 100);
 	delete obj;
 
+	// --- over-aligned operator new/delete(std::align_val_t) ---
+	struct alignas(32) FOveralignedObj { int32 x = 7; };
+
+	FOveralignedObj* pOveraligned = new FOveralignedObj();
+	check(pOveraligned->x == 7);
+	check((reinterpret_cast<uintptr_t>(pOveraligned) % 32) == 0);
+	delete pOveraligned;
 
 	int32* arr = new int32[8];
 	check(arr != nullptr);
@@ -2080,5 +2107,12 @@ int main()
 		TestDevice.Shutdown();
 	}
 
+	if (g_TestFailCount > 0)
+	{
+		wprintf(L"[Tests] %d CHECK(S) FAILED\n", g_TestFailCount);
+		return 1;
+	}
+
+	wprintf(L"[Tests] ALL CHECKS PASSED (Debug/Release 공통 검증)\n");
 	return 0;
 }
