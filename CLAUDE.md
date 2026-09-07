@@ -2,7 +2,9 @@
 
 ## 프로젝트 개요
 
-DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따라 C++17로 직접 구현한다.  
+DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따라 C++20 컴파일러
+설정에서 직접 구현한다(C++20 전용 문법을 의도적으로 쓰지는 않음 — 실제 값과
+경위는 아래 "컴파일러 설정" 참고).  
 목표 게임: MapleStory 스타일 2D 플랫포머 RPG  
 포트폴리오 목적: 넥슨 MapleStory 팀 등 대형 스튜디오 지원
 
@@ -11,8 +13,13 @@ DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따�
 ## 핵심 원칙
 
 - STL 사용 금지 — std::vector, std::string, std::unordered_map 전부 자체 구현으로 대체
-- 예외 처리 금지 — /EHs-c- 컴파일 옵션, check() 매크로로 대체
-- RTTI 금지 — /GR- 컴파일 옵션, UClass 기반 Cast<T>() 직접 구현
+- 예외 없는 에러 전파 — 엔진 코어 로직은 check()/verify()/TResult<T,E> 기반.
+  단, 컴파일러 예외 자체가 꺼져있는 건 아님 — Game 프로젝트는 DirectXTK 연동
+  때문에 /EHsc(예외 활성)이고 Engine/Test도 명시적 비활성 설정이 없어 MSVC
+  기본값(활성)이다(2026-09 확인, 실제 값은 "컴파일러 설정" 참고) — "예외
+  금지"는 엔진 자체 코드가 예외를 던지지 않는다는 설계 원칙이지 컴파일러
+  플래그가 아님
+- RTTI 금지 — /GR- 컴파일 옵션(RuntimeTypeInfo: false), UClass 기반 Cast<T>() 직접 구현
 - 언리얼 네이밍 컨벤션 — TArray, TMap, FString, FName, UObject, AActor
 - 단위 테스트 필수 — 각 Phase 완료 시 Tests 프로젝트에서 검증 후 다음 단계 진행
 
@@ -51,15 +58,28 @@ MyEngine.sln
 
 ## 컴파일러 설정 (VS 프로젝트 속성)
 
+아래는 3개 vcxproj(Engine/Game/Test)의 x64 Debug/Release 공통 **실제 설정값**
+(2026-09 확인) — 예전엔 "이렇게 하기로 정했다"는 목표치를 적어뒀는데 실제
+vcxproj와 어긋나 있었다. C++ 표준·경고 수준은 실제 값을 그대로 유지하기로
+확정(vcxproj를 고치지 않음, 문서만 정정) — 아래가 최종 기준.
+
 ```
 구성 형식:          정적 라이브러리 (.lib)  [Engine]
                     응용 프로그램 (.exe)     [Game, Tests]
-C++ 표준:           /std:c++17
-예외 처리:          /EHs-c-   (예외 비활성화)
-RTTI:               /GR-      (dynamic_cast 비활성화)
-경고 수준:          /W4
+C++ 표준:           /std:c++20  (처음부터 vcxproj가 C++20으로 생성돼 있었음
+                    — C++20 전용 문법을 의도적으로 쓰지는 않아서 굳이 17로
+                    낮출 필요가 없다고 판단, 그대로 둠)
+예외 처리:          Engine·Test는 명시 설정 없음(MSVC 기본값 = 활성),
+                    Game은 x64에서 명시적으로 /EHsc(활성) — DirectXTK
+                    헤더가 예외를 쓰므로 Phase 8에서 의도적으로 켰음.
+                    엔진 자체 코드는 여전히 check()/verify()만 쓰고 예외를
+                    던지지 않음(설계 원칙과 컴파일러 플래그는 별개)
+RTTI:               /GR-      (dynamic_cast 비활성화, RuntimeTypeInfo: false)
+경고 수준:          Level3  (프로젝트 초기엔 /W4를 목표로 적어뒀으나, 전체
+                    코드베이스를 W4로 올리면 새로 드러날 경고를 이번에 다
+                    해소할 필요는 없다고 판단해 Level3로 확정)
 추가 포함 디렉터리: $(SolutionDir)Engine/
-미리 컴파일된 헤더: EnginePCH.h 사용
+미리 컴파일된 헤더: EnginePCH.h 사용(Engine만 — Game/Test는 PCH 미설정)
 ```
 
 ---
@@ -85,8 +105,13 @@ using uint32 = uint32_t;
 using uint64 = uint64_t;
 
 #define INDEX_NONE   -1
-#define check(expr)  assert(expr)
-#define verify(expr) assert(expr)
+#define check(expr)  assert(expr)   // Release(NDEBUG)에서 완전히 사라짐 — 부수효과 있는 식을 넣으면 안 됨
+
+#ifdef NDEBUG
+#define verify(expr) ((void)(expr)) // Release: 평가는 하지만 실패해도 그냥 무시
+#else
+#define verify(expr) assert(expr)   // Debug: 실패 시 assert
+#endif
 ```
 
 ---
@@ -1088,32 +1113,51 @@ Visual Studio Debug/Release 빌드로 검증 필요, 이 세션은 Linux라 직�
   getter를 새로 추가하고, Phase 6-1b 회귀 테스트로 `MakeShared` 호출
   전후 살아있는 할당 개수가 정확히 1만 늘고 주는지 확인.
 
+### 수정 완료 (2026-09-07, 3차 라운드) — 남은 기술 부채 중 3개
+
+1·2차 라운드(핵심 정확성 버그 5개 + `FMemoryTracker` 추적 지점 이동)를
+사용자가 로컬 Debug/Release 빌드로 전부 통과 확인한 뒤 이어서 처리.
+C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위 "컴파일러
+설정" 참고), `FMallocBinned` 스레드 안전화는 이번에도 보류(아래 참고).
+
+- **Release 빌드 테스트가 사실상 아무것도 검증 안 함** — ✅ 수정.
+  `check()`의 전역 정의(`EnginePCH.h`)는 엔진 코드 전반의 진짜 불변조건
+  검증에 쓰이므로 그대로 두고, `Test/Include/main.cpp`의 `main()` 시작
+  직전에서만 `check()`를 지역 재정의 — Debug는 기존과 동일하게 실패 시
+  `assert()`로 즉시 중단, Release는 이제 실패를 `g_TestFailCount`에
+  집계하고 위치(`__FILE__:__LINE__`)를 출력한다. `main()` 끝에서
+  `g_TestFailCount > 0`이면 실패 개수를 출력하고 `return 1`, 아니면
+  `"ALL CHECKS PASSED"`를 출력하고 `return 0` — Release에서도 실제로
+  검증이 이뤄지고 실패 시 프로세스 종료 코드로도 드러난다. 각 블록의
+  개별 `"...PASSED"` 출력 351곳은 그대로 뒀음(기존처럼 "이 블록까지
+  크래시 없이 도달했다"는 의미) — 실제 성패 판정은 이 최종 요약이 담당.
+- **문서(C++17/`/W4`/예외 비활성) vs 실제 vcxproj 설정 불일치** — ✅ 정정.
+  "핵심 원칙"·"컴파일러 설정"·`EnginePCH.h` 코드 블록을 실제 값(C++20,
+  Level3, Game만 명시적 예외 활성)으로 갱신 — 코드 변경 없음, 문서만.
+- **Over-aligned `new`(`alignas(32)` 이상) 미지원** — ✅ 수정.
+  `MemoryOverride.cpp`에 `operator new`/`new[]`/`delete`/`delete[]`/
+  sized-delete의 `std::align_val_t` 버전 6개를 추가로 구현 — 전부
+  `FMemory::Malloc(size, alignment)`/`Free()`에 그대로 위임하므로
+  `GMalloc`/`FMallocBinned`/`FMemoryTracker`를 우회하지 않는다.
+  `Test/Include/main.cpp`에 `alignas(32)` 타입으로 정렬 확인 회귀 테스트
+  추가.
+
 ### 확인됨 — 실제 문제, 아직 미수정 (다음 라운드로 보류)
 
-- **Release 빌드 테스트가 사실상 아무것도 검증 안 함** — `check(expr)`는
-  `assert(expr)` 그대로라 Release(`NDEBUG`)에서 완전히 사라진다.
-  `Test/Include/main.cpp`는 결과 검증에 `check()`를 338번 쓰고 `verify()`는
-  0번 써서, Release "PASSED"는 "크래시 안 하고 끝까지 실행됐다"만 의미하고
-  계산 결과가 실제로 맞았는지는 거의 검증하지 못함. Release에서도 항상
-  평가되는 실패 카운터/매크로가 없음.
-- **문서(C++17/`/W4`/예외 비활성) vs 실제 vcxproj 설정 불일치** — 실제
-  x64 빌드는 `stdcpp20`(문서는 17), `WarningLevel: Level3`(문서는 `/W4`),
-  `Game.vcxproj`는 `ExceptionHandling: Sync`로 예외가 켜져 있음(`Engine.vcxproj`는
-  명시적 비활성 설정 자체가 없어 MSVC 기본값인 활성 상태). RTTI 비활성
-  (`/GR-`)만 문서와 일치. 단, 예외 활성화 건은 Phase 8에 "DirectXTK 호환을
-  위해 켰다"고 이미 자체 기록돼 있어 완전히 숨겨진 불일치는 아니고, 최상단
-  "핵심 원칙" 문단만 그 사실을 반영하도록 갱신이 안 된 상태.
-- **Over-aligned `new`(`alignas(32)` 이상) 미지원** — `MemoryOverride.cpp`엔
-  일반 `operator new`/`new[]`/`delete`/`delete[]`/sized-delete 6개뿐,
-  `operator new(size_t, std::align_val_t)` 계열이 하나도 없음. 그런 타입을
-  `new`로 만들면 `GMalloc`/`FMallocBinned`를 완전히 우회해서 CRT의 기본
-  `_aligned_malloc` 경로로 빠짐 — 렌더링/SIMD 수학 타입이 늘어나면 실제로
-  부딪힐 수 있음.
 - **`FMallocBinned` 멀티스레드 미지원** — `Core/Memory/` 전체에 mutex/
-  atomic/critical section이 전혀 없음(grep 0건). free-list head, 페이지
-  목록(`m_pAllPages`) 갱신이 전부 무보호 read-modify-write라 두 스레드가
-  동시에 `Malloc()`/`Free()`하면 free-list 손상·이중 할당 가능. 사실상
-  메인 스레드 전용 할당자.
+  atomic/critical section이 전혀 없음. free-list head, 페이지 목록
+  (`m_pAllPages`) 갱신이 전부 무보호 read-modify-write라 두 스레드가
+  동시에 `Malloc()`/`Free()`하면 free-list 손상·이중 할당 가능. 3차
+  라운드 조사 중 "엔진 어디서도 스레드가 생성되지 않는다"던 이전 기록이
+  부정확했음을 발견 — `Test/Include/main.cpp`(Phase 7.5+ (4))가 실제로
+  `CreateThread` 4개로 `TSharedPtr` 원자적 참조카운트 스트레스 테스트를
+  돌린다(이전 Explore 에이전트의 grep이 폴더명을 `Tests`로 잘못 짚어
+  `Test/`를 놓쳤던 것). 다만 그 테스트는 `TSharedPtr` 복사/해제(이미
+  원자적으로 보호됨)만 반복할 뿐 `FMemory::Malloc()`/`Free()`(`GMalloc`/
+  `FMallocBinned`)를 여러 스레드에서 동시에 부르지는 않으므로,
+  `FMallocBinned` 자체의 동시성 문제는 여전히 실제로 재현되지 않는다 —
+  사실상 메인 스레드 전용 할당자인 채로 보류(이번 라운드에도 사용자가
+  "지금은 보류"로 확정 — Phase 16+ 실제 병렬 작업이 생길 때 처리).
 - **저장소에 `GameEngine/` 스테일 미러(68개 파일) + 추적된 빌드 산출물
   28개** — `GameEngine/Include/`가 `Engine/Include/`의 오래된 복사본으로
   존재하고(둘 다 각각 존재 확인, vcxproj 어디에서도 참조 안 됨), 단순히
