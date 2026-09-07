@@ -42,6 +42,8 @@
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
 #include <ctime>
+#include <io.h>
+#include <fcntl.h>
 
 namespace
 {
@@ -187,6 +189,14 @@ static int32 g_TestFailCount = 0;
 
 int main()
 {
+	// wprintf(L"...")가 콘솔에 쓸 때는 기본 "C" 로케일 기준으로 와이드->멀티바이트
+	// 변환을 거치는데, "C" 로케일은 ASCII 밖 문자(한글 등)를 변환하지 못해서
+	// 그 지점에서 출력이 끊긴다(이전에 겪은 버그). stdout을 UTF-16 텍스트
+	// 모드로 바꾸면 그 변환 자체를 건너뛰고 와이드 문자를 그대로 써서
+	// 한글도 정상 출력된다 — 이 프로세스 안의 모든 wprintf(FLogger의 콘솔
+	// 출력 포함)에 적용되므로 반드시 main() 맨 앞, 첫 wprintf 호출 전에 있어야 함.
+	_setmode(_fileno(stdout), _O_U16TEXT);
+
 	FMemory::InitMemory();
 
 	// --- operator new/delete + GMalloc ---
@@ -2113,6 +2123,6 @@ int main()
 		return 1;
 	}
 
-	wprintf(L"[Tests] ALL CHECKS PASSED\n");
+	wprintf(L"[Tests] ALL CHECKS PASSED (Debug/Release 공통 검증)\n");
 	return 0;
 }
