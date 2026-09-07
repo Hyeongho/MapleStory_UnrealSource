@@ -91,12 +91,15 @@ public:
 
     TSharedPtr<T> Pin() const
     {
-        if (!IsValid())
+        // IsValid() 확인과 AddShared() 증가를 따로 하지 않는다 — 그 사이에
+        // 마지막 strong reference가 해제될 수 있는 TOCTOU 레이스를 막기 위해
+        // "0이 아닐 때만 증가"를 ConditionallyAddShared() 하나의 원자적 연산으로
+        // 수행한다.
+        if (!m_pRefCountBlock || !m_pRefCountBlock->ConditionallyAddShared())
         {
             return TSharedPtr<T>();
         }
 
-        m_pRefCountBlock->AddShared();
         return TSharedPtr<T>(m_pElement, m_pRefCountBlock);
     }
 

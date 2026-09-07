@@ -15,11 +15,17 @@ void FTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& Dele
 
     OutHandle.m_Handle = m_NextHandleID++;
 
+    // 루프 타이머의 Rate가 0 이하로 들어오면 Tick()이 한 프레임 안에서도
+    // 계속 재발동하게 된다(Remaining이 매번 다시 0 이하로 남음) — 화면에
+    // 안 티 나는 최소 양수값으로 클램프한다. 1회성 타이머(SetTimerNextFrame
+    // 등)는 Rate=0이 의도된 동작이라 bLoop가 false일 때는 건드리지 않는다.
+    const float ClampedRate = (bLoop && Rate <= 0.f) ? 0.001f : Rate;
+
     FTimerData Data;
     Data.m_Handle = OutHandle;
     Data.m_Delegate = Delegate;
-    Data.m_Rate = Rate;
-    Data.m_Remaining = Rate;
+    Data.m_Rate = ClampedRate;
+    Data.m_Remaining = ClampedRate;
     Data.m_bLoop = bLoop;
     Data.m_bPaused = false;
     Data.m_bPendingRemove = false;
@@ -100,14 +106,20 @@ void FTimerManager::Tick(float DeltaTime)
         if (Data.m_Remaining <= 0.f)
         {
             Data.m_Delegate.Execute();
-            if (Data.m_bLoop)
-            {
-                Data.m_Remaining += Data.m_Rate;
-            }
 
+            // 콜백이 SetTimer()를 호출해 m_Timers가 재할당됐을 수 있으므로
+            // Execute() 이후에는 위 Data(호출 전 참조)를 더 이상 쓰지 않고
+            // 인덱스로 다시 조회한다 — i 자체는 여전히 유효하다(이 루프
+            // 안에서는 PendingRemove 플래그만 세워지고 실제 제거는 루프가
+            // 끝난 뒤 PurgePending()에서만 일어나므로).
+            FTimerData& Refreshed = m_Timers[i];
+            if (Refreshed.m_bLoop)
+            {
+                Refreshed.m_Remaining += Refreshed.m_Rate;
+            }
             else
             {
-                Data.m_bPendingRemove = true;
+                Refreshed.m_bPendingRemove = true;
             }
         }
     }

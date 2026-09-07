@@ -982,6 +982,23 @@ int main()
 			wprintf(L"[Tests] Phase 6-1 TSharedPtr Basic - PASSED\n");
 		}
 
+		// Phase 6-1b. MakeShared<T>() 단일 할당 회귀 테스트 — 객체+컨트롤
+		// 블록을 FMemory::Malloc() 1번으로 합쳤는지 확인(기존 2회 할당
+		// 구현이었다면 이 델타가 2였을 것). FMemoryTracker는 _DEBUG 전용.
+#ifdef _DEBUG
+		{
+			const int64 Before = FMemoryTracker::GetLiveAllocCount();
+			{
+				TSharedPtr<int32> A = MakeShared<int32>(42);
+				check(A.IsValid() && *A == 42);
+				check(FMemoryTracker::GetLiveAllocCount() - Before == 1);
+			}
+			check(FMemoryTracker::GetLiveAllocCount() == Before);
+
+			wprintf(L"[Tests] Phase 6-1b MakeShared Single Allocation - PASSED\n");
+		}
+#endif
+
 		// Phase 6-2. TWeakPtr
 		{
 			TWeakPtr<int32> Weak;
@@ -1229,6 +1246,61 @@ int main()
 			wprintf(L"[Tests] Phase 7.5-7 IsTimerActive/GetTimerRemaining - PASSED\n");
 		}
 
+		// 7.5-8. Tick() 콜백 재진입 시 안전성 — 콜백 안에서 SetTimer()를
+		// 대량으로 호출해 m_Timers 내부 버퍼가 재할당되도록 강제한 뒤에도,
+		// Execute() 이후 원래 타이머 자신의 상태(1회성 -> PendingRemove)가
+		// 정상적으로 갱신되는지 확인한다. 예전에는 Execute() 이전에 잡아둔
+		// FTimerData&를 Execute() 이후까지 그대로 썼기 때문에, 콜백이
+		// SetTimer()로 재할당을 유발하면 그 레퍼런스가 댕글링돼
+		// use-after-free였다.
+		{
+			static int32 s_FireCount = 0;
+			static int32 s_ReentrantCount = 0;
+			s_FireCount = 0;
+			s_ReentrantCount = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*)
+			{
+				s_FireCount++;
+				for (int32 i = 0; i < 64; i++)
+				{
+					FTimerHandle Extra;
+					FTimerDelegate ExtraD{ [](void*) { s_ReentrantCount++; } };
+					GTimerManager->SetTimer(Extra, ExtraD, 100.0f, false);
+				}
+			} };
+
+			GTimerManager->SetTimer(H, D, 1.0f, false);
+			GTimerManager->Tick(1.5f);
+			check(s_FireCount == 1);
+			check(!GTimerManager->IsTimerActive(H)); // 1회성이므로 이번 Tick의 PurgePending()으로 제거됨
+
+			GTimerManager->Tick(10.0f);
+			check(s_FireCount == 1); // 이미 제거됐으니 재발동하지 않음
+
+			wprintf(L"[Tests] Phase 7.5-8 Tick Reentrancy Safety - PASSED\n");
+		}
+
+		// 7.5-9. 루프 타이머에 Rate<=0을 줘도 매 Tick() 호출마다 최대 1번만
+		// 발동하며(무한 폭주 없이 유한하게 처리) 크래시 없이 동작하는지 확인.
+		{
+			static int32 s_Count = 0;
+			s_Count = 0;
+
+			FTimerHandle H;
+			FTimerDelegate D{ [](void*) { s_Count++; } };
+			GTimerManager->SetTimer(H, D, 0.0f, true);
+
+			GTimerManager->Tick(0.01f);
+			check(s_Count == 1);
+			GTimerManager->Tick(0.01f);
+			check(s_Count == 2);
+
+			GTimerManager->ClearTimer(H);
+			wprintf(L"[Tests] Phase 7.5-9 Loop Timer Rate<=0 Clamp - PASSED\n");
+		}
+
 		delete GTimerManager;
 		GTimerManager = nullptr;
 
@@ -1268,6 +1340,30 @@ int main()
 			check(Container.IsEmpty());
 
 			wprintf(L"[Tests] Phase 7.7-2 FGameplayTagContainer - PASSED\n");
+		}
+
+		// 7.7-2b. FGameplayTagContainer 참조 카운트 — 같은 태그를 두 소스가
+		// (예: 이펙트 A와 B가 둘 다) 부여한 상태에서 그중 하나만 제거해도
+		// 태그가 여전히 남아있는지 확인(버그 4 회귀 테스트) — 예전에는
+		// RemoveTag() 한 번에 무조건 지워져서 B가 아직 부여 중인데도
+		// 태그가 사라졌다.
+		{
+			FGameplayTagContainer Container;
+			FGameplayTag TagBuff(L"State.Buff");
+
+			Container.AddTag(TagBuff); // 소스 A
+			Container.AddTag(TagBuff); // 소스 B(같은 태그를 다시 부여)
+			check(Container.HasTag(TagBuff));
+			check(Container.Num() == 1); // 여전히 dedup된 뷰
+
+			Container.RemoveTag(TagBuff); // A만 제거
+			check(Container.HasTag(TagBuff)); // B가 아직 부여 중이므로 남아있어야 함
+
+			Container.RemoveTag(TagBuff); // B도 제거
+			check(!Container.HasTag(TagBuff));
+			check(Container.IsEmpty());
+
+			wprintf(L"[Tests] Phase 7.7-2b FGameplayTagContainer RefCount - PASSED\n");
 		}
 
 		// 7.7-3. UAttributeSet
@@ -1386,6 +1482,35 @@ int main()
 			delete pASC;
 			delete pSet;
 			wprintf(L"[Tests] Phase 7.7-7 Period Dot Damage - PASSED\n");
+		}
+
+		// 7.7-7b. Period 효과가 큰 DeltaTime(디버거 중단·프레임 히치)에서도
+		// 놓치지 않고 여러 번 발동하는지 확인(버그 3 회귀 테스트) — 예전에는
+		// if 한 번만이라 1번만 발동하고 나머지는 새어나왔다.
+		{
+			UAttributeSet* pSet = new UAttributeSet();
+			pSet->InitAttribute(FName(L"HP"), 1000.f, 0.f, 9999.f);
+
+			UAbilitySystemComponent* pASC = new UAbilitySystemComponent();
+			pASC->SetAttributeSet(pSet);
+
+			UGameplayEffect* pDot = new UGameplayEffect();
+			pDot->m_DurationType = EGameplayEffectDurationType::Duration;
+			pDot->m_Duration = 10.f;
+			pDot->m_Period = 1.f;
+			pDot->AddModifier(FName(L"HP"), EGameplayModifierOperation::Add, -50.f);
+
+			pASC->ApplyGameplayEffect(pDot);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 1000.f);
+
+			// Period(1초)의 3배가 넘는 DeltaTime을 한 번에 준다 — 3번 발동해야 함.
+			pASC->Tick(3.5f);
+			check(pASC->GetAttributeCurrentValue(FName(L"HP")) == 850.f);
+
+			delete pDot;
+			delete pASC;
+			delete pSet;
+			wprintf(L"[Tests] Phase 7.7-7b Period Large DeltaTime Catch-up - PASSED\n");
 		}
 
 		// 7.7-8. Stack 중첩 버프

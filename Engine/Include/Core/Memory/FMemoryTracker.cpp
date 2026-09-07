@@ -18,6 +18,11 @@ void FMemoryTracker::OnFree()
 	m_FreeCount++;
 }
 
+int64 FMemoryTracker::GetLiveAllocCount()
+{
+	return m_AllocCount - m_FreeCount;
+}
+
 void FMemoryTracker::ReportLeaks()
 {
 	// OutputDebugStringW는 두 분기 모두에서 부른다 — wprintf만으로는 콘솔이

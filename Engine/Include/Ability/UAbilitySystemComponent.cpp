@@ -12,7 +12,7 @@ UAbilitySystemComponent::UAbilitySystemComponent() : m_pAttributeSet(nullptr)
 UAbilitySystemComponent::~UAbilitySystemComponent() = default;
 
 // ---------------------------------------------------------------------------
-// �Ӽ�
+// �Ӽ�
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::SetAttributeSet(UAttributeSet* pSet)
@@ -44,7 +44,7 @@ float UAbilitySystemComponent::GetAttributeBaseValue(const FName& Name) const
 }
 
 // ---------------------------------------------------------------------------
-// �±�
+// �±�
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::HasTag(const FGameplayTag& Tag) const
@@ -68,7 +68,7 @@ void UAbilitySystemComponent::RemoveLooseTag(const FGameplayTag& Tag)
 }
 
 // ---------------------------------------------------------------------------
-// ȿ�� ����
+// ȿ�� ����
 // ---------------------------------------------------------------------------
 
 bool UAbilitySystemComponent::ApplyGameplayEffect(UGameplayEffect* pEffect)
@@ -170,7 +170,7 @@ void UAbilitySystemComponent::RemoveEffectsOfClass(UGameplayEffect* pEffect)
 }
 
 // ---------------------------------------------------------------------------
-// ��ų
+// ��ų
 // ---------------------------------------------------------------------------
 
 int32 UAbilitySystemComponent::GrantAbility(UGameplayAbility* pAbility, int32 Level)
@@ -248,7 +248,12 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
             if (pSpec->m_Period > 0.f)
             {
                 Active.m_PeriodTimer -= DeltaTime;
-                if (Active.m_PeriodTimer <= 0.f)
+                // 디버거 중단·프레임 히치 등으로 DeltaTime이 Period의 여러 배가
+                // 되면 논리적으로 여러 번 발동해야 한다 — if 한 번만 적용하면
+                // 나머지가 이후 프레임들로 하나씩 뒤늦게 새어나온다.
+                // pSpec->m_Period > 0.f로 이미 감싸여 있어 매 반복 양수만큼
+                // 증가하므로 유한 횟수 안에 종료된다.
+                while (Active.m_PeriodTimer <= 0.f)
                 {
                     ApplyModifiersToBase(pSpec->m_Modifiers, Active.m_StackCount);
                     Active.m_PeriodTimer += pSpec->m_Period;
@@ -263,7 +268,7 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
         if (pSpec->m_Period > 0.f)
         {
             Active.m_PeriodTimer -= DeltaTime;
-            if (Active.m_PeriodTimer <= 0.f)
+            while (Active.m_PeriodTimer <= 0.f)
             {
                 ApplyModifiersToBase(pSpec->m_Modifiers, Active.m_StackCount);
                 Active.m_PeriodTimer += pSpec->m_Period;
@@ -292,10 +297,10 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
 }
 
 // ---------------------------------------------------------------------------
-// �Ӽ� ����
-// RecalculateAttributes: ��Period Duration/Infinite ȿ���� �ٽ� ����.
-//   1. ���� �Ӽ� CurrentValue = BaseValue �ʱ�ȭ
-//   2. Add ���� �� Multiply ���� �� Override ����
+// �Ӽ� ����
+// RecalculateAttributes: ��Period Duration/Infinite ȿ���� �ٽ� ����.
+//   1. ���� �Ӽ� CurrentValue = BaseValue �ʱ�ȭ
+//   2. Add ���� �� Multiply ���� �� Override ����
 // ---------------------------------------------------------------------------
 
 void UAbilitySystemComponent::RecalculateAttributes()

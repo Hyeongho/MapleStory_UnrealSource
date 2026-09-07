@@ -8,10 +8,17 @@ void FGameplayTagContainer::AddTag(const FGameplayTag& Tag)
         return;
     }
 
-    if (!HasTag(Tag))
+    for (int32 i = 0; i < m_Tags.Num(); i++)
     {
-        m_Tags.Add(Tag);
+        if (m_Tags[i] == Tag)
+        {
+            m_TagCounts[i]++;
+            return;
+        }
     }
+
+    m_Tags.Add(Tag);
+    m_TagCounts.Add(1);
 }
 
 bool FGameplayTagContainer::RemoveTag(const FGameplayTag& Tag)
@@ -20,7 +27,12 @@ bool FGameplayTagContainer::RemoveTag(const FGameplayTag& Tag)
     {
         if (m_Tags[i] == Tag)
         {
-            m_Tags.RemoveAtSwap(i);
+            m_TagCounts[i]--;
+            if (m_TagCounts[i] <= 0)
+            {
+                m_Tags.RemoveAtSwap(i);
+                m_TagCounts.RemoveAtSwap(i);
+            }
             return true;
         }
     }
@@ -31,6 +43,7 @@ bool FGameplayTagContainer::RemoveTag(const FGameplayTag& Tag)
 void FGameplayTagContainer::Reset()
 {
     m_Tags.Reset();
+    m_TagCounts.Reset();
 }
 
 bool FGameplayTagContainer::HasTag(const FGameplayTag& Tag) const
