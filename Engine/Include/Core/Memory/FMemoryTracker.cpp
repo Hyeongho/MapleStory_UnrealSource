@@ -18,21 +18,29 @@ void FMemoryTracker::OnFree()
 	m_FreeCount++;
 }
 
+int64 FMemoryTracker::GetLiveAllocCount()
+{
+	return m_AllocCount - m_FreeCount;
+}
+
 void FMemoryTracker::ReportLeaks()
 {
 	int64 leaked = m_AllocCount - m_FreeCount;
+
+	wchar_t buf[256];
+
 	if (leaked > 0)
 	{
-		wchar_t buf[256];
 		swprintf_s(buf, L"[MemoryTracker] LEAK detected: %lld alloc, %lld free, %lld leaked, %lld bytes total\n", m_AllocCount, m_FreeCount, leaked, m_TotalAllocBytes);
-		OutputDebugStringW(buf);
-		wprintf(buf);
 	}
 
 	else
 	{
 		wprintf(L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
 	}
+
+	OutputDebugStringW(buf);
+	wprintf(buf);
 }
 
 #endif

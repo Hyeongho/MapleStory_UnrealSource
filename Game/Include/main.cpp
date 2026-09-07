@@ -13,14 +13,36 @@
 #include "Core/Math/FColor.h"
 #include "Core/Math/FLinearColor.h"
 #include "Timer/FTimerManager.h"
+#include "Timer/FTimerHandle.h"
+#include "Timer/FTimerDelegate.h"
 #include "World/UWorld.h"
 #include "Object/ACharacter.h"
 #include "Animation/UFlipbookComponent.h"
+#include "Animation/UAnimStateMachine.h"
 #include "Core/Containers/TArray.h"
+#include "Core/String/FName.h"
+#include "Core/Memory/FMemoryTracker.h"
 
 static const wchar_t* WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 static const uint32 WINDOW_WIDTH = 1366;
 static const uint32 WINDOW_HEIGHT = 768;
+
+struct FAnimDemoToggleContext
+{
+	UAnimStateMachine* m_pStateMachine = nullptr;
+	ACharacter* m_pCharacter = nullptr;
+	bool m_bMoving = false;
+};
+static FAnimDemoToggleContext GAnimDemoToggle;
+static FTimerHandle GAnimDemoToggleHandle;
+
+static void ToggleAnimDemoState(void* Ctx)
+{
+	FAnimDemoToggleContext* pCtx = static_cast<FAnimDemoToggleContext*>(Ctx);
+	pCtx->m_bMoving = !pCtx->m_bMoving;
+	pCtx->m_pStateMachine->SetState(pCtx->m_bMoving ? FName(L"Move") : FName(L"Idle"));
+	pCtx->m_pCharacter->SetFacingRight(pCtx->m_bMoving);
+}
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
@@ -157,8 +179,43 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		// SetFrames()가 각 텍스처를 AddRef해서 자체 배열에 옮겨 담으므로, 여기서 갖고
 		// 있던 로컬 레퍼런스(LoadAvatarTexture가 돌려준 것)는 그대로 반납해도 된다.
 		UFlipbookComponent* pFlipbook = pPlayerCharacter->AddComponent<UFlipbookComponent>();
-		pFlipbook->SetFrames(WalkFrames, /*bLoop=*/ true);
-		pFlipbook->Play();
+		UAnimStateMachine* pAnimStateMachine = pPlayerCharacter->AddComponent<UAnimStateMachine>();
+		(void)pFlipbook;
+
+		TArray<FFlipbookFrame> IdleFrames;
+
+		for (int32 i = 0; ; i++)
+		{
+			FAvatarTexture StandFrame = FWzTextureLoader::LoadAvatarTexture(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", i);
+
+			if (!StandFrame.m_pTexture)
+			{
+				break;
+			}
+
+			IdleFrames.Add(FFlipbookFrame{ StandFrame.m_pTexture, StandFrame.m_Origin, StandFrame.m_DelayMs / 1000.0f });
+		}
+
+		if (IdleFrames.Num() > 0)
+		{
+			pAnimStateMachine->RegisterState(FName(L"Idle"), IdleFrames, /*bLoop=*/ true);
+			//IdleFrames[0].m_pTexture->Release(); // RegisterState()가 자체 몫을 AddRef했으니 로컬 참조 반납
+		}
+
+		pAnimStateMachine->RegisterState(FName(L"Move"), WalkFrames, /*bLoop=*/ true);
+
+		pAnimStateMachine->SetState(IdleFrames.Num() > 0 ? FName(L"Idle") : FName(L"Move"));
+
+		// Input이 없어서 SetState()를 타이머로 토글한다 — 위 주석 참고,
+		// Phase 13에서 이 블록만 실제 입력으로 교체.
+		if (IdleFrames.Num() > 0)
+		{
+			GAnimDemoToggle.m_pStateMachine = pAnimStateMachine;
+			GAnimDemoToggle.m_pCharacter = pPlayerCharacter;
+			GAnimDemoToggle.m_bMoving = false;
+
+			GTimerManager->SetTimer(GAnimDemoToggleHandle, FTimerDelegate::CreateStatic(&ToggleAnimDemoState, &GAnimDemoToggle), /*Rate=*/ 2.0f, /*bLoop=*/ true);
+		}
 	}
 
 	MSG Msg = {};
@@ -238,6 +295,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	GDXDevice = nullptr;
 
 	UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
+
+#ifdef _DEBUG
+	FMemoryTracker::ReportLeaks();
+#endif
 
 	return (int)Msg.wParam;
 }

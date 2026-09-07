@@ -23,3 +23,8 @@ void ACharacter::SetLocation(const FVector2D& Location)
 {
 	m_pSpriteComponent->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
 }
+
+void ACharacter::SetFacingRight(bool bFacingRight)
+{
+	m_pSpriteComponent->SetFlipHorizontal(bFacingRight);
+}

@@ -55,7 +55,7 @@ void FSpriteBatch::DrawSprite(ID3D11ShaderResourceView* pTexture, const FVector2
 	check(m_bInBeginEnd);
 
 	DirectX::XMFLOAT2 Pos(Position.m_X, Position.m_Y);
-	DirectX::XMFLOAT2 Origin(0.0f, 0.0f);
+	DirectX::XMFLOAT2 Origin(0.0f, 0.0f); 
 	DirectX::XMFLOAT2 ScaleVec(Scale.m_X, Scale.m_Y);
 	DirectX::XMVECTORF32 TintColor = { { { Tint.m_R, Tint.m_G, Tint.m_B, Tint.m_A } } };
 

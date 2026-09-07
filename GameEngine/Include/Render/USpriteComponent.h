@@ -40,6 +40,16 @@ public:
 		m_ParallaxFactor = Factor;
 	}
 
+	void SetFlipHorizontal(bool bFlip) 
+	{ 
+		m_bFlipHorizontal = bFlip; 
+	}
+
+	bool IsFlippedHorizontal() const 
+	{ 
+		return m_bFlipHorizontal; 
+	}
+
 	bool HasTexture() const 
 	{ 
 		return m_pTexture != nullptr; 
@@ -57,5 +67,6 @@ private:
 	ELayer m_Layer = ELayer::Object;
 	FLinearColor m_Tint = FLinearColor::White;
 	float m_ParallaxFactor = 1.0f;
+	bool m_bFlipHorizontal = false;
 };
 

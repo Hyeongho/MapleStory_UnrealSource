@@ -9,6 +9,7 @@ public:
 	static void OnAlloc(size_t size);
 	static void OnFree();
 	static void ReportLeaks();
+	static int64 GetLiveAllocCount();
 
 private:
 	static int64  m_AllocCount;

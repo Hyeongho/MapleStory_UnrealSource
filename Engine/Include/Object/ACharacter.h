@@ -18,6 +18,8 @@ public:
 
 	void SetLocation(const FVector2D& Location);
 
+	void SetFacingRight(bool bFacingRight);
+
 	USpriteComponent* GetSpriteComponent() const { return m_pSpriteComponent; }
 
 private:

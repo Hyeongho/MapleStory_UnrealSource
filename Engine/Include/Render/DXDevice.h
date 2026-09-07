@@ -2,6 +2,7 @@
 
 #include "EnginePCH.h"
 #include <d3d11.h>
+#include <d3d11sdklayers.h>
 #include <dxgi.h>
 
 #pragma comment(lib, "d3d11.lib")

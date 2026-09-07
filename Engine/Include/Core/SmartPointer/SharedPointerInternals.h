@@ -37,6 +37,16 @@ struct FSmartPtrAtomics
         return __atomic_load_n(pValue, __ATOMIC_SEQ_CST);
 #endif
     }
+
+    static int32 CompareExchange(volatile int32* pDest, int32 Exchange, int32 Comparand)
+    {
+#if defined(_MSC_VER)
+        return (int32)_InterlockedCompareExchange(reinterpret_cast<volatile long*>(pDest), Exchange, Comparand);
+#else
+        __atomic_compare_exchange_n(pDest, &Comparand, Exchange, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+        return Comparand;
+#endif
+    }
 };
 
 struct FRefCountBlock
@@ -52,6 +62,25 @@ struct FRefCountBlock
     void AddShared()
     {
         FSmartPtrAtomics::Increment(&m_SharedCount);
+    }
+
+    bool ConditionallyAddShared()
+    {
+        int32 Current = FSmartPtrAtomics::Load(&m_SharedCount);
+
+        while (Current != 0)
+        {
+            const int32 Prev = FSmartPtrAtomics::CompareExchange(&m_SharedCount, Current + 1, Current);
+
+            if (Prev == Current)
+            {
+                return true;
+            }
+
+            Current = Prev;
+        }
+
+        return false;
     }
 
     void AddWeak()

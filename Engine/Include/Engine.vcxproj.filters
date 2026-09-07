@@ -279,6 +279,12 @@
     <ClInclude Include="Animation\UFlipbookComponent.h">
       <Filter>07. Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Animation\UAnimNotify.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UAnimStateMachine.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -429,6 +435,12 @@
       <Filter>06. World</Filter>
     </ClCompile>
     <ClCompile Include="Animation\UFlipbookComponent.cpp">
+      <Filter>07. Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UAnimStateMachine.cpp">
+      <Filter>07. Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UAnimNotify.cpp">
       <Filter>07. Animation</Filter>
     </ClCompile>
   </ItemGroup>

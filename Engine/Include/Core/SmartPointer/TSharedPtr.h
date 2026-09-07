@@ -153,14 +153,41 @@ private:
         FMemory::Free(p);
     }
 
+    static void InlineDeleter(void* p)
+    {
+        static_cast<T*>(p)->~T();
+    }
+
     template<typename U> friend class TWeakPtr;
     template<typename U> friend class TSharedPtr;
+    template<typename U, typename... Args> friend TSharedPtr<U> MakeShared(Args&&... InArgs);
+};
+
+template<typename T>
+struct FInlineRefCountBlock : public FRefCountBlock
+{
+    alignas(T) uint8 m_ObjectStorage[sizeof(T)];
+
+    FInlineRefCountBlock(FSmartPtrDeleter InDeleter) : FRefCountBlock(InDeleter)
+    {
+    }
+
+    T* GetObject()
+    {
+        return reinterpret_cast<T*>(m_ObjectStorage);
+    }
 };
 
 template<typename T, typename... Args>
 TSharedPtr<T> MakeShared(Args&&... InArgs)
 {
-    T* Ptr = static_cast<T*>(FMemory::Malloc(sizeof(T), alignof(T)));
-    new (Ptr) T(Forward<Args>(InArgs)...);
-    return TSharedPtr<T>(Ptr);
+    using FBlock = FInlineRefCountBlock<T>;
+
+    FBlock* pBlock = static_cast<FBlock*>(FMemory::Malloc(sizeof(FBlock), alignof(FBlock)));
+    new (pBlock) FBlock(&TSharedPtr<T>::InlineDeleter);
+
+    T* pObject = pBlock->GetObject();
+    new (pObject) T(Forward<Args>(InArgs)...);
+
+    return TSharedPtr<T>(pObject, pBlock);
 }

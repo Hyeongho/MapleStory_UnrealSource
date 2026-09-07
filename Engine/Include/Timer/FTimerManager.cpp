@@ -52,11 +52,13 @@ void FTimerManager::SetTimer(FTimerHandle& OutHandle, const FTimerDelegate& Dele
 
     OutHandle.m_Handle = m_NextHandleID++;
 
+    const float ClampedRate = (bLoop && Rate <= 0.f) ? 0.001f : Rate;
+
     FTimerData Data;
     Data.m_Handle = OutHandle;
     Data.m_Delegate = Delegate;
-    Data.m_Rate = Rate;
-    Data.m_Remaining = Rate;
+    Data.m_Rate = ClampedRate;
+    Data.m_Remaining = ClampedRate;
     Data.m_bLoop = bLoop;
     Data.m_bPaused = false;
     Data.m_bPendingRemove = false;
@@ -128,23 +130,28 @@ void FTimerManager::Tick(float DeltaTime)
     for (int32 i = 0; i < Count; i++)
     {
         FTimerData& Data = m_Timers[i];
+
         if (Data.m_bPendingRemove || Data.m_bPaused)
         {
             continue;
         }
 
         Data.m_Remaining -= DeltaTime;
+
         if (Data.m_Remaining <= 0.f)
         {
             Data.m_Delegate.Execute();
-            if (Data.m_bLoop)
+
+            FTimerData& Refreshed = m_Timers[i];
+
+            if (Refreshed.m_bLoop)
             {
-                Data.m_Remaining += Data.m_Rate;
+                Refreshed.m_Remaining += Refreshed.m_Rate;
             }
 
             else
             {
-                Data.m_bPendingRemove = true;
+                Refreshed.m_bPendingRemove = true;
             }
         }
     }

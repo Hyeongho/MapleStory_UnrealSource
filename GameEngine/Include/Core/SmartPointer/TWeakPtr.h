@@ -91,12 +91,11 @@ public:
 
     TSharedPtr<T> Pin() const
     {
-        if (!IsValid())
+        if (!m_pRefCountBlock || !m_pRefCountBlock->ConditionallyAddShared())
         {
             return TSharedPtr<T>();
         }
 
-        m_pRefCountBlock->AddShared();
         return TSharedPtr<T>(m_pElement, m_pRefCountBlock);
     }
 

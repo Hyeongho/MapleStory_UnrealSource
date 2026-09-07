@@ -22,4 +22,5 @@ public:
 
 private:
     TArray<FGameplayTag> m_Tags;
+    TArray<int32> m_TagCounts;
 };

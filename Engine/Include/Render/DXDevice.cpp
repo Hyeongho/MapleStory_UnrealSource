@@ -51,6 +51,18 @@ void FDXDevice::Shutdown()
 		m_pContext = nullptr;
 	}
 
+#ifdef _DEBUG
+	if (m_pDevice)
+	{
+		ID3D11Debug* pDebug = nullptr;
+		if (SUCCEEDED(m_pDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&pDebug)) && pDebug)
+		{
+			pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+			pDebug->Release();
+		}
+	}
+#endif
+
 	if (m_pDevice)
 	{
 		m_pDevice->Release();

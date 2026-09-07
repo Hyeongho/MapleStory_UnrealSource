@@ -2,6 +2,7 @@
 #include "FMemory.h"
 #include "FMallocAnsi.h"
 #include "FMallocBinned.h"
+#include "FMemoryTracker.h"
 
 static IAllocator& GetDefaultAllocator()
 {
@@ -22,7 +23,12 @@ void* FMemory::Malloc(size_t size, uint32 alignment)
 	}
 
 	check(GMalloc);
-	return GMalloc->Malloc(size, alignment);
+
+	void* pResult = GMalloc->Malloc(size, alignment);
+#ifdef _DEBUG
+	FMemoryTracker::OnAlloc(size);
+#endif
+	return pResult;
 }
 
 void* FMemory::Realloc(void* ptr, size_t newSize, uint32 alignment)
@@ -44,6 +50,11 @@ void FMemory::Free(void* ptr)
 	}
 
 	check(GMalloc);
+
+#ifdef _DEBUG
+	FMemoryTracker::OnFree();
+#endif
+
 	GMalloc->Free(ptr);
 }
 

@@ -248,13 +248,15 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
             if (pSpec->m_Period > 0.f)
             {
                 Active.m_PeriodTimer -= DeltaTime;
-                if (Active.m_PeriodTimer <= 0.f)
+
+                while (Active.m_PeriodTimer <= 0.f)
                 {
                     ApplyModifiersToBase(pSpec->m_Modifiers, Active.m_StackCount);
                     Active.m_PeriodTimer += pSpec->m_Period;
                     bNeedRecalc = true;
                 }
             }
+
             continue;
         }
 
@@ -263,7 +265,7 @@ void UAbilitySystemComponent::TickActiveEffects(float DeltaTime)
         if (pSpec->m_Period > 0.f)
         {
             Active.m_PeriodTimer -= DeltaTime;
-            if (Active.m_PeriodTimer <= 0.f)
+            while (Active.m_PeriodTimer <= 0.f)
             {
                 ApplyModifiersToBase(pSpec->m_Modifiers, Active.m_StackCount);
                 Active.m_PeriodTimer += pSpec->m_Period;

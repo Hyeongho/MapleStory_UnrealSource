@@ -6,12 +6,14 @@
 #include <d3d11.h>
 
 class USpriteComponent;
+class UAnimNotify;
 
 struct FFlipbookFrame
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr; // 소유 — SetFrames()가 AddRef해서 보관
 	FVector2D m_Origin = FVector2D::Zero;
 	float m_Duration = 0.1f;
+	UAnimNotify* m_pNotify = nullptr;
 };
 
 class UFlipbookComponent :
