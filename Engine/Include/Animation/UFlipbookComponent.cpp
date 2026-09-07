@@ -18,6 +18,33 @@ UFlipbookComponent::~UFlipbookComponent()
 
 void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+#ifdef _DEBUG
+	// 진단용 — Idle<->Move 반복 전환 중 발생하는 크래시 원인 규명 임시 코드.
+	// AddRef() 직후 바로 Release()해서 실제 부작용 없이 "현재 참조 카운트"만
+	// 확인한다(COM AddRef/Release는 갱신된 카운트를 반환값으로 돌려줌).
+	{
+		wchar_t Buf[256];
+		swprintf_s(Buf, L"[Flipbook] SetFrames: 기존 m_Frames=%d개, 새로 받은 Frames=%d개\n", m_Frames.Num(), Frames.Num());
+		OutputDebugStringW(Buf);
+
+		for (int32 i = 0; i < m_Frames.Num(); i++)
+		{
+			ULONG Ref = m_Frames[i].m_pTexture->AddRef();
+			m_Frames[i].m_pTexture->Release();
+			swprintf_s(Buf, L"[Flipbook]   해제 예정 기존[%d] tex=%p 현재refcount=%lu\n", i, (void*)m_Frames[i].m_pTexture, Ref);
+			OutputDebugStringW(Buf);
+		}
+
+		for (int32 i = 0; i < Frames.Num(); i++)
+		{
+			ULONG Ref = Frames[i].m_pTexture->AddRef();
+			Frames[i].m_pTexture->Release();
+			swprintf_s(Buf, L"[Flipbook]   새로 받을 incoming[%d] tex=%p 현재refcount=%lu\n", i, (void*)Frames[i].m_pTexture, Ref);
+			OutputDebugStringW(Buf);
+		}
+	}
+#endif
+
 	for (int32 i = 0; i < m_Frames.Num(); i++)
 	{
 		m_Frames[i].m_pTexture->Release();

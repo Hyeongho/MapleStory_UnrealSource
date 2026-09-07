@@ -21,6 +21,22 @@ UAnimStateMachine::~UAnimStateMachine()
 
 void UAnimStateMachine::RegisterState(FName StateName, const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+#ifdef _DEBUG
+	// 진단용 — Idle<->Move 반복 전환 중 발생하는 크래시 원인 규명 임시 코드.
+	{
+		wchar_t Buf[256];
+		swprintf_s(Buf, L"[AnimSM] RegisterState(idx=%u): Frames=%d개\n", StateName.GetIndex(), Frames.Num());
+		OutputDebugStringW(Buf);
+		for (int32 i = 0; i < Frames.Num(); i++)
+		{
+			ULONG Ref = Frames[i].m_pTexture->AddRef();
+			Frames[i].m_pTexture->Release();
+			swprintf_s(Buf, L"[AnimSM]   등록 전 incoming[%d] tex=%p 현재refcount=%lu\n", i, (void*)Frames[i].m_pTexture, Ref);
+			OutputDebugStringW(Buf);
+		}
+	}
+#endif
+
 	FAnimStateData& Data = m_States.FindOrAdd(StateName);
 
 	// 재등록(같은 이름으로 다시 호출)이면 기존 보관분을 먼저 Release —
