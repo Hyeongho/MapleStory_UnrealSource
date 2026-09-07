@@ -132,6 +132,20 @@ void UFlipbookComponent::Tick(float DeltaTime)
 
 	if (m_pTargetSprite)
 	{
+#ifdef _DEBUG
+		// 진단용 — Idle<->Move 반복 전환 크래시 원인 규명 임시 코드. 프레임
+		// 인덱스가 바뀔 때만(스팸 방지) 표시 직전 refcount를 찍는다.
+		static int32 s_LastLoggedIndex = -1;
+		if (m_CurrentFrameIndex != s_LastLoggedIndex)
+		{
+			s_LastLoggedIndex = m_CurrentFrameIndex;
+			ULONG Ref = pCurrent->m_pTexture->AddRef();
+			pCurrent->m_pTexture->Release();
+			wchar_t Buf[256];
+			swprintf_s(Buf, L"[Flipbook] Tick: frameIndex=%d tex=%p 표시 직전 refcount=%lu (표시 후 +1)\n", m_CurrentFrameIndex, (void*)pCurrent->m_pTexture, Ref);
+			OutputDebugStringW(Buf);
+		}
+#endif
 		pCurrent->m_pTexture->AddRef();
 		m_pTargetSprite->SetTexture(pCurrent->m_pTexture, pCurrent->m_Origin);
 	}
