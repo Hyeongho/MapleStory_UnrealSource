@@ -1168,6 +1168,19 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
   git에 추적돼 있고, `.gitignore`는 있지만 이미 추적된 파일엔 소급 적용
   안 됨(레포 용량 `.git` 78MB).
 
+### 수정 완료 (2026-09-15, 코드 리뷰 4차 라운드)
+
+- **`FMemoryTracker`가 `Free(nullptr)`와 `Realloc` 경계 동작을 잘못 집계**
+  — ✅ 수정. 추적 지점을 `FMemory`로 옮긴 뒤 `Free(nullptr)`도 해제로
+  세어 live count를 1 감소시키고, `Realloc(nullptr, Size)` 및
+  `Realloc(Ptr, 0)`은 각각 내부에서 실제 할당/해제를 수행하면서도 추적을
+  전혀 갱신하지 않는 회귀가 남아 있었다. `FMemory::Malloc()`은 실제 반환
+  포인터가 있을 때만 할당을 기록하고, `Free()`는 non-null 포인터만 해제로
+  기록하도록 변경했다. `Realloc()`은 null→할당과 포인터→0 두 경계만 각각
+  할당/해제로 기록하며, 일반 크기 변경은 live allocation 1개가 유지되므로
+  카운트를 바꾸지 않는다. `Test/Include/main.cpp`에 네 경우를 연속 검증하는
+  Debug 회귀 테스트를 추가했다.
+
 ### 부분 확인
 
 - **`UFlipbookComponent`/`UAnimStateMachine`의 null 텍스처 방어 부족** —

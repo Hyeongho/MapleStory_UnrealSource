@@ -226,6 +226,28 @@ int main()
 	FMemory::Memset(raw, 0xCD, 256);
 	FMemory::Free(raw);
 
+#ifdef _DEBUG
+	// FMemoryTracker is attached at the FMemory boundary, so direct calls and
+	// Realloc's allocation/free edge cases must obey the same live-count rules
+	// as global new/delete. In particular, Free(nullptr) is a no-op rather than
+	// a real deallocation.
+	const int64 TrackerBaseline = FMemoryTracker::GetLiveAllocCount();
+	FMemory::Free(nullptr);
+	check(FMemoryTracker::GetLiveAllocCount() == TrackerBaseline);
+
+	void* pReallocated = FMemory::Realloc(nullptr, 32);
+	check(pReallocated != nullptr);
+	check(FMemoryTracker::GetLiveAllocCount() == TrackerBaseline + 1);
+
+	pReallocated = FMemory::Realloc(pReallocated, 64);
+	check(pReallocated != nullptr);
+	check(FMemoryTracker::GetLiveAllocCount() == TrackerBaseline + 1);
+
+	pReallocated = FMemory::Realloc(pReallocated, 0);
+	check(pReallocated == nullptr);
+	check(FMemoryTracker::GetLiveAllocCount() == TrackerBaseline);
+#endif
+
 	// --- Pool Allocator ---
 	FPoolAllocator pool;
 	pool.Init(sizeof(FTestObj), 10);

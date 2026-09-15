@@ -28,7 +28,10 @@ void* FMemory::Malloc(size_t size, uint32 alignment)
 	// 여기서 한 번만 추적해야 이중 카운트 없이 new/delete 경유 할당과
 	// FMemory::Malloc()을 직접 호출하는 곳(MakeShared, TArray/TMap 내부
 	// 성장 등)을 모두 커버한다.
-	FMemoryTracker::OnAlloc(size);
+	if (pResult)
+	{
+		FMemoryTracker::OnAlloc(size);
+	}
 #endif
 	return pResult;
 }
@@ -40,7 +43,23 @@ void* FMemory::Realloc(void* ptr, size_t newSize, uint32 alignment)
 		InitMemory();
 	}
 	check(GMalloc);
-	return GMalloc->Realloc(ptr, newSize, alignment);
+	void* pResult = GMalloc->Realloc(ptr, newSize, alignment);
+#ifdef _DEBUG
+	// Realloc keeps one live allocation alive when both ptr and newSize are
+	// non-zero, so the live allocation count must not change in that case.
+	// The two edge cases have the same ownership semantics as Malloc/Free and
+	// must be reflected explicitly because allocator-internal calls bypass this
+	// FMemory tracking boundary.
+	if (!ptr && pResult)
+	{
+		FMemoryTracker::OnAlloc(newSize);
+	}
+	else if (ptr && newSize == 0)
+	{
+		FMemoryTracker::OnFree();
+	}
+#endif
+	return pResult;
 }
 
 void FMemory::Free(void* ptr)
@@ -51,9 +70,12 @@ void FMemory::Free(void* ptr)
 	}
 	check(GMalloc);
 #ifdef _DEBUG
-	// operator delete(nullptr)도 호출되므로(C++ 표준상 유효), 기존
-	// operator delete가 하던 것과 동일하게 null 체크 없이 무조건 카운트한다.
-	FMemoryTracker::OnFree();
+	// nullptr 해제는 할당자와 트래커 양쪽 모두 no-op이어야 한다. 직접
+	// FMemory::Free(nullptr)를 호출해도 존재하지 않는 해제를 세지 않는다.
+	if (ptr)
+	{
+		FMemoryTracker::OnFree();
+	}
 #endif
 	GMalloc->Free(ptr);
 }
