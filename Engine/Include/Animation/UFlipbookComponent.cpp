@@ -18,6 +18,15 @@ UFlipbookComponent::~UFlipbookComponent()
 
 void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+	for (int32 i = 0; i < Frames.Num(); i++)
+	{
+		if (!Frames[i].m_pTexture)
+		{
+			UE_LOG(LogRenderer, Warning, L"SetFrames rejected null texture at frame %d", i);
+			return;
+		}
+	}
+
 #ifdef _DEBUG
 	// 진단용 — Idle<->Move 반복 전환 중 발생하는 크래시 원인 규명 임시 코드.
 	// AddRef() 직후 바로 Release()해서 실제 부작용 없이 "현재 참조 카운트"만

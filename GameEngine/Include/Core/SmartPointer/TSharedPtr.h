@@ -37,8 +37,8 @@ public:
         Other.m_pRefCountBlock = nullptr;
     }
 
-    template<typename U>
-    TSharedPtr(const TSharedPtr<U>& Other) noexcept : m_pElement(static_cast<T*>(Other.m_pElement)), m_pRefCountBlock(Other.m_pRefCountBlock)
+    template<typename U, typename = typename TEnableIf<TPointerIsConvertibleFromTo<U, T>::Value>::Type>
+    TSharedPtr(const TSharedPtr<U>& Other) noexcept : m_pElement(Other.m_pElement), m_pRefCountBlock(Other.m_pRefCountBlock)
     {
         if (m_pRefCountBlock)
         {
@@ -144,7 +144,7 @@ private:
             return;
         }
 
-        m_pRefCountBlock->ReleaseShared(m_pElement);
+        m_pRefCountBlock->ReleaseShared(const_cast<void*>(static_cast<const volatile void*>(m_pElement)));
     }
 
     static void DefaultDeleter(void* p)

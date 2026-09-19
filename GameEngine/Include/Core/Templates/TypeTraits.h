@@ -89,3 +89,24 @@ namespace UObjectPrivate
 
 template<typename Base, typename Derived>
 struct TIsBaseOf : TIntegralConstant<bool, UObjectPrivate::TIsBaseOfHelper<Base, Derived>::Value> {};
+// UE-style pointer conversion trait: tests implicit From* -> To* conversion.
+// The dependent expression makes inaccessible/ambiguous bases fail via SFINAE.
+namespace PointerIsConvertibleFromToPrivate
+{
+	template<typename To> void Accept(To*);
+
+	template<typename From, typename To>
+	struct TImpl
+	{
+		template<typename F, typename T, typename = decltype(Accept<T>(static_cast<F*>(nullptr)))>
+		static FTrueType Test(int);
+
+		template<typename, typename> static FFalseType Test(...);
+		static constexpr bool Value = decltype(Test<From, To>(0))::Value;
+	};
+}
+
+template<typename From, typename To>
+struct TPointerIsConvertibleFromTo : TIntegralConstant<bool, PointerIsConvertibleFromToPrivate::TImpl<From, To>::Value> 
+{
+};

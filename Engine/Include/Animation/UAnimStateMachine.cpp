@@ -21,6 +21,15 @@ UAnimStateMachine::~UAnimStateMachine()
 
 void UAnimStateMachine::RegisterState(FName StateName, const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+	for (int32 i = 0; i < Frames.Num(); i++)
+	{
+		if (!Frames[i].m_pTexture)
+		{
+			UE_LOG(LogRenderer, Warning, L"RegisterState rejected null texture at frame %d", i);
+			return;
+		}
+	}
+
 #ifdef _DEBUG
 	// 진단용 — Idle<->Move 반복 전환 중 발생하는 크래시 원인 규명 임시 코드.
 	{
