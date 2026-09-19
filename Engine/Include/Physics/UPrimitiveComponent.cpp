@@ -1,5 +1,6 @@
 #include "EnginePCH.h"
 #include "Physics/UPrimitiveComponent.h"
+#include "Physics/UBoxCollision.h"
 #include "Physics/UCircleCollision.h"
 
 UPrimitiveComponent::UPrimitiveComponent() = default;
@@ -7,9 +8,7 @@ UPrimitiveComponent::~UPrimitiveComponent() = default;
 
 FVector2D UPrimitiveComponent::GetWorldCenter() const
 {
-	const FTransform2D Transform = GetWorldTransform();
-	return Transform.m_Location
-	       + FVector2D(m_CenterOffset.m_X * Transform.m_Scale.m_X, m_CenterOffset.m_Y * Transform.m_Scale.m_Y);
+	return GetWorldTransform().TransformPoint(m_CenterOffset);
 }
 
 void UPrimitiveComponent::SetCenterOffset(const FVector2D& Offset)
@@ -65,7 +64,10 @@ bool UPrimitiveComponent::Overlaps(const UPrimitiveComponent& Other) const
 	}
 	if (GetShapeType() == ECollisionShape::Box && Other.GetShapeType() == ECollisionShape::Box)
 	{
-		return GetWorldBounds().Overlaps(Other.GetWorldBounds());
+		FVector2D Normal;
+		float Depth;
+		return static_cast<const UBoxCollision&>(*this).GetWorldBox().FindContact(
+			static_cast<const UBoxCollision&>(Other).GetWorldBox(), Normal, Depth);
 	}
 	if (GetShapeType() == ECollisionShape::Circle && Other.GetShapeType() == ECollisionShape::Circle)
 	{
@@ -76,10 +78,10 @@ bool UPrimitiveComponent::Overlaps(const UPrimitiveComponent& Other) const
 	const UCircleCollision& Circle = GetShapeType() == ECollisionShape::Circle
 	                                     ? static_cast<const UCircleCollision&>(*this)
 	                                     : static_cast<const UCircleCollision&>(Other);
-	const FRect Box = GetShapeType() == ECollisionShape::Box ? GetWorldBounds() : Other.GetWorldBounds();
+	const UBoxCollision& Box = GetShapeType() == ECollisionShape::Box
+		? static_cast<const UBoxCollision&>(*this) : static_cast<const UBoxCollision&>(Other);
 	const FVector2D Center = Circle.GetWorldCenter();
-	const FVector2D Closest(
-	    FMath::Clamp(Center.m_X, Box.m_Left, Box.m_Right), FMath::Clamp(Center.m_Y, Box.m_Top, Box.m_Bottom));
+	const FVector2D Closest = Box.GetWorldBox().GetClosestPoint(Center);
 	const float Radius = Circle.GetWorldRadius();
 	return FVector2D::DistanceSquared(Center, Closest) <= Radius * Radius;
 }

@@ -164,7 +164,10 @@ MapleStory 패턴 매핑: 패시브=Infinite, 독 도트=Duration+Period, 포션
 - Phase 8 Renderer와 주요 Phase 9 Animation 구현 완료: WZ 아바타, Idle/Move 전환, 좌우 반전 데모.
 - CLAUDE.md 순서대로 Phase 10 Physics/Collision 및 Map.wz Foothold부터 진행한다.
 - 정적 Box 충돌에 이어 선분 Foothold·단방향 착지·경사면 이동을 구현했다.
-  선분 단계는 사용자 빌드·실행 확인 대기이며, WZ 파싱 연동과 로프·사다리 등은 남아 있다.
+  사용자가 기존 단계의 동작을 확인했으며, WZ 파싱 연동은 남아 있다.
+- 로프·사다리 Trigger 영역과 입력 기반 오르기 상태를 추가했다. 이 단계의 빌드·실행은 사용자 확인 대기다.
+- Box 충돌을 회전 기반 OBB로 전환했다. 겹침·Raycast·이동 충돌·침투 보정·접지에 적용하며,
+  각속도 시뮬레이션은 포함하지 않는다. OBB 검사 코드는 main()에 추가했고 실행 확인 대기다.
 - 이후 Phase 11 Audio → Phase 12 UI → Phase 13 Input → Phase 14 Resource → Phase 15 World 순서를 유지한다.
 - Input을 앞당기지 않고, Physics는 테스트에서 위치·속도·시간을 지정해 먼저 검증한다.
 - `FMallocBinned` 멀티스레드 안전성은 실제 병렬 작업 도입 전에 처리한다.

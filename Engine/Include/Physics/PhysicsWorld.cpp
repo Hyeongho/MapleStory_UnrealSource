@@ -2,65 +2,9 @@
 #include "Physics/PhysicsWorld.h"
 #include "Physics/UBoxCollision.h"
 #include "Physics/UCircleCollision.h"
+#include "Physics/UClimbableComponent.h"
 #include "Physics/URigidbody.h"
 #include "World/UWorld.h"
-
-// 축별 구간 교차를 검사한다. Sweep은 도형 내부로 진입할 때만 충돌로 판단하므로,
-// 접촉면에서 멀어지거나 평행하게 이동하는 Box가 표면에 걸리지 않는다.
-bool FPhysicsWorld::IntersectBox(
-    const FVector2D& Start, const FVector2D& Delta, const FRect& Bounds, float& Time, FVector2D& Normal, bool bSweep)
-{
-	float Enter = -FLT_MAX, Exit = FLT_MAX;
-	Normal = FVector2D::Zero;
-	for (int32 Axis = 0; Axis < 2; Axis++)
-	{
-		const float Position = Axis == 0 ? Start.m_X : Start.m_Y;
-		const float Direction = Axis == 0 ? Delta.m_X : Delta.m_Y;
-		const float Minimum = Axis == 0 ? Bounds.m_Left : Bounds.m_Top;
-		const float Maximum = Axis == 0 ? Bounds.m_Right : Bounds.m_Bottom;
-		if (FMath::Abs(Direction) < FMath::SMALL_NUMBER)
-		{
-			if (Position < Minimum || Position > Maximum)
-			{
-				return false;
-			}
-			if (bSweep && (Position <= Minimum || Position >= Maximum))
-			{
-				return false;
-			}
-			continue;
-		}
-		float Near = (Minimum - Position) / Direction;
-		float Far = (Maximum - Position) / Direction;
-		const float Sign = Direction > 0.0f ? -1.0f : 1.0f;
-		if (Near > Far)
-		{
-			const float Swap = Near;
-			Near = Far;
-			Far = Swap;
-		}
-		if (Near > Enter)
-		{
-			Enter = Near;
-			Normal = Axis == 0 ? FVector2D(Sign, 0.0f) : FVector2D(0.0f, Sign);
-		}
-		Exit = FMath::Min(Exit, Far);
-		if (Enter > Exit)
-		{
-			return false;
-		}
-	}
-	if (Exit < 0.0f || Enter > 1.0f)
-	{
-		return false;
-	}
-	if (bSweep && (Enter < -FMath::SMALL_NUMBER || Enter >= Exit))
-	{
-		return false;
-	}
-	Time = FMath::Max(0.0f, Enter);
-	return true;
-}
 
 bool FPhysicsWorld::IsBlocker(const UBoxCollision& Box, const UPrimitiveComponent& Other)
 {
@@ -78,12 +22,6 @@ void FPhysicsWorld::Translate(UBoxCollision& Box, const FVector2D& Delta)
 	FTransform2D Transform = Box.GetRelativeTransform();
 	Transform.m_Location += Delta;
 	Box.SetRelativeTransform(Transform);
-}
-
-FRect FPhysicsWorld::Expanded(const FRect& Bounds, const FVector2D& Extent)
-{
-	return FRect(Bounds.m_Left - Extent.m_X, Bounds.m_Top - Extent.m_Y, Bounds.m_Right + Extent.m_X,
-	    Bounds.m_Bottom + Extent.m_Y);
 }
 
 FPhysicsWorld::FPhysicsWorld(UWorld& World) : m_World(World)
@@ -162,8 +100,7 @@ void FPhysicsWorld::InvalidateFootholdSupport(int32 Id)
 
 FVector2D FPhysicsWorld::GetFootPosition(const UBoxCollision& Box)
 {
-	const FRect Bounds = Box.GetWorldBounds();
-	return FVector2D(Box.GetWorldCenter().m_X, Bounds.m_Bottom);
+	return Box.GetWorldBox().GetSupportPoint(FVector2D(0, 1));
 }
 
 bool FPhysicsWorld::CanUseFoothold(const UBoxCollision& Box, const FFoothold& Foothold)
@@ -225,6 +162,22 @@ const FFoothold* FPhysicsWorld::FindSupportingFoothold(const UBoxCollision& Box,
 	return Result;
 }
 
+const UClimbableComponent* FPhysicsWorld::FindClimbable(
+	const UBoxCollision& Box, const TArray<UPrimitiveComponent*>& Primitives)
+{
+	for (int32 i = 0; i < Primitives.Num(); i++)
+	{
+		const UClimbableComponent* Climbable = Cast<UClimbableComponent>(Primitives[i]);
+		if (Climbable && Climbable->GetOwner() != Box.GetOwner()
+			&& Climbable->GetCollisionObjectType() == ECollisionChannel::Trigger
+			&& Box.Overlaps(*Climbable))
+		{
+			return Climbable;
+		}
+	}
+	return nullptr;
+}
+
 void FPhysicsWorld::GatherPrimitives(TArray<UPrimitiveComponent*>& Out) const
 {
 	Out.Reset();
@@ -260,6 +213,7 @@ void FPhysicsWorld::Tick(float DeltaTime)
 			UBoxCollision* Box = Actors[i]->GetComponent<UBoxCollision>();
 			if (!Box || Box->GetAttachParent() || !Box->IsCollisionEnabled())
 			{
+			Body->StopClimbing();
 				Body->m_bIsGrounded = false;
 				Body->m_CurrentFootholdId = INDEX_NONE;
 				continue;
@@ -274,7 +228,9 @@ void FPhysicsWorld::ResolveVelocity(URigidbody& Body, const FVector2D& Normal)
 	const float IntoSurface = Body.m_Velocity.Dot(Normal);
 	if (IntoSurface < 0.0f)
 	{
-		Body.m_Velocity -= Normal * IntoSurface;
+		// 고속 정면 충돌에서 큰 수끼리 빼며 잔여 법선 속도가 생기지 않도록 접선에 투영한다.
+		const FVector2D Tangent(-Normal.m_Y, Normal.m_X);
+		Body.m_Velocity = Tangent * Body.m_Velocity.Dot(Tangent);
 	}
 	if (Normal.m_Y < -0.5f)
 	{
@@ -287,8 +243,25 @@ void FPhysicsWorld::SimulateBody(
 {
 	Body.m_bIsGrounded = false;
 	Body.m_CurrentFootholdId = INDEX_NONE;
-	Body.m_Velocity.m_Y =
-	    FMath::Min(Body.m_MaxFallSpeed, Body.m_Velocity.m_Y + m_Gravity * Body.m_GravityScale * DeltaTime);
+	const UClimbableComponent* Climbable = FindClimbable(Box, Primitives);
+	if (Body.m_bIsClimbing && !Climbable)
+	{
+		Body.StopClimbing();
+	}
+	if (!Body.m_bIsClimbing && Climbable && FMath::Abs(Body.m_ClimbInput) > FMath::SMALL_NUMBER)
+	{
+		Body.m_bIsClimbing = true;
+	}
+	if (Body.m_bIsClimbing)
+	{
+		// 진입 시 기존 낙하·수평 속도를 버리고 이동 입력으로만 움직인다.
+		Body.m_Velocity = FVector2D(0.0f, Body.m_ClimbInput * Body.m_ClimbSpeed);
+	}
+	else
+	{
+		Body.m_Velocity.m_Y =
+			FMath::Min(Body.m_MaxFallSpeed, Body.m_Velocity.m_Y + m_Gravity * Body.m_GravityScale * DeltaTime);
+	}
 
 	// 스폰이나 순간 이동으로 생긴 초기 겹침을 제한된 횟수의 최소 이동으로 해소한다.
 	for (int32 Pass = 0; Pass < 8; Pass++)
@@ -300,23 +273,15 @@ void FPhysicsWorld::SimulateBody(
 			{
 				continue;
 			}
-			const FRect A = Box.GetWorldBounds(), B = Primitives[i]->GetWorldBounds();
-			if (A.m_Right <= B.m_Left || A.m_Left >= B.m_Right || A.m_Bottom <= B.m_Top || A.m_Top >= B.m_Bottom)
+			FVector2D Normal;
+			float Depth;
+			const FOrientedBox2D Other = static_cast<const UBoxCollision*>(Primitives[i])->GetWorldBox();
+			if (!Box.GetWorldBox().FindContact(Other, Normal, Depth) || Depth <= 0.0f)
 			{
 				continue;
 			}
-			FVector2D Correction(B.m_Left - A.m_Right, 0.0f);
-			const FVector2D Candidates[] = {FVector2D(B.m_Right - A.m_Left, 0.0f),
-			    FVector2D(0.0f, B.m_Top - A.m_Bottom), FVector2D(0.0f, B.m_Bottom - A.m_Top)};
-			for (const FVector2D& Candidate : Candidates)
-			{
-				if (Candidate.SizeSquared() < Correction.SizeSquared())
-				{
-					Correction = Candidate;
-				}
-			}
-			Translate(Box, Correction);
-			ResolveVelocity(Body, Correction.GetNormalized());
+			Translate(Box, Normal * Depth);
+			ResolveVelocity(Body, Normal);
 			bMoved = true;
 		}
 		if (!bMoved)
@@ -329,7 +294,7 @@ void FPhysicsWorld::SimulateBody(
 	bool bWasFollowingFoothold = false;
 	for (int32 Pass = 0; Pass < 16 && RemainingTime > 0.0f; Pass++)
 	{
-		const FFoothold* Support = Body.m_Velocity.m_Y >= 0.0f
+		const FFoothold* Support = !Body.m_bIsClimbing && Body.m_Velocity.m_Y >= 0.0f
 			? FindSupportingFoothold(Box, Body.m_Velocity.m_X) : nullptr;
 		float MoveTime = RemainingTime;
 		FVector2D Delta;
@@ -371,8 +336,8 @@ void FPhysicsWorld::SimulateBody(
 			}
 			float Time;
 			FVector2D CandidateNormal;
-			if (IntersectBox(Box.GetWorldCenter(), Delta,
-			        Expanded(Primitives[i]->GetWorldBounds(), Box.GetScaledBoxExtent()), Time, CandidateNormal, true)
+			if (Box.GetWorldBox().Sweep(static_cast<const UBoxCollision*>(Primitives[i])->GetWorldBox(),
+			        Delta, Time, CandidateNormal)
 			    && Time <= Earliest)
 			{
 				Earliest = Time;
@@ -380,7 +345,7 @@ void FPhysicsWorld::SimulateBody(
 				bHit = true;
 			}
 		}
-		for (int32 i = 0; i < m_Footholds.Num(); i++)
+		for (int32 i = 0; !Body.m_bIsClimbing && i < m_Footholds.Num(); i++)
 		{
 			const FFoothold& Foothold = m_Footholds[i];
 			if (&Foothold == Support || !CanUseFoothold(Box, Foothold))
@@ -419,32 +384,44 @@ void FPhysicsWorld::SimulateBody(
 		}
 	}
 
-	// 중력이 0이어도 정지 접촉을 확인한다. 위로 이동 중이면 지면에 서 있는 상태가 아니다.
-	Body.m_bIsGrounded = false;
-	if (Body.m_Velocity.m_Y >= 0.0f)
+	if (Body.m_bIsClimbing)
 	{
-		const FRect A = Box.GetWorldBounds();
-		for (int32 i = 0; i < Primitives.Num(); i++)
+		Body.m_bIsGrounded = false;
+		if (!FindClimbable(Box, Primitives))
 		{
-			if (!IsBlocker(Box, *Primitives[i]))
-			{
-				continue;
-			}
-			const FRect B = Primitives[i]->GetWorldBounds();
-			if (A.m_Right > B.m_Left && A.m_Left < B.m_Right && FMath::Abs(A.m_Bottom - B.m_Top) <= 0.001f)
-			{
-				Body.m_bIsGrounded = true;
-				break;
-			}
+			Body.StopClimbing();
 		}
-		if (!Body.m_bIsGrounded)
+		else
 		{
-			const FFoothold* Support = FindSupportingFoothold(Box, 0.0f);
-			if (Support)
-			{
-				Body.m_bIsGrounded = true;
-				Body.m_CurrentFootholdId = Support->GetId();
-			}
+			return;
+		}
+	}
+
+	// 월드 Y 속도 대신 면의 법선 방향 속도로 이탈을 판단해 경사면 위쪽 이동도 지지한다.
+	Body.m_bIsGrounded = false;
+	for (int32 i = 0; i < Primitives.Num(); i++)
+	{
+		if (!IsBlocker(Box, *Primitives[i]))
+		{
+			continue;
+		}
+		FVector2D Normal;
+		float Depth;
+		if (Box.GetWorldBox().FindContact(static_cast<const UBoxCollision*>(Primitives[i])->GetWorldBox(),
+			Normal, Depth, 0.001f) && Normal.m_Y < -0.5f
+			&& Body.m_Velocity.Dot(Normal) <= 0.0001f)
+		{
+			Body.m_bIsGrounded = true;
+			break;
+		}
+	}
+	if (!Body.m_bIsGrounded && Body.m_Velocity.m_Y >= 0.0f)
+	{
+		const FFoothold* Support = FindSupportingFoothold(Box, 0.0f);
+		if (Support)
+		{
+			Body.m_bIsGrounded = true;
+			Body.m_CurrentFootholdId = Support->GetId();
 		}
 	}
 }
@@ -469,10 +446,7 @@ bool FPhysicsWorld::Raycast(const FVector2D& Start, const FVector2D& End, FHitRe
 		bool bInside;
 		if (Shape.GetShapeType() == ECollisionShape::Box)
 		{
-			const FRect Bounds = Shape.GetWorldBounds();
-			bInside = Start.m_X > Bounds.m_Left && Start.m_X < Bounds.m_Right && Start.m_Y > Bounds.m_Top
-			          && Start.m_Y < Bounds.m_Bottom;
-			if (!IntersectBox(Start, Delta, Bounds, Time, Normal, false))
+			if (!static_cast<const UBoxCollision&>(Shape).GetWorldBox().Raycast(Start, End, Time, Normal, bInside))
 			{
 				continue;
 			}

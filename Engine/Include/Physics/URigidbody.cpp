@@ -24,11 +24,40 @@ void URigidbody::SetMaxFallSpeed(float Speed)
 	m_MaxFallSpeed = FMath::Max(0.0f, Speed);
 }
 
+void URigidbody::SetClimbInput(float Direction)
+{
+	m_ClimbInput = _finite(Direction) ? FMath::Clamp(Direction, -1.0f, 1.0f) : 0.0f;
+}
+
+void URigidbody::SetClimbSpeed(float Speed)
+{
+	if (_finite(Speed) && Speed >= 0.0f)
+	{
+		m_ClimbSpeed = Speed;
+	}
+}
+
+void URigidbody::StopClimbing()
+{
+	if (m_bIsClimbing)
+	{
+		m_Velocity = FVector2D::Zero;
+	}
+	m_bIsClimbing = false;
+	m_ClimbInput = 0.0f;
+}
+
+bool URigidbody::IsClimbing() const
+{
+	return m_bIsClimbing;
+}
+
 void URigidbody::SetSimulatePhysics(bool bSimulate)
 {
 	m_bSimulatePhysics = bSimulate;
 	if (!bSimulate)
 	{
+		StopClimbing();
 		m_bIsGrounded = false;
 		m_CurrentFootholdId = INDEX_NONE;
 	}

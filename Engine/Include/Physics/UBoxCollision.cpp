@@ -22,6 +22,10 @@ ECollisionShape UBoxCollision::GetShapeType() const
 
 FRect UBoxCollision::GetWorldBounds() const
 {
-	const FVector2D Center = GetWorldCenter(), Extent = GetScaledBoxExtent();
-	return FRect(Center - Extent, Center + Extent);
+	return GetWorldBox().GetBounds();
+}
+
+FOrientedBox2D UBoxCollision::GetWorldBox() const
+{
+	return FOrientedBox2D(GetWorldCenter(), GetScaledBoxExtent(), GetWorldTransform().m_Rotation);
 }

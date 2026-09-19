@@ -7,7 +7,7 @@ class UWorld;
 class AActor;
 class URigidbody;
 class UBoxCollision;
-class FRect;
+class UClimbableComponent;
 
 class FPhysicsWorld
 {
@@ -38,11 +38,6 @@ public:
 	void FindOverlaps(TArray<FOverlapResult>& OutOverlaps) const;
 
 private:
-	// 교차 검사 / 도형 확장
-	static bool IntersectBox(const FVector2D& Start, const FVector2D& Delta, const FRect& Bounds, float& Time,
-	    FVector2D& Normal, bool bSweep);
-	static FRect Expanded(const FRect& Bounds, const FVector2D& Extent);
-
 	// 차단 대상 필터링
 	static bool IsBlocker(const UBoxCollision& Box, const UPrimitiveComponent& Other);
 
@@ -50,13 +45,17 @@ private:
 	static void Translate(UBoxCollision& Box, const FVector2D& Delta);
 	static void ResolveVelocity(URigidbody& Body, const FVector2D& Normal);
 
-	// 발밑 중심점의 단방향 착지 / 경사면 지지 판정
+	// 아래쪽 지지점의 단방향 착지 / 경사면 지지 판정
 	static FVector2D GetFootPosition(const UBoxCollision& Box);
 	static bool CanUseFoothold(const UBoxCollision& Box, const FFoothold& Foothold);
 	static bool SweepFoothold(const FFoothold& Foothold, const FVector2D& Start,
 		const FVector2D& Delta, float& OutTime);
 	const FFoothold* FindSupportingFoothold(const UBoxCollision& Box, float DirectionX) const;
 	void InvalidateFootholdSupport(int32 Id);
+
+	// 로프·사다리 Trigger와 강체의 겹침 판정
+	static const UClimbableComponent* FindClimbable(
+		const UBoxCollision& Box, const TArray<UPrimitiveComponent*>& Primitives);
 
 	// 도형 수집 / 개별 강체 시뮬레이션
 	void GatherPrimitives(TArray<UPrimitiveComponent*>& Out) const;

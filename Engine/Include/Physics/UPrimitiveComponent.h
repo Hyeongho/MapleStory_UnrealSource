@@ -3,8 +3,8 @@
 #include "Core/Math/FRect.h"
 #include "Physics/CollisionTypes.h"
 
-// 충돌 도형의 공통 기반. 도형은 월드 XY축에 정렬된 상태로 계산한다.
-// 회전은 반영하지 않고 월드 스케일과 로컬 중심 오프셋을 적용한다.
+// 충돌 도형의 공통 기반. 월드 회전·스케일과 로컬 중심 오프셋을 적용한다.
+// GetWorldBounds는 실제 도형을 감싸는 축 정렬 사각형을 반환한다.
 class UPrimitiveComponent : public USceneComponent
 {
 	DECLARE_CLASS(UPrimitiveComponent, USceneComponent)

@@ -462,6 +462,8 @@
     <ClCompile Include="Physics\UPrimitiveComponent.cpp"><Filter>Physics</Filter></ClCompile>
     <ClInclude Include="Physics\UBoxCollision.h"><Filter>Physics</Filter></ClInclude>
     <ClCompile Include="Physics\UBoxCollision.cpp"><Filter>Physics</Filter></ClCompile>
+    <ClInclude Include="Physics\UClimbableComponent.h"><Filter>Physics</Filter></ClInclude>
+    <ClCompile Include="Physics\UClimbableComponent.cpp"><Filter>Physics</Filter></ClCompile>
     <ClInclude Include="Physics\UCircleCollision.h"><Filter>Physics</Filter></ClInclude>
     <ClCompile Include="Physics\UCircleCollision.cpp"><Filter>Physics</Filter></ClCompile>
     <ClInclude Include="Physics\URigidbody.h"><Filter>Physics</Filter></ClInclude>
@@ -472,5 +474,7 @@
   <ItemGroup>
     <ClInclude Include="Physics\FFoothold.h"><Filter>Physics</Filter></ClInclude>
     <ClCompile Include="Physics\FFoothold.cpp"><Filter>Physics</Filter></ClCompile>
+    <ClInclude Include="Physics\FOrientedBox2D.h"><Filter>Physics</Filter></ClInclude>
+    <ClCompile Include="Physics\FOrientedBox2D.cpp"><Filter>Physics</Filter></ClCompile>
   </ItemGroup>
 </Project>

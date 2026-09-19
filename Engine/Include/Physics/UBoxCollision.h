@@ -1,5 +1,6 @@
 #pragma once
 #include "Physics/UPrimitiveComponent.h"
+#include "Physics/FOrientedBox2D.h"
 
 class UBoxCollision : public UPrimitiveComponent
 {
@@ -12,6 +13,9 @@ public:
 	// Box 크기 설정 / 조회
 	void SetBoxExtent(const FVector2D& HalfExtent);
 	FVector2D GetScaledBoxExtent() const;
+
+	// 월드 회전과 스케일을 적용한 실제 충돌 도형
+	FOrientedBox2D GetWorldBox() const;
 
 	// 도형 인터페이스 재정의
 	virtual ECollisionShape GetShapeType() const override;
