@@ -11,8 +11,9 @@ enum class ELayer : uint8
 {
 	Background = 0,
 	Object = 1,
-	Effect = 2,
-	UI = 3,
+	BackFront = 2, // Map.wz back 레이어 중 front=1인 항목 — 타일/오브젝트보다 앞, 실제 Effect/UI보다 뒤
+	Effect = 3,
+	UI = 4,
 };
 
 struct FRenderQueueEntry

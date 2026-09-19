@@ -4,7 +4,7 @@
 // ── DLL 함수 포인터 (WzTest/wz_test.cpp의 WzDll 네임스페이스와 동일한 시그니처) ──
 namespace
 {
-	using FnReadCanvas = const uint8_t* (*)(const char* WzPath, const char* NodePath, int* OutWidth, int* OutHeight, int* OutLen);
+	using FnReadCanvas = const uint8_t* (*)(const char* WzPath, const char* NodePath, int* OutWidth, int* OutHeight, int* OutOriginX, int* OutOriginY, int* OutDelayMs, int* OutLen);
 
 	using FnReadAvatar = const uint8_t* (*)(const char* WzPath, const char* LoadoutSpec, const char* ActionName, int FrameIndex, const char* EmotionName, int EmotionFrameIndex, int* OutWidth, int* OutHeight, int* OutOriginX, int* OutOriginY, int* OutLen, int* OutDelayMs);
 
@@ -99,7 +99,7 @@ ID3D11ShaderResourceView* FWzTextureLoader::UploadBGRATexture(FDXDevice& Device,
 	return pSRV;
 }
 
-ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth, int32* OutHeight)
+ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device, const char* WzPath, const char* NodePath, int32* OutWidth, int32* OutHeight, FCanvasMeta* OutMeta)
 {
 	FWzDllState& DllState = GetDllState();
 	if (!DllState.ReadCanvas)
@@ -109,9 +109,12 @@ ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device,
 
 	int Width = 0;
 	int Height = 0;
+	int OriginX = 0;
+	int OriginY = 0;
+	int DelayMs = 120;
 	int Len = 0;
 
-	const uint8_t* Pixels = DllState.ReadCanvas(WzPath, NodePath, &Width, &Height, &Len);
+	const uint8_t* Pixels = DllState.ReadCanvas(WzPath, NodePath, &Width, &Height, &OriginX, &OriginY, &DelayMs, &Len);
 	if (!Pixels || Len == 0 || Width <= 0 || Height <= 0)
 	{
 		return nullptr;
@@ -124,6 +127,12 @@ ID3D11ShaderResourceView* FWzTextureLoader::LoadCanvasTexture(FDXDevice& Device,
 	if (OutHeight)
 	{
 		*OutHeight = Height;
+	}
+
+	if (OutMeta)
+	{
+		OutMeta->m_Origin = FVector2D((float)OriginX, (float)OriginY);
+		OutMeta->m_DelayMs = DelayMs;
 	}
 
 	ID3D11ShaderResourceView* pSRV = UploadBGRATexture(Device, Pixels, Width, Height);
