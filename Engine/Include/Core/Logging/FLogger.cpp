@@ -1,9 +1,6 @@
 #include "EnginePCH.h"
 #include "FLogger.h"
 
-#include <cstdarg>
-#include <cwchar>
-
 FILE* FLogger::m_pFile = nullptr;
 bool FLogger::m_bInitialized = false;
 

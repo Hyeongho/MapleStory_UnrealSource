@@ -1,6 +1,5 @@
 #include "EnginePCH.h"
 #include "Physics/FFoothold.h"
-#include <float.h>
 
 FFoothold::FFoothold() = default;
 

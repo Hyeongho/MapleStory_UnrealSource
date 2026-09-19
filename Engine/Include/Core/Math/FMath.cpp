@@ -1,6 +1,5 @@
 #include "EnginePCH.h"
 #include "FMath.h"
-#include <cmath>
 
 float FMath::Sin(float Angle) 
 { 

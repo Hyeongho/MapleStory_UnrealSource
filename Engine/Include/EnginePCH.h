@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // -----------------------------------------------------------------------
-// 저수준 C 헤더 (STL 금지, C 헤더는 허용)
+// 공통 C/C++ 런타임 헤더
 // -----------------------------------------------------------------------
 #include <cstdint>
 #include <cstdio>
@@ -10,6 +10,11 @@
 #include <malloc.h>
 #include <new>
 #include <cassert>
+#include <cstdarg>
+#include <cwchar>
+#include <cmath>
+#include <float.h>
+#include <iostream>
 
 // -----------------------------------------------------------------------
 // Windows 플랫폼 헤더
@@ -17,7 +22,6 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
-#include <iostream>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)

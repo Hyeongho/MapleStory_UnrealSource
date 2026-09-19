@@ -4,7 +4,6 @@
 #include "Physics/UCircleCollision.h"
 #include "Physics/URigidbody.h"
 #include "World/UWorld.h"
-#include <float.h>
 
 // 축별 구간 교차를 검사한다. Sweep은 도형 내부로 진입할 때만 충돌로 판단하므로,
 // 접촉면에서 멀어지거나 평행하게 이동하는 Box가 표면에 걸리지 않는다.
