@@ -787,10 +787,10 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 - [x] `UCircleCollision.h / .cpp` — Circle 겹침/쿼리(강체 차단은 후속)
 - [x] `PhysicsWorld.h / .cpp` — UWorld 소유 충돌 감지/시뮬레이션 루프
 - [x] `URigidbody.h / .cpp` — 중력, 속도, 최대 낙하 속도, Grounded
-- [x] Raycast — Box/Circle 최근접 선분 쿼리
+- [x] Raycast — Box/Circle/Foothold 최근접 선분 쿼리
 - [x] 충돌 레이어 마스크 (플레이어/적/지형/투사체/트리거)
-- [x] 플랫폼 판정 — 정적 Box 땅·벽·천장, swept AABB (단방향 선분 발판은 후속)
-- [ ] 경사면 처리
+- [x] 플랫폼 판정 — 정적 Box 땅·벽·천장, swept AABB, 단방향 선분 발판
+- [x] 경사면 처리 — 발밑 중심점 착지·높이 추종·끝점 연결 (구현, 빌드·실행 확인 대기)
 - [ ] 로프·사다리 충돌 영역
 - [ ] 낙하 판정 / 코요테 타임 (점프 관용치)
 - [ ] 무적 프레임 (i-frame, 피격 후 무적)
@@ -803,9 +803,12 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 완료 기준: 캐릭터가 발판 위에 서고 벽에 막힘 확인
 
 첫 단계 구현: 동적 Box 대 정적 Box, Circle은 겹침/Raycast용. 구조·제약·사용 예는
-`Docs/PHYSICS.md` 참고. Phase 10 전체 완료는 아니며 선분 Foothold와 WZ 연동 등은 남아 있다.
+`Docs/PHYSICS.md` 참고. Phase 10 전체 완료는 아니며 WZ 연동과 로프·사다리 등은 남아 있다.
 첫 단계 검증(2026-09-19): Windows x64 Debug/Release 전체 빌드 및 Test 통과,
 Physics 회귀 검사 실패 0건. Game 화면의 수동 플레이 확인은 아직 수행하지 않았다.
+후속 구현: `FFoothold` 등록·제거, 단방향 착지, 경사면 이동 및 Raycast 연동.
+추가 검사 코드는 `Test/Include/main.cpp`에 통합했다. 사용자 요청에 따라 이번 변경은
+빌드·테스트를 실행하지 않았으며, 위 첫 단계 검증 기록과 구분한다.
 
 ---
 

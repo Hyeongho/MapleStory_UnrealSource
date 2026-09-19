@@ -469,4 +469,8 @@
     <ClInclude Include="Physics\PhysicsWorld.h"><Filter>Physics</Filter></ClInclude>
     <ClCompile Include="Physics\PhysicsWorld.cpp"><Filter>Physics</Filter></ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Physics\FFoothold.h"><Filter>Physics</Filter></ClInclude>
+    <ClCompile Include="Physics\FFoothold.cpp"><Filter>Physics</Filter></ClCompile>
+  </ItemGroup>
 </Project>

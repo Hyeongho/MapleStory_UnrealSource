@@ -44,6 +44,7 @@ struct FHitResult
 
 	// 충돌 대상
 	UPrimitiveComponent* m_pComponent = nullptr; // 비소유 — 컴포넌트가 파괴되기 전까지만 유효
+	int32 m_FootholdId = INDEX_NONE; // 선분 발판 적중 시 사용. 이때 m_pComponent는 nullptr이다.
 };
 
 struct FOverlapResult

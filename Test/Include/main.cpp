@@ -2395,6 +2395,105 @@ int main()
 		wprintf(L"[Physics] Phase 10 initial stage: %d failure(s)\n", g_TestFailCount - PhysicsFailuresBefore);
 	}
 
+	// Phase 10 — 단방향 선분 발판 / 경사면 / 발판 연결
+	{
+		const int32 FootholdFailuresBefore = g_TestFailCount;
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			bool bAdded = Physics.AddFoothold(FFoothold(1, FVector2D(-100, 100), FVector2D(100, 100)));
+			check(bAdded);
+			bAdded = Physics.AddFoothold(FFoothold(1, FVector2D(0, 0), FVector2D(10, 0)));
+			check(!bAdded); // 기존 ID 덮어쓰기 방지
+			bAdded = Physics.AddFoothold(FFoothold(2, FVector2D(0, 0), FVector2D(0, 100)));
+			check(!bAdded); // 수직 벽은 발판으로 등록하지 않음
+
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 130, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, -400));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 50));
+			check(!Body->IsGrounded()); // 아래에서 위로 통과
+
+			Body->SetMaxFallSpeed(100000);
+			Body->SetVelocity(FVector2D(0, 100000));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 95));
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 1);
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+
+			const bool bRemoved = Physics.RemoveFoothold(1);
+			check(bRemoved && Physics.FindFoothold(1) == nullptr);
+			check(!Body->IsGrounded() && Body->GetCurrentFootholdId() == INDEX_NONE);
+			Body->SetGravityScale(1);
+			World.Tick(0.1f);
+			check(Box->GetWorldCenter().m_Y > 95);
+		}
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			// 역순 끝점도 같은 경사로 처리하며, 끝점을 공유하는 선분끼리 이동한다.
+			bool bAdded = Physics.AddFoothold(FFoothold(10, FVector2D(100, 50), FVector2D(0, 100)));
+			check(bAdded);
+			bAdded = Physics.AddFoothold(FFoothold(11, FVector2D(100, 50), FVector2D(200, 100)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 20, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, 1000));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 85));
+			check(Body->GetCurrentFootholdId() == 10);
+
+			Body->SetVelocity(FVector2D(100, 0));
+			World.Tick(1.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 140));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 65));
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 11);
+			check(IsPhysicsTestNear(Body->GetVelocity().m_X, 100));
+
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(1.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 20));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 85));
+			check(Body->GetCurrentFootholdId() == 10);
+
+			Body->SetGravityScale(1);
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(0.5f);
+			check(Box->GetWorldCenter().m_X < 0 && Box->GetWorldCenter().m_Y > 95);
+			check(!Body->IsGrounded() && Body->GetCurrentFootholdId() == INDEX_NONE);
+		}
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			const bool bAdded = Physics.AddFoothold(FFoothold(20, FVector2D(-100, 100), FVector2D(100, 100)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, 1000));
+			Box->SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 200) && !Body->IsGrounded());
+
+			FHitResult Hit;
+			bool bHit = Physics.Raycast(FVector2D(0, 0), FVector2D(0, 200), Hit);
+			check(bHit && Hit.m_FootholdId == 20 && Hit.m_pComponent == nullptr);
+			check(IsPhysicsTestNear(Hit.m_Time, 0.5f) && Hit.m_Normal.m_Y < 0);
+			bHit = Physics.Raycast(FVector2D(0, 200), FVector2D(0, 0), Hit,
+				CollisionChannelMask(ECollisionChannel::WorldStatic));
+			check(bHit && Hit.m_FootholdId == 20); // 쿼리는 아래쪽에서도 검출
+			bHit = Physics.Raycast(FVector2D(0, 0), FVector2D(0, 150), Hit,
+				CollisionChannelMask(ECollisionChannel::Enemy));
+			check(!bHit && Hit.m_FootholdId == INDEX_NONE);
+			Physics.ClearFootholds();
+			check(Physics.FindFoothold(20) == nullptr);
+		}
+		wprintf(L"[Physics] Foothold / slopes: %d failure(s)\n", g_TestFailCount - FootholdFailuresBefore);
+	}
+
 	if (g_TestFailCount > 0)
 	{
 		wprintf(L"[Tests] %d CHECK(S) FAILED\n", g_TestFailCount);

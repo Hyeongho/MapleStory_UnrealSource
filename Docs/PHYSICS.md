@@ -1,4 +1,4 @@
-# Phase 10 — 첫 단계 Physics/Collision
+# Phase 10 — Physics/Collision
 
 `CLAUDE.md`의 Phase 순서를 유지한다. Input 선행 구현 없이 위치·속도·시간을 직접 지정해 검증한다.
 
@@ -13,17 +13,48 @@
 언리얼의 컴포넌트 계층과 월드 소유 구조를 참고한 최소 2D 구현이다.
 Chaos 또는 언리얼의 전체 Primitive/BodyInstance/MovementComponent 구현을 복제한 것은 아니다.
 
-## 이번 단계에서 지원하는 것
+## 기본 도형과 강체
 
 - Box–Box, Circle–Circle, Box–Circle 겹침 검사(경계 접촉 포함).
 - 양쪽 도형의 채널 마스크를 모두 만족해야 겹침/정적 차단 발생.
-- ObjectMask·IgnoreActor를 받는 유한 선분 Raycast. 가장 가까운 Box/Circle 반환.
+- ObjectMask·IgnoreActor를 받는 유한 선분 Raycast. 가장 가까운 Box/Circle/발판 반환.
   시작점이 도형 내부이면 Time=0, StartPenetrating=true, Normal=0이다.
   Time은 초가 아닌 선분 내 비율이며 실패 시 OutHit을 초기화한다.
 - 동적 Box와 정적 Box 사이의 중력·속도·발판 착지·벽/천장 차단 및 벽면 미끄러짐.
 - swept AABB로 빠른 이동의 관통 방지. 초기 겹침은 최대 8회 최소 이동 보정.
 - 1/120초를 목표로 최대 120회 서브스텝, 시간 버림 없음. 음수/0/비유한 DeltaTime 무시.
 - 정지 접촉과 발판 이탈을 반영한 Grounded, 최대 낙하 속도 제한.
+
+## 선분 발판과 경사면
+
+- `FFoothold`는 ID와 두 끝점, 충돌 마스크를 가진 월드 좌표 데이터다.
+  `FPhysicsWorld`가 복사해 소유하고 `AddFoothold` / `RemoveFoothold` / `ClearFootholds`로 관리한다.
+  중복 ID, 음수 ID, 비유한 좌표, 수직·퇴화 선분은 등록하지 않는다.
+- Box의 **발밑 중심점**으로 착지한다. 내려오면서 선분을 가로지를 때 착지하며,
+  위로 점프하거나 아래에서 접근하면 통과한다. Box 전체 모서리로 경사면을 지지하지 않는다.
+- 접지 중에는 수평 속도를 유지하고 발밑 높이를 경사면에 맞춘다. 끝점을 공유하는
+  선분 사이를 이동하며, 연결된 선분이 없으면 중력을 적용해 떨어진다.
+  한 서브스텝의 이동·충돌 반복은 최대 16회이며, 초과한 잔여 이동은 처리하지 않는다.
+- 발판은 `WorldStatic` 채널이다. Box와 발판의 충돌 마스크를 모두 만족해야 착지한다.
+  `URigidbody::GetCurrentFootholdId()`는 현재 지지하는 선분 ID를 반환한다.
+  공중이나 정적 Box 위에서는 `INDEX_NONE`이다. 지지 발판 삭제 시 접지 정보도 해제한다.
+- Raycast는 발판의 양쪽 방향에서 검출한다. 발판 적중 시 `FHitResult::m_FootholdId`를
+  사용하며 `m_pComponent`는 null이다. 쿼리는 ObjectMask를 적용하며 발판의 응답 마스크와는 별개다.
+  `FindOverlaps`는 컴포넌트 도형끼리의 조회로 유지한다.
+- 끝점 순서는 무관하다. 연결 판정은 끝점 위치에 기반하며 WZ의 prev/next·레이어 정보는
+  아직 사용하지 않는다. 수직 선분 벽은 정적 Box로 표현한다.
+
+```cpp
+FPhysicsWorld& Physics = World.GetPhysicsWorld();
+const bool bAdded = Physics.AddFoothold(
+    FFoothold(1, FVector2D(0, 100), FVector2D(200, 50)));
+check(bAdded);
+// Box와 URigidbody를 가진 액터가 위에서 내려오면 경사면에 착지한다.
+// 접지 후 수평 속도를 설정하면 경사면의 높이를 따라 움직인다.
+```
+
+`FindFoothold`의 반환 포인터는 발판 목록을 변경하기 전까지만 사용한다.
+이동 발판, 아래로 내려가기 입력, WZ 파싱·연결 정보 복원은 후속 범위다.
 
 ## 계약과 제한
 
@@ -69,10 +100,15 @@ Debug는 실패 시 중단하고, Release는 실패 수를 집계해 Test 종료
 얇은 발판 고속 착지, 접촉 유지, 위로 이동, 발판 이탈, 속도 제한, 벽 미끄러짐,
 천장 차단, 초기 겹침 해소, 마스크, 쿼리, 삭제 후 조회를 검증한다.
 
-2026-09-19 검증: Windows x64 Debug/Release 전체 솔루션 빌드 및 Test 실행 통과,
+첫 단계의 기존 검증 기록(2026-09-19): Windows x64 Debug/Release 전체 솔루션 빌드 및 Test 실행 통과,
 Physics 검사 실패 0건, 프로세스 종료 코드 0. `Copy.bat`으로 갱신한 Physics 공개 헤더
 6개의 원본/배포 미러 해시 일치 확인. 기존 DirectXTK PDB 누락 링크 경고는 남아 있다.
 
-다음은 같은 Phase 10 안의 선분 Foothold·경사면·단방향 발판 및 나머지 항목이다.
+추가한 선분 발판·경사면 코드는 사용자 요청에 따라 **빌드·테스트를 실행하지 않았다**.
+`main()`에 단방향 통과, 고속 착지, 양방향 경사 이동, 연결 지점 통과, 발판 이탈·삭제,
+등록 거부, 마스크 및 발판 Raycast 검사 코드를 추가했으며 사용자 실행으로 확인해야 한다.
+위의 첫 단계 통과 기록은 이번 변경의 검증 결과가 아니다.
+
+다음은 같은 Phase 10의 로프·사다리 충돌 영역 및 나머지 항목이다.
 Map.wz 파싱, 로프/사다리, 코요테 타임, i-frame, 넉백, DeathZone은 아직 미구현이다.
 현재 Game 데모를 물리 데모로 바꾸지는 않았으며 화면에서의 플레이 검증은 별도다.

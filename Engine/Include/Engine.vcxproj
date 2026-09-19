@@ -298,6 +298,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Physics\CollisionTypes.h" />
+    <ClInclude Include="Physics\FFoothold.h" />
+    <ClCompile Include="Physics\FFoothold.cpp" />
     <ClCompile Include="Physics\CollisionTypes.cpp" />
     <ClInclude Include="Physics\UPrimitiveComponent.h" />
     <ClCompile Include="Physics\UPrimitiveComponent.cpp" />

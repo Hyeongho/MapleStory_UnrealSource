@@ -30,6 +30,7 @@ void URigidbody::SetSimulatePhysics(bool bSimulate)
 	if (!bSimulate)
 	{
 		m_bIsGrounded = false;
+		m_CurrentFootholdId = INDEX_NONE;
 	}
 }
 
@@ -41,4 +42,9 @@ bool URigidbody::IsSimulatingPhysics() const
 bool URigidbody::IsGrounded() const
 {
 	return m_bIsGrounded;
+}
+
+int32 URigidbody::GetCurrentFootholdId() const
+{
+	return m_CurrentFootholdId;
 }

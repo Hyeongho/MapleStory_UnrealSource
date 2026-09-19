@@ -103,6 +103,129 @@ float FPhysicsWorld::GetGravity() const
 	return m_Gravity;
 }
 
+bool FPhysicsWorld::AddFoothold(const FFoothold& Foothold)
+{
+	if (!Foothold.IsValid() || FindFoothold(Foothold.m_Id))
+	{
+		UE_LOG(LogPhysics, Warning, L"AddFoothold: invalid segment or duplicate ID (%d)", Foothold.m_Id);
+		return false;
+	}
+	m_Footholds.Add(Foothold);
+	return true;
+}
+
+bool FPhysicsWorld::RemoveFoothold(int32 Id)
+{
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		if (m_Footholds[i].m_Id == Id)
+		{
+			m_Footholds.RemoveAtSwap(i);
+			InvalidateFootholdSupport(Id);
+			return true;
+		}
+	}
+	return false;
+}
+
+void FPhysicsWorld::ClearFootholds()
+{
+	m_Footholds.Empty();
+	InvalidateFootholdSupport(INDEX_NONE);
+}
+
+const FFoothold* FPhysicsWorld::FindFoothold(int32 Id) const
+{
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		if (m_Footholds[i].m_Id == Id)
+		{
+			return &m_Footholds[i];
+		}
+	}
+	return nullptr;
+}
+
+void FPhysicsWorld::InvalidateFootholdSupport(int32 Id)
+{
+	const TArray<AActor*>& Actors = m_World.GetActors();
+	for (int32 i = 0; i < Actors.Num(); i++)
+	{
+		URigidbody* Body = Actors[i]->GetComponent<URigidbody>();
+		if (Body && Body->m_CurrentFootholdId != INDEX_NONE
+			&& (Id == INDEX_NONE || Body->m_CurrentFootholdId == Id))
+		{
+			Body->m_CurrentFootholdId = INDEX_NONE;
+			Body->m_bIsGrounded = false;
+		}
+	}
+}
+
+FVector2D FPhysicsWorld::GetFootPosition(const UBoxCollision& Box)
+{
+	const FRect Bounds = Box.GetWorldBounds();
+	return FVector2D(Box.GetWorldCenter().m_X, Bounds.m_Bottom);
+}
+
+bool FPhysicsWorld::CanUseFoothold(const UBoxCollision& Box, const FFoothold& Foothold)
+{
+	return Box.IsCollisionEnabled()
+		&& (Box.GetCollisionMask() & CollisionChannelMask(ECollisionChannel::WorldStatic))
+		&& (Foothold.m_CollisionMask & CollisionChannelMask(Box.GetCollisionObjectType()));
+}
+
+bool FPhysicsWorld::SweepFoothold(
+	const FFoothold& Foothold, const FVector2D& Start, const FVector2D& Delta, float& OutTime)
+{
+	// 위로 점프하거나 발판 아래에서 접근하면 통과한다.
+	const float Distance = Start.m_Y - Foothold.GetHeightAtX(Start.m_X);
+	const float Approach = Delta.m_Y - Foothold.GetSlope() * Delta.m_X;
+	if (Delta.m_Y < 0.0f || Distance > 0.001f || Approach <= FMath::SMALL_NUMBER)
+	{
+		return false;
+	}
+	OutTime = FMath::Max(0.0f, -Distance / Approach);
+	if (OutTime > 1.0f)
+	{
+		return false;
+	}
+	const float HitX = Start.m_X + Delta.m_X * OutTime;
+	// 끝점에서 선분 바깥으로 나가는 접촉은 막지 않는다.
+	// 연결된 다음 경사면으로 이동할 때 이전 선분에 다시 걸리는 것을 방지한다.
+	if ((Delta.m_X > 0.0f && HitX >= Foothold.GetMaxX())
+		|| (Delta.m_X < 0.0f && HitX <= Foothold.GetMinX()))
+	{
+		return false;
+	}
+	return Foothold.ContainsX(HitX);
+}
+
+const FFoothold* FPhysicsWorld::FindSupportingFoothold(const UBoxCollision& Box, float DirectionX) const
+{
+	const FVector2D Foot = GetFootPosition(Box);
+	const FFoothold* Result = nullptr;
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		const FFoothold& Foothold = m_Footholds[i];
+		if (!CanUseFoothold(Box, Foothold) || !Foothold.ContainsX(Foot.m_X)
+			|| FMath::Abs(Foot.m_Y - Foothold.GetHeightAtX(Foot.m_X)) > 0.001f)
+		{
+			continue;
+		}
+		// 끝점에 도달하면 이동 방향 쪽으로 이어진 선분을 선택한다.
+		if ((DirectionX > 0.0f && Foothold.GetMaxX() - Foot.m_X <= FMath::SMALL_NUMBER)
+			|| (DirectionX < 0.0f && Foot.m_X - Foothold.GetMinX() <= FMath::SMALL_NUMBER))
+		{
+			continue;
+		}
+		if (!Result || Foothold.m_Id < Result->m_Id)
+		{
+			Result = &Foothold;
+		}
+	}
+	return Result;
+}
+
 void FPhysicsWorld::GatherPrimitives(TArray<UPrimitiveComponent*>& Out) const
 {
 	Out.Reset();
@@ -139,6 +262,7 @@ void FPhysicsWorld::Tick(float DeltaTime)
 			if (!Box || Box->GetAttachParent() || !Box->IsCollisionEnabled())
 			{
 				Body->m_bIsGrounded = false;
+				Body->m_CurrentFootholdId = INDEX_NONE;
 				continue;
 			}
 			SimulateBody(*Body, *Box, StepTime, Primitives);
@@ -163,6 +287,7 @@ void FPhysicsWorld::SimulateBody(
     URigidbody& Body, UBoxCollision& Box, float DeltaTime, const TArray<UPrimitiveComponent*>& Primitives)
 {
 	Body.m_bIsGrounded = false;
+	Body.m_CurrentFootholdId = INDEX_NONE;
 	Body.m_Velocity.m_Y =
 	    FMath::Min(Body.m_MaxFallSpeed, Body.m_Velocity.m_Y + m_Gravity * Body.m_GravityScale * DeltaTime);
 
@@ -202,9 +327,35 @@ void FPhysicsWorld::SimulateBody(
 	}
 
 	float RemainingTime = DeltaTime;
-	for (int32 Pass = 0; Pass < 4 && RemainingTime > 0.0f; Pass++)
+	bool bWasFollowingFoothold = false;
+	for (int32 Pass = 0; Pass < 16 && RemainingTime > 0.0f; Pass++)
 	{
-		const FVector2D Delta = Body.m_Velocity * RemainingTime;
+		const FFoothold* Support = Body.m_Velocity.m_Y >= 0.0f
+			? FindSupportingFoothold(Box, Body.m_Velocity.m_X) : nullptr;
+		float MoveTime = RemainingTime;
+		FVector2D Delta;
+		if (Support)
+		{
+			Body.m_Velocity.m_Y = 0.0f;
+			const FVector2D Foot = GetFootPosition(Box);
+			if (FMath::Abs(Body.m_Velocity.m_X) > FMath::SMALL_NUMBER)
+			{
+				const float EdgeX = Body.m_Velocity.m_X > 0.0f ? Support->GetMaxX() : Support->GetMinX();
+				MoveTime = FMath::Min(MoveTime, (EdgeX - Foot.m_X) / Body.m_Velocity.m_X);
+			}
+			Delta.m_X = Body.m_Velocity.m_X * MoveTime;
+			Delta.m_Y = Support->GetHeightAtX(Foot.m_X + Delta.m_X) - Foot.m_Y;
+		}
+		else
+		{
+			if (bWasFollowingFoothold)
+			{
+				Body.m_Velocity.m_Y = FMath::Min(Body.m_MaxFallSpeed,
+					m_Gravity * Body.m_GravityScale * RemainingTime);
+			}
+			Delta = Body.m_Velocity * MoveTime;
+		}
+		bWasFollowingFoothold = Support != nullptr;
 		if (Delta.IsNearlyZero(FMath::SMALL_NUMBER))
 		{
 			break;
@@ -212,6 +363,7 @@ void FPhysicsWorld::SimulateBody(
 		float Earliest = 1.0f;
 		FVector2D Normal;
 		bool bHit = false;
+		const FFoothold* HitFoothold = nullptr;
 		for (int32 i = 0; i < Primitives.Num(); i++)
 		{
 			if (!IsBlocker(Box, *Primitives[i]))
@@ -229,13 +381,43 @@ void FPhysicsWorld::SimulateBody(
 				bHit = true;
 			}
 		}
+		for (int32 i = 0; i < m_Footholds.Num(); i++)
+		{
+			const FFoothold& Foothold = m_Footholds[i];
+			if (&Foothold == Support || !CanUseFoothold(Box, Foothold))
+			{
+				continue;
+			}
+			float Time;
+			if (SweepFoothold(Foothold, GetFootPosition(Box), Delta, Time)
+				&& (Time < Earliest || (!bHit && Time <= Earliest)))
+			{
+				Earliest = Time;
+				HitFoothold = &Foothold;
+				bHit = true;
+			}
+		}
 		Translate(Box, Delta * Earliest);
+		RemainingTime -= MoveTime * Earliest;
 		if (!bHit)
 		{
+			// 선분 끝점까지만 이동했다면 남은 시간으로 다음 선분이나 공중 이동을 처리한다.
+			if (RemainingTime > FMath::SMALL_NUMBER)
+			{
+				continue;
+			}
 			break;
 		}
-		ResolveVelocity(Body, Normal);
-		RemainingTime *= 1.0f - Earliest;
+		if (HitFoothold)
+		{
+			const FVector2D Foot = GetFootPosition(Box);
+			Translate(Box, FVector2D(0.0f, HitFoothold->GetHeightAtX(Foot.m_X) - Foot.m_Y));
+			Body.m_Velocity.m_Y = 0.0f;
+		}
+		else
+		{
+			ResolveVelocity(Body, Normal);
+		}
 	}
 
 	// 중력이 0이어도 정지 접촉을 확인한다. 위로 이동 중이면 지면에 서 있는 상태가 아니다.
@@ -254,6 +436,15 @@ void FPhysicsWorld::SimulateBody(
 			{
 				Body.m_bIsGrounded = true;
 				break;
+			}
+		}
+		if (!Body.m_bIsGrounded)
+		{
+			const FFoothold* Support = FindSupportingFoothold(Box, 0.0f);
+			if (Support)
+			{
+				Body.m_bIsGrounded = true;
+				Body.m_CurrentFootholdId = Support->m_Id;
 			}
 		}
 	}
@@ -323,6 +514,26 @@ bool FPhysicsWorld::Raycast(const FVector2D& Start, const FVector2D& End, FHitRe
 		OutHit.m_Normal = Normal;
 		OutHit.m_Point = Start + Delta * Time;
 		OutHit.m_pComponent = &Shape;
+	}
+	if (ObjectMask & CollisionChannelMask(ECollisionChannel::WorldStatic))
+	{
+		for (int32 i = 0; i < m_Footholds.Num(); i++)
+		{
+			const FFoothold& Foothold = m_Footholds[i];
+			float Time;
+			if (!Foothold.Raycast(Start, End, Time)
+				|| (OutHit.m_bBlockingHit && Time >= OutHit.m_Time))
+			{
+				continue;
+			}
+			OutHit.m_bBlockingHit = true;
+			OutHit.m_bStartPenetrating = false;
+			OutHit.m_Time = Time;
+			OutHit.m_Normal = Foothold.GetNormal();
+			OutHit.m_Point = Start + Delta * Time;
+			OutHit.m_pComponent = nullptr;
+			OutHit.m_FootholdId = Foothold.m_Id;
+		}
 	}
 	return OutHit.m_bBlockingHit;
 }

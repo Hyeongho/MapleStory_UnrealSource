@@ -30,6 +30,7 @@ public:
 
 	// 충돌 결과 조회
 	bool IsGrounded() const;
+	int32 GetCurrentFootholdId() const;
 
 protected:
 	// 파생 강체의 이동 계산에서 확장할 수 있는 상태
@@ -44,4 +45,5 @@ private:
 	// 시뮬레이션 활성 여부와 월드에서 판정한 접지 결과
 	bool m_bSimulatePhysics = true;
 	bool m_bIsGrounded = false;
+	int32 m_CurrentFootholdId = INDEX_NONE;
 };
