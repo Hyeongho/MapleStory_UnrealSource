@@ -64,7 +64,8 @@ World.Tick(0.5f);
 
 ## 검증 및 다음 범위
 
-`Test/Include/PhysicsTests.cpp`에서 구성과 무관하게 검사하고 실패 수를 Test 종료 코드에 반영한다.
+`Test/Include/main.cpp`의 Phase 10 블록에서 기존 check 규칙으로 검사한다.
+Debug는 실패 시 중단하고, Release는 실패 수를 집계해 Test 종료 코드에 반영한다.
 얇은 발판 고속 착지, 접촉 유지, 위로 이동, 발판 이탈, 속도 제한, 벽 미끄러짐,
 천장 차단, 초기 겹침 해소, 마스크, 쿼리, 삭제 후 조회를 검증한다.
 

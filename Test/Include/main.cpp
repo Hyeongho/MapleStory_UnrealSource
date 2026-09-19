@@ -1,4 +1,4 @@
-﻿#include "EnginePCH.h"
+#include "EnginePCH.h"
 #include "Object/UObject.h"
 #include "Object/AActor.h"
 #include "Object/UActorComponent.h"
@@ -44,7 +44,10 @@
 #include <ctime>
 #include <io.h>
 #include <fcntl.h>
-#include "PhysicsTests.h"
+#include "Physics/UBoxCollision.h"
+#include "Physics/UCircleCollision.h"
+#include "Physics/URigidbody.h"
+#include "World/UWorld.h"
 #include "Animation/UAnimStateMachine.h"
 #include "Animation/UAnimNotify.h"
 
@@ -233,6 +236,31 @@ static int32 g_TestFailCount = 0;
 			assert(expr); \
 		} \
 	} while (0)
+
+// Phase 10 테스트에서 사용하는 도형 생성과 위치 설정 보조 함수.
+static void SetPhysicsTestPosition(USceneComponent& Component, float X, float Y)
+{
+	Component.SetRelativeTransform(FTransform2D(FVector2D(X, Y), 0.0f, FVector2D::One));
+}
+
+static UBoxCollision* AddPhysicsTestBox(UWorld& World, float X, float Y, float HalfX, float HalfY)
+{
+	UBoxCollision* Box = World.SpawnActor<AActor>()->AddComponent<UBoxCollision>();
+	Box->SetBoxExtent(FVector2D(HalfX, HalfY));
+	SetPhysicsTestPosition(*Box, X, Y);
+	return Box;
+}
+
+static URigidbody* AddPhysicsTestBody(UBoxCollision& Box)
+{
+	Box.SetCollisionObjectType(ECollisionChannel::Player);
+	return Box.GetOwner()->AddComponent<URigidbody>();
+}
+
+static bool IsPhysicsTestNear(float A, float B)
+{
+	return FMath::Abs(A - B) < 0.002f;
+}
 
 int main()
 {
@@ -2237,7 +2265,136 @@ int main()
 		TestDevice.Shutdown();
 	}
 
-	g_TestFailCount += RunPhysicsTests();
+	// Phase 10 — 충돌 도형 / Rigidbody / 발판·벽·천장 충돌
+	{
+		const int32 PhysicsFailuresBefore = g_TestFailCount;
+		{
+			UBoxCollision Box;
+			Box.SetBoxExtent(FVector2D(5.0f, 5.0f));
+			UCircleCollision Circle;
+			Circle.SetSphereRadius(2.0f);
+			SetPhysicsTestPosition(Circle, 7.0f, 0.0f);
+			check(Box.Overlaps(Circle)); // 경계에서 접하는 경우
+			check(Circle.Overlaps(Box));
+			SetPhysicsTestPosition(Circle, 7.0f, 7.0f);
+			check(!Box.Overlaps(Circle)); // 외접 사각형은 접하지만 실제 원과 Box는 겹치지 않음
+			UCircleCollision Second;
+			Second.SetSphereRadius(2.0f);
+			SetPhysicsTestPosition(Second, 11.0f, 7.0f);
+			check(Circle.Overlaps(Second));
+			SetPhysicsTestPosition(Second, 11.1f, 7.0f);
+			check(!Circle.Overlaps(Second));
+			Box.SetCenterOffset(FVector2D(1.0f, 2.0f));
+			Box.SetRelativeTransform(FTransform2D(FVector2D(10.0f, 20.0f), 0.0f, FVector2D(-2.0f, 3.0f)));
+			const FRect Bounds = Box.GetWorldBounds();
+			check(IsPhysicsTestNear(Bounds.m_Left, -2.0f) && IsPhysicsTestNear(Bounds.m_Bottom, 41.0f));
+			Circle.SetCollisionMask(0);
+			check(!Circle.Overlaps(Second));
+		}
+		{
+			UWorld World;
+			UBoxCollision* NearBox = AddPhysicsTestBox(World, 20, 0, 5, 5);
+			UBoxCollision* FarBox = AddPhysicsTestBox(World, 50, 0, 5, 5);
+			UCircleCollision* Circle = World.SpawnActor<AActor>()->AddComponent<UCircleCollision>();
+			Circle->SetSphereRadius(5);
+			Circle->SetCollisionObjectType(ECollisionChannel::Enemy);
+			SetPhysicsTestPosition(*Circle, 80, 0);
+			FHitResult Hit;
+			bool bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(bHit && Hit.m_pComponent == NearBox && IsPhysicsTestNear(Hit.m_Time, 0.15f));
+			check(Hit.m_Normal == FVector2D(-1, 0));
+			bHit = World.GetPhysicsWorld().Raycast(
+			    FVector2D::Zero, FVector2D(100, 0), Hit, AllCollisionChannels, NearBox->GetOwner());
+			check(bHit && Hit.m_pComponent == FarBox && IsPhysicsTestNear(Hit.m_Time, 0.45f));
+			bHit = World.GetPhysicsWorld().Raycast(
+			    FVector2D::Zero, FVector2D(100, 0), Hit, CollisionChannelMask(ECollisionChannel::Enemy));
+			check(bHit && Hit.m_pComponent == Circle && IsPhysicsTestNear(Hit.m_Time, 0.75f));
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D(80, 0), FVector2D(80, 0), Hit);
+			check(bHit && Hit.m_bStartPenetrating && Hit.m_Time == 0.0f);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D(0, 30), FVector2D(100, 30), Hit);
+			check(!bHit && !Hit.m_bBlockingHit && Hit.m_pComponent == nullptr);
+			SetPhysicsTestPosition(*FarBox, 20, 0);
+			TArray<FOverlapResult> Overlaps;
+			World.GetPhysicsWorld().FindOverlaps(Overlaps);
+			check(Overlaps.Num() == 1);
+			FarBox->SetCollisionMask(0);
+			World.GetPhysicsWorld().FindOverlaps(Overlaps);
+			check(Overlaps.Num() == 0);
+			World.DestroyActor(NearBox->GetOwner());
+			FarBox->SetCollisionEnabled(false);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(bHit && Hit.m_pComponent == Circle); // 액터 삭제 후 쿼리에 해제된 컴포넌트가 남지 않음
+			Circle->GetOwner()->RemoveComponent(Circle);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(!bHit);
+		}
+		{
+			UWorld World;
+			AddPhysicsTestBox(World, 0, 100, 100, 2);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			USceneComponent* Visual = Box->GetOwner()->AddComponent<USceneComponent>();
+			Visual->SetAttachParent(Box);
+			Body->SetMaxFallSpeed(1000000);
+			Body->SetVelocity(FVector2D(0, 1000000));
+			World.Tick(0.5f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93)); // 빠르게 낙하해도 얇은 발판을 관통하지 않음
+			check(Body->IsGrounded() && IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+			check(Visual->GetWorldTransform().m_Location == Box->GetWorldCenter());
+			World.Tick(0.25f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93) && Body->IsGrounded());
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, -200));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 73) && !Body->IsGrounded());
+			Body->SetVelocity(FVector2D::Zero);
+			SetPhysicsTestPosition(*Box, 0, 96); // 발판과 일부 겹친 위치에 스폰한 상황
+			World.Tick(0.01f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93) && Body->IsGrounded());
+			Body->SetVelocity(FVector2D(1000, 0));
+			World.Tick(0.2f);
+			check(Box->GetWorldCenter().m_X > 190 && !Body->IsGrounded());
+			Body->SetGravityScale(1);
+			Body->SetMaxFallSpeed(100);
+			World.Tick(0.5f);
+			check(Box->GetWorldCenter().m_Y > 93 && IsPhysicsTestNear(Body->GetVelocity().m_Y, 100));
+			const FVector2D Before = Box->GetWorldCenter();
+			World.Tick(0);
+			World.Tick(-1);
+			check(Box->GetWorldCenter() == Before);
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UBoxCollision* Wall = AddPhysicsTestBox(World, 30, 0, 2, 100);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetVelocity(FVector2D(10000, 20));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 23));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 2)); // 벽을 따라 수직 이동은 유지
+			check(IsPhysicsTestNear(Body->GetVelocity().m_X, 0) && !Body->IsGrounded());
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 13)); // 접촉면에서 멀어지는 이동은 허용
+			Wall->SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			Body->SetVelocity(FVector2D(1000, 0));
+			World.Tick(0.1f);
+			check(Box->GetWorldCenter().m_X > 100); // 양쪽 충돌 마스크를 모두 반영
+			AddPhysicsTestBox(World, 0, -20, 100, 2);
+			SetPhysicsTestPosition(*Box, 0, 0);
+			Body->SetVelocity(FVector2D(0, -1000));
+			World.Tick(0.05f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0) && !Body->IsGrounded());
+			Body->SetSimulatePhysics(false);
+			Body->SetVelocity(FVector2D(100, 100));
+			World.Tick(1);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
+		}
+		wprintf(L"[Physics] Phase 10 initial stage: %d failure(s)\n", g_TestFailCount - PhysicsFailuresBefore);
+	}
+
 	if (g_TestFailCount > 0)
 	{
 		wprintf(L"[Tests] %d CHECK(S) FAILED\n", g_TestFailCount);
