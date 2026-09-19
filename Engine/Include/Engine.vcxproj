@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -295,6 +295,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Copy.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Physics\CollisionTypes.h" />
+    <ClCompile Include="Physics\CollisionTypes.cpp" />
+    <ClInclude Include="Physics\UPrimitiveComponent.h" />
+    <ClCompile Include="Physics\UPrimitiveComponent.cpp" />
+    <ClInclude Include="Physics\UBoxCollision.h" />
+    <ClCompile Include="Physics\UBoxCollision.cpp" />
+    <ClInclude Include="Physics\UCircleCollision.h" />
+    <ClCompile Include="Physics\UCircleCollision.cpp" />
+    <ClInclude Include="Physics\URigidbody.h" />
+    <ClCompile Include="Physics\URigidbody.cpp" />
+    <ClInclude Include="Physics\PhysicsWorld.h" />
+    <ClCompile Include="Physics\PhysicsWorld.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,6 +3,7 @@
 #include "Object/AActor.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Templates/TypeTraits.h"
+#include "Physics/PhysicsWorld.h"
 
 class FRenderQueue;
 
@@ -46,9 +47,24 @@ public:
 	// 나중에 네트워크 리플리케이션을 붙일 때 "메시지로 들어온 ID → 로컬
 	// 액터"를 찾는 자리 — 지금은 선형 탐색으로 충분(액터 수가 적음).
 	AActor* FindActorById(uint32 ActorId) const;
+	const TArray<AActor*>& GetActors() const
+	{
+		return m_Actors;
+	}
+
+	FPhysicsWorld& GetPhysicsWorld()
+	{
+		return m_PhysicsWorld;
+	}
+
+	const FPhysicsWorld& GetPhysicsWorld() const
+	{
+		return m_PhysicsWorld;
+	}
 
 private:
 	TArray<AActor*> m_Actors;
+	FPhysicsWorld m_PhysicsWorld;
 };
 
 extern UWorld* GWorld;

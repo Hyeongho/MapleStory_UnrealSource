@@ -44,6 +44,7 @@
 #include <ctime>
 #include <io.h>
 #include <fcntl.h>
+#include "PhysicsTests.h"
 #include "Animation/UAnimStateMachine.h"
 #include "Animation/UAnimNotify.h"
 
@@ -2236,6 +2237,7 @@ int main()
 		TestDevice.Shutdown();
 	}
 
+	g_TestFailCount += RunPhysicsTests();
 	if (g_TestFailCount > 0)
 	{
 		wprintf(L"[Tests] %d CHECK(S) FAILED\n", g_TestFailCount);

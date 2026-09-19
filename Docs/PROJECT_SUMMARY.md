@@ -162,9 +162,9 @@ MapleStory 패턴 매핑: 패시브=Infinite, 독 도트=Duration+Period, 포션
 ## 6. 현재 상태와 다음 로드맵
 
 - Phase 8 Renderer와 주요 Phase 9 Animation 구현 완료: WZ 아바타, Idle/Move 전환, 좌우 반전 데모.
-- 최소 Input → 임시 발판 Physics → 선분 Foothold → Map.wz → Camera Follow 순으로 진행한다.
-- 이후 몬스터 1마리와 GAS 공격·데미지·사망·Timer 리스폰을 연결해 작은 플레이 루프를 완성한다.
-- Audio·정식 UI·전체 Resource Manager는 이후 확장한다.
+- CLAUDE.md 순서대로 Phase 10 Physics/Collision 및 Map.wz Foothold부터 진행한다.
+- 이후 Phase 11 Audio → Phase 12 UI → Phase 13 Input → Phase 14 Resource → Phase 15 World 순서를 유지한다.
+- Input을 앞당기지 않고, Physics는 테스트에서 위치·속도·시간을 지정해 먼저 검증한다.
 - `FMallocBinned` 멀티스레드 안전성은 실제 병렬 작업 도입 전에 처리한다.
 - `Engine/`은 개발 원본, `GameEngine/`은 Engine 빌드 후 `Copy.bat`으로 갱신되는 배포 미러다.
   미러를 직접 수정하지 않으며 main 반영 전 빌드와 헤더 동기화를 확인한다.

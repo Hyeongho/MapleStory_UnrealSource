@@ -63,6 +63,19 @@ public:
 
     void RemoveComponent(UActorComponent* Comp);
 
+    // 일치하는 컴포넌트를 결과 배열에 추가한다. 배열 할당과 초기화는 호출자가 관리한다.
+    template<typename T>
+    void GetComponents(TArray<T*>& OutComponents) const
+    {
+        for (int32 i = 0; i < m_Components.Num(); ++i)
+        {
+            if (T* Component = Cast<T>(m_Components[i]))
+            {
+                OutComponents.Add(Component);
+            }
+        }
+    }
+
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;

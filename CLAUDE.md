@@ -781,15 +781,15 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 
 ### Phase 10 — Physics / Collision (1주)
 
-파일 위치: `Engine/Physics/`
+파일 위치: `Engine/Include/Physics/`
 
-- [ ] `UBoxCollision.h / .cpp` — AABB 충돌
-- [ ] `UCircleCollision.h / .cpp` — Circle 충돌
-- [ ] `PhysicsWorld.h / .cpp` — 충돌 감지 루프
-- [ ] `URigidbody.h / .cpp` — 중력, 속도
-- [ ] Raycast
-- [ ] 충돌 레이어 마스크 (플레이어/적/지형/투사체)
-- [ ] 플랫폼 판정 — 땅·벽·천장 (메이플 핵심)
+- [x] `UBoxCollision.h / .cpp` — AABB 겹침/정적 차단
+- [x] `UCircleCollision.h / .cpp` — Circle 겹침/쿼리(강체 차단은 후속)
+- [x] `PhysicsWorld.h / .cpp` — UWorld 소유 충돌 감지/시뮬레이션 루프
+- [x] `URigidbody.h / .cpp` — 중력, 속도, 최대 낙하 속도, Grounded
+- [x] Raycast — Box/Circle 최근접 선분 쿼리
+- [x] 충돌 레이어 마스크 (플레이어/적/지형/투사체/트리거)
+- [x] 플랫폼 판정 — 정적 Box 땅·벽·천장, swept AABB (단방향 선분 발판은 후속)
 - [ ] 경사면 처리
 - [ ] 로프·사다리 충돌 영역
 - [ ] 낙하 판정 / 코요테 타임 (점프 관용치)
@@ -801,6 +801,11 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 - [ ] Map.wz Foothold 데이터 파싱 → PhysicsWorld 충돌 데이터 연동
 
 완료 기준: 캐릭터가 발판 위에 서고 벽에 막힘 확인
+
+첫 단계 구현: 동적 Box 대 정적 Box, Circle은 겹침/Raycast용. 구조·제약·사용 예는
+`Docs/PHYSICS.md` 참고. Phase 10 전체 완료는 아니며 선분 Foothold와 WZ 연동 등은 남아 있다.
+첫 단계 검증(2026-09-19): Windows x64 Debug/Release 전체 빌드 및 Test 통과,
+Physics 회귀 검사 실패 0건. Game 화면의 수동 플레이 확인은 아직 수행하지 않았다.
 
 ---
 
@@ -1185,13 +1190,17 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 
 ### 다음 개발 순서
 
-최소 Input(키 상태/포커스 해제/Idle·Move·Flip 연결) → 임시 발판에서 이동·중력·점프·착지 →
-선분 Foothold → Map.wz 연동 → Camera Follow → 몬스터 1마리와 GAS 공격·사망·리스폰.
+Phase 10 Physics/Collision 및 Map.wz Foothold → Phase 11 Audio → Phase 12 UI →
+Phase 13 Input → Phase 14 Resource → Phase 15 World 순서를 유지한다.
 `FMallocBinned`의 멀티스레드 지원은 실제 병렬 시스템 도입 전까지 보류한다.
 
 ---
 
 ## Claude Code 작업 지침
+
+### 검증 실행 규칙 (사용자 요청, 2026-09-19)
+- 빌드와 테스트 실행은 사용자가 직접 수행한다. Codex는 별도로 요청받지 않는 한 빌드·테스트를 실행하지 않는다.
+- Codex는 코드·문서 수정에 집중하고, 완료 보고에서 구현 범위와 사용자 확인 항목만 간단히 전달한다.
 
 ### Git 운영 규칙
 
@@ -1203,6 +1212,10 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 - 사용자가 main에 푸시 후 알리면 → `git fetch origin main && git merge origin/main` 으로 작업 브랜치 최신화
 
 ### 코딩 규칙
+- **코드 디자인은 main 브랜치의 해당 모듈과 인접 클래스 구현을 기준으로 맞춘다.** 기존 네이밍과 헤더/소스 구성, 중괄호 줄바꿈, 들여쓰기 형식을 우선한다.
+- 함수 본문과 if/for 제어문을 한 줄로 축약하지 않고 중괄호와 줄바꿈으로 명확히 작성한다.
+- 클래스 내부에서만 쓰는 보조 로직은 private 함수로 구성할 수 있는지 먼저 검토한다. 불필요한 별도 namespace나 람다 구조를 늘리지 않는다.
+- 새로 작성하거나 수정하는 주석은 한글로 작성한다. 타입명과 API 이름은 그대로 표기한다.
 - **클래스는 헤더(.h)와 소스(.cpp)를 반드시 함께 생성** — 헤더 전용 구현 금지
 - **멤버 변수에 `m_` 접두사 필수** (예: `m_Size`, `m_pData`)
 
