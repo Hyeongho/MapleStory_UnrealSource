@@ -1158,35 +1158,46 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
   `FMallocBinned` 자체의 동시성 문제는 여전히 실제로 재현되지 않는다 —
   사실상 메인 스레드 전용 할당자인 채로 보류(이번 라운드에도 사용자가
   "지금은 보류"로 확정 — Phase 16+ 실제 병렬 작업이 생길 때 처리).
-- **저장소에 `GameEngine/` 스테일 미러(68개 파일) + 추적된 빌드 산출물
-  28개** — `GameEngine/Include/`가 `Engine/Include/`의 오래된 복사본으로
-  존재하고(둘 다 각각 존재 확인, vcxproj 어디에서도 참조 안 됨), 단순히
-  오래된 정도가 아니라 **이번 세션의 `AddComponent`/`BeginPlay` 버그
-  수정을 포함해 지난 2주간 실제 엔진 변경사항이 전혀 반영 안 된 채 계속
-  갈라지고 있음**(예: `AActor.h`가 51줄 vs 77줄로 실제 내용이 다름).
-  `.exe`/`.lib`/`.idb`/`.pdf`/`.obj` 등 빌드 산출물도 정확히 28개 파일이
-  git에 추적돼 있고, `.gitignore`는 있지만 이미 추적된 파일엔 소급 적용
-  안 됨(레포 용량 `.git` 78MB).
 
-### 부분 확인
+### 배포 운영 규칙 — GameEngine은 기술 부채에서 제외
 
-- **`UFlipbookComponent`/`UAnimStateMachine`의 null 텍스처 방어 부족** —
-  `AddRef`/`Release` 호출부에 null 체크가 전혀 없는 건 사실이지만, 현재
-  유일한 호출부인 `main.cpp`가 이미 `Frame.m_pTexture`가 non-null일
-  때만 배열에 넣고 있어서 지금 당장 재현되는 크래시는 아님 — 강제되지
-  않은 불변조건(계약)일 뿐.
-- **`TSharedPtr`의 다른 타입 변환 생성자에 타입 안전 제약이 없음** —
-  `TIsBaseOf`/`is_convertible` 같은 SFINAE 제약 없이 `static_cast`만
-  해서 위험한 다운캐스트가 컴파일될 수 있는 건 사실. 다만 "그래서
-  deleter가 파생 타입을 못 찾아 소멸이 깨진다"는 우려는 틀림 — deleter는
-  `MakeShared`/raw-pointer 생성자 시점의 원래 타입에 이미 바인딩돼 있어서
-  나중에 `TSharedPtr<Base>`로 들고 있어도 소멸 자체는 안전함.
+- `Engine/`만 원본으로 수정한다. `GameEngine/`은 소비자용 SDK/배포 미러이며 직접 수정하지 않는다.
+- Engine 빌드 후 `Copy.bat`이 공개 헤더(.h/.inl/.hpp)를 `GameEngine/Include`에,
+  빌드 결과물을 `Game/Bin`, `GameEngine/Bin`, `Test/Bin`에 배포한다.
+- 개발 브랜치의 빌드 전 차이는 허용한다. main 반영 전 Engine을 다시 빌드하고
+  최종 공개 헤더 동기화를 확인한다. 미러 삭제나 중복 소스 제거 대상이 아니다.
+- 추적된 산출물은 배포 목적을 확인해서 관리하며 일괄 삭제하지 않는다.
+
+### 안전성 보강 (2026-09-19)
+
+- **애니메이션 null 텍스처 계약**: `SetFrames`와 `RegisterState`에서 전체 입력을
+  먼저 검사한다. null 텍스처가 하나라도 있으면 `UE_LOG` 경고 후 전체 요청을 거부하며
+  기존 프레임, 재생 상태, COM 참조를 유지한다. 빈 배열은 허용한다.
+  Release에서도 동일하게 검사한다. 프레임을 걸러내지 않으므로 인덱스와 Notify 배치가 바뀌지 않는다.
+- **TSharedPtr 교차 타입 생성자**: 언리얼식 `TPointerIsConvertibleFromTo`와 `TEnableIf`로
+  암시적 포인터 변환이 가능한 타입만 허용한다. 업캐스트와 const 추가는 허용하고,
+  다운캐스트, const 제거, 무관한 타입, private/모호한 베이스 변환은 컴파일 단계에서 차단한다.
+  const 뷰도 원래 컨트롤 블록의 deleter를 공유한다.
+- `Test/Include/main.cpp`에 컴파일 제약 검사와 COM 참조 수명/잘못된 입력 회귀 테스트를 추가했다.
+- 검증: Windows x64 Debug/Release 전체 솔루션 빌드 및 Test 실행 성공(종료 코드 0).
+  `Copy.bat`으로 배포 미러 갱신 후 수정한 공개 헤더의 해시 일치를 확인했다.
+  DirectXTK PDB 누락 링크 경고는 남아 있으며 Game 화면의 수동 플레이 검증은 별도다.
+
+### 다음 개발 순서
+
+최소 Input(키 상태/포커스 해제/Idle·Move·Flip 연결) → 임시 발판에서 이동·중력·점프·착지 →
+선분 Foothold → Map.wz 연동 → Camera Follow → 몬스터 1마리와 GAS 공격·사망·리스폰.
+`FMallocBinned`의 멀티스레드 지원은 실제 병렬 시스템 도입 전까지 보류한다.
 
 ---
 
 ## Claude Code 작업 지침
 
 ### Git 운영 규칙
+
+- **Codex는 다음 작업부터 코드·문서 수정 전에 작업별 `codex/<작업명>` 브랜치를 생성하고 그 브랜치에서 작업한다.**
+- 시작할 때 현재 브랜치와 미커밋 변경을 확인하고 기존 변경을 보존한다. 다른 작업의 변경을 임의로 커밋하거나 섞지 않는다.
+- main 브랜치에 직접 수정·커밋·머지하지 않는다. 커밋·머지·푸시는 사용자의 요청 범위에 따라 수행한다.
 - **main 브랜치 커밋·머지는 사용자가 직접 수행**
 - Claude는 작업 브랜치(`claude/dx11-2d-engine-fr8yv`)에만 커밋·푸시
 - 사용자가 main에 푸시 후 알리면 → `git fetch origin main && git merge origin/main` 으로 작업 브랜치 최신화
@@ -1198,7 +1209,7 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 ### 파일 생성 요청 방식
 ```
 "Engine/Core/Memory/IAllocator.h 작성해줘.
-STL 사용 금지, C++17, /GR- /EHs-c- 옵션 기준.
+STL 사용 금지, C++20, /GR- 기준. 엔진 자체 코드는 예외를 던지지 않음(Game x64는 /EHsc).
 EnginePCH.h가 PCH로 포함되어 있어."
 ```
 

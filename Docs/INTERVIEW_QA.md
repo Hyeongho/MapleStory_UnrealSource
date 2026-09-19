@@ -897,7 +897,7 @@ Phase 8 DX11 렌더러입니다. DXDevice, SwapChain, SpriteBatch, RenderQueue,
 
 ## 부록: 1분 프로젝트 소개 스크립트
 
-"언리얼 엔진의 코어 아키텍처를 STL·예외·RTTI 없이 C++17로 직접 재구현한 2D
+"언리얼 엔진의 코어 아키텍처를 STL 컨테이너·엔진 자체 예외·RTTI 없이 C++20 설정으로 직접 재구현한 2D
 엔진입니다. TArray부터 시작해서 언리얼 실제 내부 구조인 TSparseArray 기반
 해시 컨테이너, FName 문자열 인터닝 풀, Bin 방식 메모리 할당자, 원자적 참조
 카운트 스마트 포인터, RTTI 없는 UClass/Cast 타입 시스템, 그리고 GAS까지

@@ -2321,7 +2321,7 @@ void FLogger::Shutdown()
 
 **실무적 함의**: `check(SomeFunctionWithSideEffect())`처럼 `check` 안에 부수효과가 있는 호출(예: 리스트에서 원소를 제거하고 성공 여부를 bool로 반환하는 함수, 카운터를 증가시키는 함수 등)을 넣으면, Debug 빌드에서는 그 호출이 실행되지만 Release(`NDEBUG`) 빌드에서는 `expr` 자체가 통째로 컴파일 결과물에서 사라져 **그 함수가 아예 호출되지 않는다.** 이는 Debug와 Release 사이에서 프로그램의 동작(상태 변화)이 달라지는 매우 찾기 어려운 버그로 이어진다 — Debug에서는 멀쩡히 동작하다가 Release 빌드로 넘어가는 순간 부수효과가 통째로 빠지면서 로직이 깨진다. 이런 이유로 부수효과가 있는 호출은 반드시 `check` 밖에서 먼저 실행한 뒤 그 결과(bool 등)만 `check`에 넘기거나, 애초에 `verify`(항상 평가는 보장됨)를 사용해야 한다. `EnginePCH.h`의 주석 자체가 이 점을 명시하고 있다: "Release(NDEBUG)에서는 표현식 자체가 평가되지 않으므로 부수효과 있는 호출을 넣으면 안 됨."
 
-참고로 이 프로젝트는 `/EHs-c-`로 예외를 비활성화하고 `assert`/`ExitProcess`/`__debugbreak` 기반의 즉시 종료·중단 방식으로 오류를 처리하는 정책을 쓰고 있으며(`CLAUDE.md`의 "예외 처리 금지 — check() 매크로로 대체" 원칙과 일치), `check`/`verify`/`ensure`/`UE_LOG`의 Fatal 경로 모두 이 원칙 — 예외를 던지지 않고 `assert`, `__debugbreak`, `ExitProcess` 중 하나로 직접 프로세스를 멈추거나 종료시키는 방식 — 을 공유한다.
+참고로 이 프로젝트는 엔진 자체 코드에서 예외를 던지지 않고(Game x64는 DirectXTK 연동을 위해 `/EHsc` 사용), `assert`/`ExitProcess`/`__debugbreak` 기반의 즉시 종료·중단 방식으로 오류를 처리하는 정책을 쓰고 있으며(`CLAUDE.md`의 "예외 처리 금지 — check() 매크로로 대체" 원칙과 일치), `check`/`verify`/`ensure`/`UE_LOG`의 Fatal 경로 모두 이 원칙 — 예외를 던지지 않고 `assert`, `__debugbreak`, `ExitProcess` 중 하나로 직접 프로세스를 멈추거나 종료시키는 방식 — 을 공유한다.
 ---
 
 ## 스마트 포인터 (TSharedPtr / TWeakPtr / TSharedRef)

@@ -1,6 +1,6 @@
 # MapleStory DX11 2D 엔진 — 프로젝트 진행 정리
 
-> 언리얼 엔진 아키텍처를 STL/예외/RTTI 없이 C++17로 직접 재구현하는 포트폴리오 엔진.
+> 언리얼 엔진 아키텍처를 STL 컨테이너·엔진 자체 예외·RTTI 없이 C++20 설정으로 직접 재구현하는 포트폴리오 엔진.
 > 목표 게임: MapleStory 스타일 2D 플랫포머 RPG.
 
 ---
@@ -10,7 +10,7 @@
 | 제약 | 내용 | 이유 |
 |---|---|---|
 | STL 금지 | std::vector/string/unordered_map 등 전부 자체 구현 | 컨테이너/할당자 내부 동작의 완전한 이해 증명 |
-| 예외 금지 | `/EHs-c-`, check() 매크로 + TResult<T,E>로 대체 | 게임 엔진 관례 (언리얼도 예외 비활성) |
+| 엔진 예외 정책 | check()/verify()/TResult<T,E> 사용 | 컴파일러 예외 비활성과는 별개. Game x64는 DirectXTK 연동을 위해 /EHsc |
 | RTTI 금지 | `/GR-`, UClass 기반 Cast<T>() 직접 구현 | dynamic_cast 없이 타입 시스템 구축 |
 | 네이밍 | TArray, TMap, FString, FName, UObject, AActor | 언리얼 컨벤션 준수 |
 | 검증 | Phase마다 단위 테스트 후 다음 단계 진행 | 현재 86개 테스트, Debug/Release 양쪽 통과 |
@@ -159,9 +159,12 @@ MapleStory 패턴 매핑: 패시브=Infinite, 독 도트=Duration+Period, 포션
 
 ---
 
-## 6. 다음 로드맵
+## 6. 현재 상태와 다음 로드맵
 
-- **Phase 8 — Renderer (DX11)**: DXDevice/SwapChain/SpriteBatch/RenderQueue/FCamera2D,
-  WZ Canvas→텍스처 병행
-- Phase 9 Animation → 10 Physics(Foothold) → 11 Audio → 12 UI → 13 Input → 14 Resource → 15 World
-- LAYER 3: 캐릭터/스킬(GAS 활용)/몬스터 AI/인벤토리/퀘스트/세이브
+- Phase 8 Renderer와 주요 Phase 9 Animation 구현 완료: WZ 아바타, Idle/Move 전환, 좌우 반전 데모.
+- 최소 Input → 임시 발판 Physics → 선분 Foothold → Map.wz → Camera Follow 순으로 진행한다.
+- 이후 몬스터 1마리와 GAS 공격·데미지·사망·Timer 리스폰을 연결해 작은 플레이 루프를 완성한다.
+- Audio·정식 UI·전체 Resource Manager는 이후 확장한다.
+- `FMallocBinned` 멀티스레드 안전성은 실제 병렬 작업 도입 전에 처리한다.
+- `Engine/`은 개발 원본, `GameEngine/`은 Engine 빌드 후 `Copy.bat`으로 갱신되는 배포 미러다.
+  미러를 직접 수정하지 않으며 main 반영 전 빌드와 헤더 동기화를 확인한다.

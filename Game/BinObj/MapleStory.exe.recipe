@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>D:\MapleStory_UnrealSource\Game\Bin\MapleStory.exe</FullPath>
+      <FullPath>D:\MapleStory_UnrealSource_Codex\Game\Bin\MapleStory.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

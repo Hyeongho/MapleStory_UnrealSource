@@ -21,6 +21,16 @@ UAnimStateMachine::~UAnimStateMachine()
 
 void UAnimStateMachine::RegisterState(FName StateName, const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+	// Reject invalid input before FindOrAdd or releasing an existing state.
+	for (int32 i = 0; i < Frames.Num(); ++i)
+	{
+		if (!Frames[i].m_pTexture)
+		{
+			UE_LOG(LogRenderer, Warning, L"RegisterState rejected null texture at frame %d", i);
+			return;
+		}
+	}
+
 #ifdef _DEBUG
 	{
 		wchar_t Buf[256];

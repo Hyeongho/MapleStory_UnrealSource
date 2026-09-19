@@ -18,6 +18,16 @@ UFlipbookComponent::~UFlipbookComponent()
 
 void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bLoop)
 {
+	// Validate the entire input before changing ownership or playback state.
+	for (int32 i = 0; i < Frames.Num(); ++i)
+	{
+		if (!Frames[i].m_pTexture)
+		{
+			UE_LOG(LogRenderer, Warning, L"SetFrames rejected null texture at frame %d", i);
+			return;
+		}
+	}
+
 #ifdef _DEBUG
 	{
 		wchar_t Buf[256];

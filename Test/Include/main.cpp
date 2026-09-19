@@ -44,6 +44,52 @@
 #include <ctime>
 #include <io.h>
 #include <fcntl.h>
+#include "Animation/UAnimStateMachine.h"
+#include "Animation/UAnimNotify.h"
+
+// A COM test double: tracks ownership without a GPU or a window.
+class FTestTextureView : public ID3D11ShaderResourceView
+{
+public:
+	ULONG m_Refs = 1;
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void** Out) override { if (Out) *Out = nullptr; return E_NOINTERFACE; }
+	ULONG STDMETHODCALLTYPE AddRef() override { return ++m_Refs; }
+	ULONG STDMETHODCALLTYPE Release() override { return --m_Refs; }
+	void STDMETHODCALLTYPE GetDevice(ID3D11Device** Out) override { *Out = nullptr; }
+	HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID, UINT*, void*) override { return E_NOTIMPL; }
+	HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID, UINT, const void*) override { return E_NOTIMPL; }
+	HRESULT STDMETHODCALLTYPE SetPrivateDataInterface(REFGUID, const IUnknown*) override { return E_NOTIMPL; }
+	void STDMETHODCALLTYPE GetResource(ID3D11Resource** Out) override { *Out = nullptr; }
+	void STDMETHODCALLTYPE GetDesc(D3D11_SHADER_RESOURCE_VIEW_DESC* Out) override { *Out = {}; }
+};
+
+struct FSharedConversionBase { int32 m_Value = 42; };
+struct FSharedConversionDerived : FSharedConversionBase
+{
+	inline static int32 m_Destructions = 0;
+	~FSharedConversionDerived() { ++m_Destructions; }
+};
+struct FSharedConversionPrivate : private FSharedConversionBase {};
+struct FSharedConversionLeft : FSharedConversionBase {};
+struct FSharedConversionRight : FSharedConversionBase {};
+struct FSharedConversionAmbiguous : FSharedConversionLeft, FSharedConversionRight {};
+
+class FTestFrameNotify : public UAnimNotify
+{
+public:
+	int32 m_Count = 0;
+	void Notify(AActor*) override { ++m_Count; }
+};
+
+static_assert(__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(__is_constructible(TSharedPtr<const FSharedConversionBase>, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionDerived>, const TSharedPtr<FSharedConversionBase>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<const FSharedConversionBase>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<int>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionPrivate>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionAmbiguous>&));
+static_assert(__is_assignable(TSharedPtr<FSharedConversionBase>&, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(!__is_assignable(TSharedPtr<FSharedConversionDerived>&, const TSharedPtr<FSharedConversionBase>&));
 
 namespace
 {
@@ -2102,6 +2148,79 @@ int main()
 		}
 
 		wprintf(L"[Tests] Phase 7.5+ (5) TSparseArray/TMap/TSet Rework - ALL PASSED\n");
+	}
+
+	// Shared-pointer implicit conversion and const-view lifetime regression.
+	{
+#ifdef _DEBUG
+		const int64 Before = FMemoryTracker::GetLiveAllocCount();
+#endif
+		const int32 DestructionsBefore = FSharedConversionDerived::m_Destructions;
+		{
+			auto Derived = MakeShared<FSharedConversionDerived>();
+			TSharedPtr<FSharedConversionBase> Base = Derived;
+			TSharedPtr<const FSharedConversionBase> ConstBase = Derived;
+			check(Base.Get() == Derived.Get());
+			check(ConstBase->m_Value == 42);
+			check(Derived.GetRefCount() == 3);
+			Derived.Reset();
+			Base.Reset();
+			check(ConstBase.GetRefCount() == 1);
+		}
+		#ifdef _DEBUG
+		check(FMemoryTracker::GetLiveAllocCount() == Before);
+		#endif
+		check(FSharedConversionDerived::m_Destructions == DestructionsBefore + 1);
+	}
+
+	// Invalid animation input must not release old frames or retain partial input.
+	{
+		FTestTextureView Texture;
+		FTestFrameNotify Notify;
+		TArray<FFlipbookFrame> Valid;
+		FFlipbookFrame Frame;
+		Frame.m_pTexture = &Texture;
+		Frame.m_pNotify = &Notify;
+		Valid.Add(Frame);
+		TArray<FFlipbookFrame> Invalid = Valid;
+		Invalid.Add(FFlipbookFrame{});
+		TArray<FFlipbookFrame> Empty;
+		{
+			UFlipbookComponent Flipbook;
+			Flipbook.SetFrames(Valid);
+			check(Texture.m_Refs == 2);
+			Flipbook.Play();
+			Flipbook.Tick(0.05f);
+			Flipbook.SetFrames(Invalid, false);
+			check(Texture.m_Refs == 2);
+			Flipbook.Tick(0.06f);
+			check(Notify.m_Count == 1); // elapsed time, playing and loop flag preserved
+			Flipbook.SetFrames(Empty);
+			check(Texture.m_Refs == 1);
+			Flipbook.SetFrames(Invalid);
+			Flipbook.Play();
+			Flipbook.Tick(0.25f);
+			check(Texture.m_Refs == 1);
+			check(Notify.m_Count == 1);
+			Flipbook.SetFrames(Valid);
+		}
+		check(Texture.m_Refs == 1);
+		{
+			UAnimStateMachine StateMachine;
+			const FName Idle(L"NullContractIdle");
+			StateMachine.RegisterState(Idle, Valid);
+			StateMachine.SetState(Idle);
+			StateMachine.RegisterState(Idle, Invalid);
+			check(StateMachine.GetCurrentState() == Idle);
+			check(Texture.m_Refs == 2);
+			StateMachine.RegisterState(FName(L"RejectedState"), Invalid);
+			check(Texture.m_Refs == 2);
+			StateMachine.RegisterState(Idle, Empty);
+			check(Texture.m_Refs == 1);
+			StateMachine.RegisterState(Idle, Valid);
+		}
+		check(Texture.m_Refs == 1);
+		wprintf(L"[Tests] Shared conversion / animation null contract - PASSED\n");
 	}
 
 	// Phase 8 — Renderer(DX11) 코어 부트스트랩
