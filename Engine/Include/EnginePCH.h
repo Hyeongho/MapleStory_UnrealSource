@@ -71,10 +71,19 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #define PLATFORM_WINDOWS 1
 
+// -----------------------------------------------------------------------
+// 링크 라이브러리
+// DirectXTK 라이브러리 경로는 Game/Test 프로젝트에서 설정한다.
+// -----------------------------------------------------------------------
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+
 #ifdef _DEBUG
 #pragma comment(lib, "Engine_Debug.lib")
+#pragma comment(lib, "DirectXTK_Debug.lib")
 #else
 #pragma comment(lib, "Engine.lib")
+#pragma comment(lib, "DirectXTK.lib")
 #endif
 
 // -----------------------------------------------------------------------
