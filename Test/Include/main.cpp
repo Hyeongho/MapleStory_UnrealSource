@@ -41,9 +41,6 @@
 #include "Ability/UGameplayEffect.h"
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
-#include <ctime>
-#include <io.h>
-#include <fcntl.h>
 #include "Physics/UBoxCollision.h"
 #include "Physics/UCircleCollision.h"
 #include "Physics/URigidbody.h"

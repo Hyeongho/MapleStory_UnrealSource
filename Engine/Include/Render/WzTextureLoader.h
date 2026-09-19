@@ -2,7 +2,6 @@
 #include "EnginePCH.h"
 #include "Render/DXDevice.h"
 #include "Core/Math/FVector2D.h"
-#include <d3d11.h>
 
 // 로드된 아바타 합성 텍스처 + 그리기 기준점(피벗) + 이 프레임을 표시할 시간.
 // m_Origin은 wz_read_avatar가 돌려주는 AvatarCanvas::DrawFrame()의

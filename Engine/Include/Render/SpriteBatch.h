@@ -4,10 +4,6 @@
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
 #include "Core/Math/FColor.h"
-#include <d3d11.h>
-#include <DirectXMath.h>
-#include <SpriteBatch.h>
-#include <CommonStates.h>
 
 // ThirdParty/DirectXTK/Lib/에 사용자가 직접 빌드해 넣은 DirectXTK.lib를
 // 자동으로 링크한다(LibraryPath는 Game.vcxproj에 설정되어 있음). Debug/Release

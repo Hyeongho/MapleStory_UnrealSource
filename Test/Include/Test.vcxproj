@@ -74,13 +74,13 @@
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
     <TargetName>$(ProjectName)_Debug</TargetName>
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../../ThirdParty/DirectXTK/Lib/;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)ThirdParty\DirectXTK\Inc;../../Engine/Include/;$(IncludePath)</IncludePath>
     <LibraryPath>../../ThirdParty/DirectXTK/Lib/;../Bin/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

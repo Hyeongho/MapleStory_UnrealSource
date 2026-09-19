@@ -15,6 +15,12 @@
 #include <cmath>
 #include <float.h>
 #include <iostream>
+#include <ctime>
+#include <io.h>
+#include <fcntl.h>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 // -----------------------------------------------------------------------
 // Windows 플랫폼 헤더
@@ -22,6 +28,16 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+
+// -----------------------------------------------------------------------
+// DirectX SDK / DirectXTK 헤더
+// -----------------------------------------------------------------------
+#include <d3d11.h>
+#include <d3d11sdklayers.h>
+#include <dxgi.h>
+#include <DirectXMath.h>
+#include <SpriteBatch.h>
+#include <CommonStates.h>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)

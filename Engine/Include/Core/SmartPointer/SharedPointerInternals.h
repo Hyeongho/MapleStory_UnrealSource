@@ -3,10 +3,6 @@
 #include "EnginePCH.h"
 #include "Core/Memory/FMemory.h"
 
-#if defined(_MSC_VER)
-#include <intrin.h>
-#endif
-
 using FSmartPtrDeleter = void(*)(void*);
 
 struct FSmartPtrAtomics

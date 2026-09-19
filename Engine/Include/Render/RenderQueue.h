@@ -3,7 +3,6 @@
 #include "Core/Containers/TArray.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
-#include <d3d11.h>
 
 class FSpriteBatch;
 

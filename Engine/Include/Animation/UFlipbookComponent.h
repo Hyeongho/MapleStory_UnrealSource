@@ -2,7 +2,6 @@
 #include "Object/UActorComponent.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Math/FVector2D.h"
-#include <d3d11.h>
 
 class USpriteComponent;
 class UAnimNotify;

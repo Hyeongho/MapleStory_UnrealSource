@@ -3,7 +3,6 @@
 #include "Render/RenderQueue.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
-#include <d3d11.h>
 
 // 텍스처 하나를 소유하고 매 프레임 FRenderQueue에 제출하는 범용 스프라이트 컴포넌트.
 // AActor에 AddComponent<USpriteComponent>()로 붙여서 쓴다 — 지금까지 main.cpp에서

@@ -2,7 +2,6 @@
 #include "EnginePCH.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FMath.h"
-#include <DirectXMath.h>
 
 // 월드 좌표계 카메라. WorldToScreen/ScreenToWorld는 순수 FVector2D 연산이라
 // 게임플레이 코드가 DirectXMath를 몰라도 사용할 수 있다.
