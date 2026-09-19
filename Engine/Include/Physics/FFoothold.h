@@ -3,11 +3,21 @@
 
 // 월드 좌표의 단방향 발판. 끝점 순서와 관계없이 위쪽 면에 착지한다.
 // 수직 선분은 발판으로 등록하지 않는다. 벽과 천장은 정적 Box가 담당한다.
-struct FFoothold
+class FFoothold
 {
+public:
 	// 생성
 	FFoothold();
 	FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End);
+
+	// 식별 정보 / 월드 좌표 조회
+	int32 GetId() const;
+	const FVector2D& GetStart() const;
+	const FVector2D& GetEnd() const;
+
+	// 충돌 대상 설정 / 조회
+	void SetCollisionMask(uint32 Mask);
+	uint32 GetCollisionMask() const;
 
 	// 선분 유효성 / 범위
 	bool IsValid() const;
@@ -24,6 +34,7 @@ struct FFoothold
 	// 양방향 선분 쿼리 — 반환 시간은 쿼리 선분 내 비율
 	bool Raycast(const FVector2D& Start, const FVector2D& End, float& OutTime) const;
 
+private:
 	// 식별 정보 / 월드 좌표
 	int32 m_Id = INDEX_NONE;
 	FVector2D m_Start;

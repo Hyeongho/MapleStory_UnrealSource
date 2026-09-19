@@ -105,9 +105,9 @@ float FPhysicsWorld::GetGravity() const
 
 bool FPhysicsWorld::AddFoothold(const FFoothold& Foothold)
 {
-	if (!Foothold.IsValid() || FindFoothold(Foothold.m_Id))
+	if (!Foothold.IsValid() || FindFoothold(Foothold.GetId()))
 	{
-		UE_LOG(LogPhysics, Warning, L"AddFoothold: invalid segment or duplicate ID (%d)", Foothold.m_Id);
+		UE_LOG(LogPhysics, Warning, L"AddFoothold: invalid segment or duplicate ID (%d)", Foothold.GetId());
 		return false;
 	}
 	m_Footholds.Add(Foothold);
@@ -118,7 +118,7 @@ bool FPhysicsWorld::RemoveFoothold(int32 Id)
 {
 	for (int32 i = 0; i < m_Footholds.Num(); i++)
 	{
-		if (m_Footholds[i].m_Id == Id)
+		if (m_Footholds[i].GetId() == Id)
 		{
 			m_Footholds.RemoveAtSwap(i);
 			InvalidateFootholdSupport(Id);
@@ -138,7 +138,7 @@ const FFoothold* FPhysicsWorld::FindFoothold(int32 Id) const
 {
 	for (int32 i = 0; i < m_Footholds.Num(); i++)
 	{
-		if (m_Footholds[i].m_Id == Id)
+		if (m_Footholds[i].GetId() == Id)
 		{
 			return &m_Footholds[i];
 		}
@@ -171,7 +171,7 @@ bool FPhysicsWorld::CanUseFoothold(const UBoxCollision& Box, const FFoothold& Fo
 {
 	return Box.IsCollisionEnabled()
 		&& (Box.GetCollisionMask() & CollisionChannelMask(ECollisionChannel::WorldStatic))
-		&& (Foothold.m_CollisionMask & CollisionChannelMask(Box.GetCollisionObjectType()));
+		&& (Foothold.GetCollisionMask() & CollisionChannelMask(Box.GetCollisionObjectType()));
 }
 
 bool FPhysicsWorld::SweepFoothold(
@@ -218,7 +218,7 @@ const FFoothold* FPhysicsWorld::FindSupportingFoothold(const UBoxCollision& Box,
 		{
 			continue;
 		}
-		if (!Result || Foothold.m_Id < Result->m_Id)
+		if (!Result || Foothold.GetId() < Result->GetId())
 		{
 			Result = &Foothold;
 		}
@@ -444,7 +444,7 @@ void FPhysicsWorld::SimulateBody(
 			if (Support)
 			{
 				Body.m_bIsGrounded = true;
-				Body.m_CurrentFootholdId = Support->m_Id;
+				Body.m_CurrentFootholdId = Support->GetId();
 			}
 		}
 	}
@@ -532,7 +532,7 @@ bool FPhysicsWorld::Raycast(const FVector2D& Start, const FVector2D& End, FHitRe
 			OutHit.m_Normal = Foothold.GetNormal();
 			OutHit.m_Point = Start + Delta * Time;
 			OutHit.m_pComponent = nullptr;
-			OutHit.m_FootholdId = Foothold.m_Id;
+			OutHit.m_FootholdId = Foothold.GetId();
 		}
 	}
 	return OutHit.m_bBlockingHit;

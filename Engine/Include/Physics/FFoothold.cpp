@@ -9,6 +9,31 @@ FFoothold::FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End)
 {
 }
 
+int32 FFoothold::GetId() const
+{
+	return m_Id;
+}
+
+const FVector2D& FFoothold::GetStart() const
+{
+	return m_Start;
+}
+
+const FVector2D& FFoothold::GetEnd() const
+{
+	return m_End;
+}
+
+void FFoothold::SetCollisionMask(uint32 Mask)
+{
+	m_CollisionMask = Mask & AllCollisionChannels;
+}
+
+uint32 FFoothold::GetCollisionMask() const
+{
+	return m_CollisionMask;
+}
+
 bool FFoothold::IsValid() const
 {
 	return m_Id >= 0 && _finite(m_Start.m_X) && _finite(m_Start.m_Y)
