@@ -247,10 +247,12 @@
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Render\USpriteComponent.h" />
+    <ClInclude Include="Render\WzMapLoader.h" />
     <ClInclude Include="Render\WzTextureLoader.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
+    <ClInclude Include="World\FMapLoader.h" />
     <ClInclude Include="World\UWorld.h" />
   </ItemGroup>
   <ItemGroup>
@@ -315,8 +317,10 @@
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Render\USpriteComponent.cpp" />
+    <ClCompile Include="Render\WzMapLoader.cpp" />
     <ClCompile Include="Render\WzTextureLoader.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
+    <ClCompile Include="World\FMapLoader.cpp" />
     <ClCompile Include="World\UWorld.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -315,6 +315,12 @@
     <ClInclude Include="Physics\UClimbableComponent.h">
       <Filter>08. Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Render\WzMapLoader.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="World\FMapLoader.h">
+      <Filter>06. World</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -499,6 +505,12 @@
     </ClCompile>
     <ClCompile Include="Physics\UClimbableComponent.cpp">
       <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\WzMapLoader.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="World\FMapLoader.cpp">
+      <Filter>06. World</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
