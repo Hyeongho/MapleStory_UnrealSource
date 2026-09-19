@@ -11,9 +11,11 @@ class AActor : public UObject
 {
     DECLARE_CLASS(AActor, UObject)
 public:
+    // 생성 / 소멸
     AActor();
     virtual ~AActor() override;
 
+    // 액터 식별 정보
     // 로컬 전용 순증 ID — 지금은 UWorld::FindActorById()용이지만, 나중에
     // 네트워크 리플리케이션을 붙일 때 액터를 가리키는 안정적인 식별자로
     // 그대로 쓸 수 있게 미리 넣어둔다(값 자체는 지금은 의미 없음).
@@ -22,6 +24,7 @@ public:
         return m_ActorId;
     }
 
+    // 컴포넌트 생성
     template<typename T>
     T* AddComponent()
     {
@@ -46,6 +49,7 @@ public:
         return Comp;
     }
 
+    // 단일 컴포넌트 조회
     template<typename T>
     T* GetComponent() const
     {
@@ -61,8 +65,10 @@ public:
         return nullptr;
     }
 
+    // 컴포넌트 제거
     void RemoveComponent(UActorComponent* Comp);
 
+    // 컴포넌트 목록 조회
     // 일치하는 컴포넌트를 결과 배열에 추가한다. 배열 할당과 초기화는 호출자가 관리한다.
     template<typename T>
     void GetComponents(TArray<T*>& OutComponents) const
@@ -76,16 +82,21 @@ public:
         }
     }
 
+    // 액터 생명주기
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;
 
+    // 렌더링
     // Tick과 동일한 패턴 — 렌더 패스 시점에 UWorld::Render()가 호출하면
     // 모든 컴포넌트의 Render()로 전파한다.
     void Render(FRenderQueue& Queue);
 
 private:
+    // 소유 컴포넌트 목록
     TArray<UActorComponent*> m_Components;
+
+    // 액터 식별 / 생명주기 상태
     uint32 m_ActorId = 0;
     bool m_bHasBegunPlay = false;
 };

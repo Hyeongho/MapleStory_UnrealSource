@@ -19,9 +19,11 @@ class UWorld : public UObject
 {
 	DECLARE_CLASS(UWorld, UObject)
 public:
+	// 생성 / 소멸
 	UWorld();
 	virtual ~UWorld() override;
 
+	// 액터 생성 / 제거
 	// AActor::AddComponent<T>()와 동일한 패턴(Malloc+placement-new)으로
 	// 액터를 만들고, 스폰 직후 BeginPlay()까지 자동 호출한다(언리얼 관례) —
 	// 호출자가 따로 BeginPlay()를 부를 필요 없음.
@@ -41,17 +43,21 @@ public:
 	// EndPlay() + 명시적 소멸자 호출 + FMemory::Free, m_Actors에서 제거.
 	void DestroyActor(AActor* Actor);
 
-	void Tick(float DeltaTime);       // m_Actors 순회하며 Actor->Tick(DeltaTime)
+	// 월드 갱신 / 렌더링
+	void Tick(float DeltaTime);       // Actor Tick 이후 물리 시뮬레이션 갱신
 	void Render(FRenderQueue& Queue); // m_Actors 순회하며 Actor->Render(Queue)
 
+	// 액터 조회
 	// 나중에 네트워크 리플리케이션을 붙일 때 "메시지로 들어온 ID → 로컬
 	// 액터"를 찾는 자리 — 지금은 선형 탐색으로 충분(액터 수가 적음).
 	AActor* FindActorById(uint32 ActorId) const;
+
 	const TArray<AActor*>& GetActors() const
 	{
 		return m_Actors;
 	}
 
+	// 물리 월드 접근
 	FPhysicsWorld& GetPhysicsWorld()
 	{
 		return m_PhysicsWorld;
@@ -63,7 +69,10 @@ public:
 	}
 
 private:
+	// 소유 액터 목록
 	TArray<AActor*> m_Actors;
+
+	// 월드 물리 시뮬레이션
 	FPhysicsWorld m_PhysicsWorld;
 };
 
