@@ -309,6 +309,12 @@
     <ClInclude Include="Physics\FFoothold.h">
       <Filter>08. Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Physics\FOrientedBox2D.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UClimbableComponent.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -486,6 +492,12 @@
       <Filter>08. Physics</Filter>
     </ClCompile>
     <ClCompile Include="Physics\FFoothold.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\FOrientedBox2D.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UClimbableComponent.cpp">
       <Filter>08. Physics</Filter>
     </ClCompile>
   </ItemGroup>

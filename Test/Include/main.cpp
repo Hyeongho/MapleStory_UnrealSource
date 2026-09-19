@@ -42,6 +42,7 @@
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
 #include "Physics/UBoxCollision.h"
+#include "Physics/UClimbableComponent.h"
 #include "Physics/UCircleCollision.h"
 #include "Physics/URigidbody.h"
 #include "World/UWorld.h"
@@ -261,6 +262,11 @@ static bool IsPhysicsTestNear(float A, float B)
 
 int main()
 {
+#ifdef _DEBUG
+	const int Flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+	_CrtSetDbgFlag(Flags | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
 	// wprintf(L"...")가 콘솔에 쓸 때는 기본 "C" 로케일 기준으로 와이드->멀티바이트
 	// 변환을 거치는데, "C" 로케일은 ASCII 밖 문자(한글 등)를 변환하지 못해서
 	// 그 지점에서 출력이 끊긴다(이전에 겪은 버그). stdout을 UTF-16 텍스트
@@ -2392,6 +2398,122 @@ int main()
 		wprintf(L"[Physics] Phase 10 initial stage: %d failure(s)\n", g_TestFailCount - PhysicsFailuresBefore);
 	}
 
+	// Phase 10 — 회전 도형 / OBB 쿼리 / 고속 이동과 경사면 접촉
+	{
+		const int32 OBBFailuresBefore = g_TestFailCount;
+		const float QuarterTurn = FMath::PI * 0.5f;
+		const float DiagonalAngle = FMath::PI * 0.25f;
+		const float Diagonal = 0.70710678f;
+		const FVector2D AxisX(Diagonal, Diagonal), AxisY(-Diagonal, Diagonal);
+		{
+			UBoxCollision Box;
+			Box.SetBoxExtent(FVector2D(4, 1));
+			Box.SetCenterOffset(FVector2D(1, 2));
+			Box.SetRelativeTransform(FTransform2D(FVector2D(10, 20), QuarterTurn, FVector2D(-2, 3)));
+			check(IsPhysicsTestNear(Box.GetWorldCenter().m_X, 4));
+			check(IsPhysicsTestNear(Box.GetWorldCenter().m_Y, 18));
+			const FRect Bounds = Box.GetWorldBounds();
+			check(IsPhysicsTestNear(Bounds.m_Left, 1) && IsPhysicsTestNear(Bounds.m_Right, 7));
+			check(IsPhysicsTestNear(Bounds.m_Top, 10) && IsPhysicsTestNear(Bounds.m_Bottom, 26));
+		}
+		{
+			UBoxCollision Box, Other;
+			Box.SetBoxExtent(FVector2D(10, 1));
+			Other.SetBoxExtent(FVector2D(10, 1));
+			Box.SetRelativeTransform(FTransform2D(FVector2D::Zero, DiagonalAngle, FVector2D::One));
+			Other.SetRelativeTransform(FTransform2D(AxisY * 3.0f, DiagonalAngle, FVector2D::One));
+			check(Box.GetWorldBounds().Overlaps(Other.GetWorldBounds()));
+			check(!Box.Overlaps(Other) && !Other.Overlaps(Box)); // 외접 AABB의 빈 모서리에서 오탐하지 않음
+			Other.SetRelativeTransform(FTransform2D(AxisY * 1.5f, -DiagonalAngle, FVector2D::One));
+			check(Box.Overlaps(Other) && Other.Overlaps(Box));
+			UCircleCollision Circle;
+			Circle.SetSphereRadius(0.5f);
+			SetPhysicsTestPosition(Circle, 6, -6);
+			check(Box.GetWorldBounds().Overlaps(Circle.GetWorldBounds()));
+			check(!Box.Overlaps(Circle) && !Circle.Overlaps(Box));
+			Circle.SetRelativeTransform(FTransform2D(AxisY * 1.4f, 0, FVector2D::One));
+			check(Box.Overlaps(Circle) && Circle.Overlaps(Box));
+		}
+		{
+			UWorld World;
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 10, 1);
+			Box->SetRelativeTransform(FTransform2D(FVector2D::Zero, DiagonalAngle, FVector2D::One));
+			FHitResult Hit;
+			bool bHit = World.GetPhysicsWorld().Raycast(AxisY * -20.0f, AxisY * 20.0f, Hit);
+			check(bHit && Hit.m_pComponent == Box && IsPhysicsTestNear(Hit.m_Time, 0.475f));
+			check(IsPhysicsTestNear(Hit.m_Normal.m_X, Diagonal) && IsPhysicsTestNear(Hit.m_Normal.m_Y, -Diagonal));
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D(6, -6), FVector2D(7, -6), Hit);
+			check(!bHit); // AABB 내부에 있지만 OBB 바깥인 선분
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D::Zero, Hit);
+			check(bHit && Hit.m_bStartPenetrating && Hit.m_Time == 0 && Hit.m_Normal == FVector2D::Zero);
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UBoxCollision* Floor = AddPhysicsTestBox(World, 0, 0, 100, 2);
+			Floor->SetRelativeTransform(FTransform2D(FVector2D::Zero, DiagonalAngle, FVector2D::One));
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 3);
+			Box->SetRelativeTransform(FTransform2D(AxisY * -50.0f, -FMath::PI / 6.0f, FVector2D::One));
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetMaxFallSpeed(1000000);
+			Body->SetVelocity(AxisY * 100000.0f);
+			World.Tick(0.01f);
+			// 두 도형의 회전 차이 75도를 반영한 법선 방향 접촉 거리
+			const float ContactDistance = 2.0f + 5.0f * 0.96592583f + 3.0f * 0.25881905f;
+			check(IsPhysicsTestNear(Box->GetWorldCenter().Dot(AxisY), -ContactDistance));
+			check(Body->IsGrounded() && Body->GetVelocity().IsNearlyZero(0.02f));
+			const FVector2D Before = Box->GetWorldCenter();
+			Body->SetVelocity(AxisX * -100.0f);
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear((Box->GetWorldCenter() - Before).Dot(AxisX), -10));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().Dot(AxisY), -ContactDistance));
+			check(Body->IsGrounded()); // 경사면 위쪽으로 이동해도 법선 방향으로 이탈하지 않음
+			Body->SetVelocity(AxisY * -100.0f);
+			World.Tick(0.1f);
+			check(!Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().Dot(AxisY), -ContactDistance - 10));
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UBoxCollision* Floor = AddPhysicsTestBox(World, 0, 0, 100, 2);
+			Floor->SetRelativeTransform(FTransform2D(FVector2D::Zero, DiagonalAngle, FVector2D::One));
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			Box->SetRelativeTransform(FTransform2D(AxisY * -3.0f, DiagonalAngle, FVector2D::One));
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			World.Tick(0.01f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().Dot(AxisY), -7));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().Dot(AxisX), 0) && Body->IsGrounded());
+		}
+		{
+			UWorld World;
+			const bool bAdded = World.GetPhysicsWorld().AddFoothold(FFoothold(101, FVector2D(-100, 50), FVector2D(100, 50)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 4, 2);
+			Box->SetRelativeTransform(FTransform2D(FVector2D::Zero, FMath::PI / 6.0f, FVector2D::One));
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			World.Tick(0.5f);
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 101);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 50.0f - 2.0f - 1.7320508f));
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(1, 20));
+			Ladder->SetRelativeTransform(FTransform2D(FVector2D::Zero, DiagonalAngle, FVector2D::One));
+			UBoxCollision* Box = AddPhysicsTestBox(World, 12, 12, 0.5f, 0.5f);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(-1);
+			World.Tick(0.01f);
+			check(!Body->IsClimbing()); // 회전된 사다리의 외접 영역만 겹치면 오르지 않음
+			SetPhysicsTestPosition(*Box, 0, 0);
+			World.Tick(0.01f);
+			check(Body->IsClimbing());
+		}
+		wprintf(L"[Physics] Phase 10 OBB: %d failure(s)\n", g_TestFailCount - OBBFailuresBefore);
+	}
+
 	// Phase 10 — 단방향 선분 발판 / 경사면 / 발판 연결
 	{
 		const int32 FootholdFailuresBefore = g_TestFailCount;
@@ -2491,6 +2613,104 @@ int main()
 		wprintf(L"[Physics] Foothold / slopes: %d failure(s)\n", g_TestFailCount - FootholdFailuresBefore);
 	}
 
+	// Phase 10 — 로프·사다리 Trigger와 오르기 상태
+	{
+		const int32 ClimbFailuresBefore = g_TestFailCount;
+		{
+			UWorld World;
+			AActor* LadderActor = World.SpawnActor<AActor>();
+			UClimbableComponent* Ladder = LadderActor->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			check(Ladder->GetClimbableType() == EClimbableType::Ladder);
+			check(Ladder->GetCollisionObjectType() == ECollisionChannel::Trigger);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			TArray<FOverlapResult> Overlaps;
+			World.GetPhysicsWorld().FindOverlaps(Overlaps);
+			check(Overlaps.Num() == 1); // Trigger는 겹침으로 감지하지만 이동을 막지 않음
+			Body->SetClimbSpeed(100);
+			Body->SetClimbInput(-1);
+			World.Tick(0.2f);
+			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -20));
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, -100));
+			Body->SetClimbInput(0);
+			World.Tick(0.2f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -20));
+			Body->SetClimbInput(1);
+			World.Tick(0.2f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 0));
+			Body->StopClimbing();
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y > 0);
+			SetPhysicsTestPosition(*Box, 0, 45);
+			Body->SetClimbInput(1);
+			World.Tick(0.2f);
+			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y > 50); // 아래쪽 이탈 시 중력 복귀
+			SetPhysicsTestPosition(*Box, 0, -45);
+			Body->SetClimbInput(-1);
+			World.Tick(0.2f);
+			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y < -45); // 위쪽 이탈
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			AActor* RopeActor = World.SpawnActor<AActor>();
+			UClimbableComponent* Rope = RopeActor->AddComponent<UClimbableComponent>();
+			Rope->SetClimbableType(EClimbableType::Rope);
+			Rope->SetBoxExtent(FVector2D(6, 50));
+			check(Rope->GetClimbableType() == EClimbableType::Rope);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, -30, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetVelocity(FVector2D(0, 200));
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -10));
+			Body->SetClimbSpeed(100);
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 0));
+			World.DestroyActor(RopeActor);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 0));
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			AActor* LadderActor = World.SpawnActor<AActor>();
+			UClimbableComponent* Ladder = LadderActor->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			const bool bAdded = World.GetPhysicsWorld().AddFoothold(
+				FFoothold(30, FVector2D(-50, 0), FVector2D(50, 0)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, -15, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(100);
+			Body->SetClimbInput(1);
+			World.Tick(0.3f);
+			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 15));
+			check(Body->GetCurrentFootholdId() == INDEX_NONE);
+			Ladder->SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 15));
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			AActor* LadderActor = World.SpawnActor<AActor>();
+			UClimbableComponent* Ladder = LadderActor->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			AddPhysicsTestBox(World, 0, -20, 30, 2);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(100);
+			Body->SetClimbInput(-1);
+			World.Tick(0.2f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
+		}
+		wprintf(L"[Physics] Climbable areas: %d failure(s)\n", g_TestFailCount - ClimbFailuresBefore);
+	}
+
 	if (g_TestFailCount > 0)
 	{
 		wprintf(L"[Tests] %d CHECK(S) FAILED\n", g_TestFailCount);
@@ -2498,5 +2718,11 @@ int main()
 	}
 
 	wprintf(L"[Tests] ALL CHECKS PASSED (Debug/Release 공통 검증)\n");
+
+	// --- Memory Tracker ---
+#ifdef _DEBUG
+	FMemoryTracker::ReportLeaks();
+#endif
+
 	return 0;
 }

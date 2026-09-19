@@ -24,6 +24,13 @@ public:
 	void SetGravityScale(float Scale);
 	void SetMaxFallSpeed(float Speed);
 
+	// 로프·사다리 이동 입력과 속도
+	// Direction은 -1(위)부터 1(아래)까지이며, 0이면 영역 안에서 멈춘다.
+	void SetClimbInput(float Direction);
+	void SetClimbSpeed(float Speed);
+	void StopClimbing();
+	bool IsClimbing() const;
+
 	// 시뮬레이션 활성 상태
 	void SetSimulatePhysics(bool bSimulate);
 	bool IsSimulatingPhysics() const;
@@ -37,6 +44,8 @@ protected:
 	FVector2D m_Velocity;
 	float m_GravityScale = 1.0f;
 	float m_MaxFallSpeed = 2000.0f;
+	float m_ClimbInput = 0.0f;
+	float m_ClimbSpeed = 100.0f;
 
 private:
 	// 물리 월드는 속도와 접지 상태를 갱신한다.
@@ -45,5 +54,6 @@ private:
 	// 시뮬레이션 활성 여부와 월드에서 판정한 접지 결과
 	bool m_bSimulatePhysics = true;
 	bool m_bIsGrounded = false;
+	bool m_bIsClimbing = false;
 	int32 m_CurrentFootholdId = INDEX_NONE;
 };
