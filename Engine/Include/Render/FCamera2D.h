@@ -3,6 +3,7 @@
 #include "EnginePCH.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FMath.h"
+#include "Core/Math/FRect.h"
 
 class FCamera2D
 {
@@ -37,6 +38,10 @@ public:
 
 	FVector2D WorldToScreen(const FVector2D& WorldPos) const;
 	FVector2D ScreenToWorld(const FVector2D& ScreenPos) const;
+
+	// 지금 화면에 보이는 월드 좌표 영역. back 타일링에서 "화면을 덮으려면
+	// 몇 번 반복해야 하는지"를 계산할 때 쓴다(레퍼런스 Camera.ScaledClipRect).
+	FRect GetScaledClipRect() const;
 
 	DirectX::XMMATRIX GetViewMatrix() const;
 

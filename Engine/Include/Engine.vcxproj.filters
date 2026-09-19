@@ -321,6 +321,9 @@
     <ClInclude Include="World\FMapLoader.h">
       <Filter>06. World</Filter>
     </ClInclude>
+    <ClInclude Include="World\FMapScene.h">
+      <Filter>06. World</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -510,6 +513,9 @@
       <Filter>05. Render</Filter>
     </ClCompile>
     <ClCompile Include="World\FMapLoader.cpp">
+      <Filter>06. World</Filter>
+    </ClCompile>
+    <ClCompile Include="World\FMapScene.cpp">
       <Filter>06. World</Filter>
     </ClCompile>
   </ItemGroup>

@@ -13,6 +13,15 @@
 #pragma comment(lib, "DirectXTK.lib")
 #endif
 
+// WZ 프레임의 "blend" 프로퍼티에 대응하는 블렌드 상태. MapRender의
+// MeshBatcher는 frame.Blend가 켜진 프레임만 가산 블렌딩으로 그린다
+// (MeshBatcher.cs:158,176 — 기본은 비-사전곱 알파).
+enum class EBlendMode : uint8
+{
+	NonPremultiplied = 0,
+	Additive = 1,
+};
+
 class FSpriteBatch
 {
 public:
@@ -22,7 +31,7 @@ public:
 	bool Initialize(FDXDevice& Device);
 	void Shutdown();
 
-	void Begin(DirectX::FXMMATRIX Transform);
+	void Begin(DirectX::FXMMATRIX Transform, EBlendMode BlendMode = EBlendMode::NonPremultiplied);
 	void Begin(); // Transform = 항등행렬
 
 	void DrawSprite(ID3D11ShaderResourceView* pTexture, const FVector2D& Position, const FVector2D& Scale = FVector2D(1.0f, 1.0f), float RotationRadians = 0.0f, const FLinearColor& Tint = FLinearColor::White, const RECT* pSourceRect = nullptr, float LayerDepth = 0.0f);

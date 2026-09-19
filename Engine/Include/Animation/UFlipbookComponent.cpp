@@ -3,6 +3,7 @@
 #include "Object/AActor.h"
 #include "Render/USpriteComponent.h"
 #include "Animation/UAnimNotify.h"
+#include "Core/Math/FMath.h"
 
 UFlipbookComponent::UFlipbookComponent()
 {
@@ -134,6 +135,16 @@ void UFlipbookComponent::Tick(float DeltaTime)
 
 	if (m_pTargetSprite)
 	{
+		// 프레임 구간 안에서 a0 → a1로 보간(FrameAnimator.cs:100). 대부분의
+		// 프레임은 둘이 같아서 상수가 된다. 텍스처와 달리 소유권 문제가 없는
+		// 별도 슬롯이라, m_pTexture를 건드리지 않고 그냥 밀어 넣으면 된다.
+		float FrameProgress = pCurrent->m_Duration > 0.0f ? (m_ElapsedInFrame / pCurrent->m_Duration) : 0.0f;
+		FrameProgress = FMath::Clamp(FrameProgress, 0.0f, 1.0f);
+		int32 FrameAlpha = (int32)(pCurrent->m_A0 + (pCurrent->m_A1 - pCurrent->m_A0) * FrameProgress);
+
+		m_pTargetSprite->SetFrameAlpha(FrameAlpha);
+		m_pTargetSprite->SetBlend(pCurrent->m_bBlend ? EBlendMode::Additive : EBlendMode::NonPremultiplied);
+
 		ULONG After = pCurrent->m_pTexture->AddRef();
 
 #ifdef _DEBUG

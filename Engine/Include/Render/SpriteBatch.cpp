@@ -37,12 +37,16 @@ void FSpriteBatch::Shutdown()
 	m_pContext = nullptr;
 }
 
-void FSpriteBatch::Begin(DirectX::FXMMATRIX Transform)
+void FSpriteBatch::Begin(DirectX::FXMMATRIX Transform, EBlendMode BlendMode)
 {
 	check(!m_bInBeginEnd);
 	m_bInBeginEnd = true;
 
-	m_pSpriteBatch->Begin(DirectX::SpriteSortMode_Deferred, m_pCommonStates->NonPremultiplied(), m_pCommonStates->PointClamp(), nullptr, m_pCommonStates->CullNone(), nullptr, Transform);
+	// DirectXTK는 블렌드 상태를 Begin에서만 받는다 — 한 배치 안에서 섞을 수
+	// 없으므로, 블렌드가 바뀌는 지점마다 FRenderQueue::Flush가 배치를 끊는다.
+	ID3D11BlendState* pBlendState = (BlendMode == EBlendMode::Additive) ? m_pCommonStates->Additive() : m_pCommonStates->NonPremultiplied();
+
+	m_pSpriteBatch->Begin(DirectX::SpriteSortMode_Deferred, pBlendState, m_pCommonStates->PointClamp(), nullptr, m_pCommonStates->CullNone(), nullptr, Transform);
 }
 
 void FSpriteBatch::Begin()

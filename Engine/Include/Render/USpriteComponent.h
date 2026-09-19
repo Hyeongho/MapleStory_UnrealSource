@@ -19,9 +19,51 @@ public:
 	// Submit()이 GetWorldTransform().m_Location에서 이만큼 빼서 발밑 정렬한다.
 	void SetTexture(ID3D11ShaderResourceView* Texture, const FVector2D& Origin = FVector2D::Zero);
 
-	void SetZOrder(int32 ZOrder) 
-	{ 
-		m_ZOrder = ZOrder; 
+	// Z0/Z1은 레퍼런스 MeshItem의 정렬 키와 같은 의미다 — Z0는 캔버스/오브젝트의
+	// z, Z1은 WZ 슬롯 번호. 기존 호출부를 위해 SetZOrder는 Z0의 별칭으로 남긴다.
+	void SetZOrder(int32 ZOrder)
+	{
+		m_Z0 = ZOrder;
+	}
+
+	void SetZ0(int32 Z0)
+	{
+		m_Z0 = Z0;
+	}
+
+	void SetZ1(int32 Z1)
+	{
+		m_Z1 = Z1;
+	}
+
+	// 아이템 단위 알파(0~255) — back의 a, 오브젝트 페이드 등. 프레임 알파와
+	// 곱해져 최종 알파가 된다(MeshBatcher.cs:139 — A0 * (Alpha/255)).
+	void SetAlpha(int32 Alpha)
+	{
+		m_Alpha = Alpha;
+	}
+
+	// 프레임 단위 알파 — UFlipbookComponent가 a0→a1 보간값을 매 틱 밀어 넣는다.
+	// 아이템 알파와는 별도 슬롯이라 서로 덮어쓰지 않는다.
+	void SetFrameAlpha(int32 FrameAlpha)
+	{
+		m_FrameAlpha = FrameAlpha;
+	}
+
+	void SetBlend(EBlendMode Blend)
+	{
+		m_Blend = Blend;
+	}
+
+	// back 타일링 반복 — [L, R) × [T, B) 범위의 (x, y)마다 Offset * (x, y)만큼
+	// 옮겨 한 번씩 더 그린다. 기본값은 "원점에 한 번만".
+	void SetTileParams(const FVector2D& Offset, int32 L, int32 T, int32 R, int32 B)
+	{
+		m_TileOffset = Offset;
+		m_TileL = L;
+		m_TileT = T;
+		m_TileR = R;
+		m_TileB = B;
 	}
 
 	void SetLayer(ELayer Layer) 
@@ -62,10 +104,21 @@ public:
 private:
 	ID3D11ShaderResourceView* m_pTexture = nullptr; // owning
 	FVector2D m_Origin = FVector2D::Zero;
+	int32 m_Z0 = 0;
+	int32 m_Z1 = 0;
 	int32 m_ZOrder = 0;
 	ELayer m_Layer = ELayer::Object;
 	FLinearColor m_Tint = FLinearColor::White;
+	int32 m_Alpha = 255;      // 아이템 단위
+	int32 m_FrameAlpha = 255; // 프레임 단위(Flipbook이 갱신)
+	EBlendMode m_Blend = EBlendMode::NonPremultiplied;
 	float m_ParallaxFactor = 1.0f;
 	bool m_bFlipHorizontal = false;
+
+	FVector2D m_TileOffset = FVector2D::Zero;
+	int32 m_TileL = 0;
+	int32 m_TileT = 0; 
+	int32 m_TileR = 1; 
+	int32 m_TileB = 1;
 };
 

@@ -13,6 +13,12 @@ struct FFlipbookFrame
 	FVector2D m_Origin = FVector2D::Zero;
 	float m_Duration = 0.1f;
 	UAnimNotify* m_pNotify = nullptr;
+
+	// WZ 프레임의 a0/a1 — 프레임이 재생되는 동안 알파가 a0에서 a1로 변한다
+	// (FrameAnimator.cs:100). 대부분의 프레임은 둘 다 255라 변화가 없다.
+	int32 m_A0 = 255;
+	int32 m_A1 = 255;
+	bool m_bBlend = false; // WZ의 blend — true면 가산 블렌딩
 };
 
 class UFlipbookComponent :

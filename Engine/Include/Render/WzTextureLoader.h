@@ -29,7 +29,6 @@ public:
 
 	static FAvatarTexture LoadAvatarTexture(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, const char* ActionName, int32 FrameIndex, const char* EmotionName = "default", int32 EmotionFrameIndex = 0);
 
-private:
 	static ID3D11ShaderResourceView* UploadBGRATexture(FDXDevice& Device, const uint8_t* Pixels, int32 Width, int32 Height);
 };
 

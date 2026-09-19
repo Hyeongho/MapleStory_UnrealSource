@@ -253,6 +253,7 @@
     <ClInclude Include="Timer\FTimerHandle.h" />
     <ClInclude Include="Timer\FTimerManager.h" />
     <ClInclude Include="World\FMapLoader.h" />
+    <ClInclude Include="World\FMapScene.h" />
     <ClInclude Include="World\UWorld.h" />
   </ItemGroup>
   <ItemGroup>
@@ -321,6 +322,7 @@
     <ClCompile Include="Render\WzTextureLoader.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
     <ClCompile Include="World\FMapLoader.cpp" />
+    <ClCompile Include="World\FMapScene.cpp" />
     <ClCompile Include="World\UWorld.cpp" />
   </ItemGroup>
   <ItemGroup>

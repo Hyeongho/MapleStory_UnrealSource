@@ -16,6 +16,8 @@
 #include "Timer/FTimerHandle.h"
 #include "Timer/FTimerDelegate.h"
 #include "World/UWorld.h"
+#include "World/FMapLoader.h"
+#include "World/FMapScene.h"
 #include "Object/ACharacter.h"
 #include "Animation/UFlipbookComponent.h"
 #include "Animation/UAnimStateMachine.h"
@@ -154,6 +156,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UWorld* pWorld = new UWorld();
 	GWorld = pWorld;
 
+	// Map.wz 로드 데모 — 실제 로컬 Map.wz 파일 경로/맵 .img 경로로 수정해서
+	// 사용할 것(기존 TestWzPath와 동일한 관례).
+	// 배경·타일은 MapScene이 직접 들고 그리고, obj/portal/reactor만 액터로
+	// 스폰된다. 발판은 파싱만 하고 물리 연동은 하지 않는다(범위 밖).
+	static const char* TestMapWzPath = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
+	static const char* TestMapPath = R"(Map\Map\Map2\200000100.img)";
+
+	FMapScene* pMapScene = new FMapScene();
+	TArray<FMapFootholdItem> MapFootholds;
+	FMapLoader::LoadMap(*pDevice, *pWorld, *pMapScene, TestMapWzPath, TestMapPath, &MapFootholds);
+
 	static const char* TestWzPath = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
 	static const char* TestCanvasNodePath = R"(Mob\_Canvas\0100100.img\stand\0)";
 
@@ -244,20 +257,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		float DeltaTime = GetDeltaTime();
 		GTimerManager->Tick(DeltaTime);
 		pWorld->Tick(DeltaTime);
+		pMapScene->Tick(DeltaTime);
 
-		pWorld->Render(*pRenderQueue);
-
+		// 카메라를 먼저 갱신한다 — 배경 타일링이 제출 시점에 카메라의 클립
+		// 사각형을 읽어 "화면을 덮으려면 몇 번 반복할지"를 계산하기 때문에,
+		// 렌더 뒤에 옮기면 한 프레임 늦은 범위로 그리게 된다.
 		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
+
+		// 맵 씬(배경·타일)과 액터(오브젝트·포털·리액터·캐릭터)가 같은 큐에
+		// 제출하고, 순서는 큐의 전역 비교자가 (Layer, Z0, Z1)로 결정한다.
+		pMapScene->Render(*pRenderQueue);
+		pWorld->Render(*pRenderQueue);
 
 		pSwapChain->Clear(FLinearColor(0.1f, 0.1f, 0.15f, 1.0f));
 
-		pSpriteBatch->Begin(pCamera->GetViewMatrix());
+		// Begin/End는 이제 Flush가 직접 관리한다 — 가산 블렌딩이 필요한
+		// 프레임에서 배치를 끊어야 해서(DirectXTK는 블렌드를 Begin에서만 받음).
+		// 뷰 행렬도 Flush가 GCamera2D에서 직접 가져온다.
 		pRenderQueue->Flush(*pSpriteBatch);
-		pSpriteBatch->End();
 
-		pSpriteBatch->Begin(); // 항등 변환 — UI는 카메라와 무관하게 화면 좌표에 고정
+		// UI는 카메라와 무관하게 화면 좌표에 고정(FlushUI가 항등 변환 사용).
 		pRenderQueue->FlushUI(*pSpriteBatch);
-		pSpriteBatch->End();
 
 		pSwapChain->Present(1);
 	}
@@ -271,6 +291,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// EndPlay+소멸자+FMemory::Free로 정리하고, ~ACharacter() -> ~AActor()가
 	// USpriteComponent까지 연쇄로 정리하면서 그 안의 텍스처 Release()도
 	// 함께 처리된다 — 별도 해제 코드 불필요.
+	// 맵 씬은 배경·타일 텍스처를 직접 소유하므로 액터보다 먼저 정리한다.
+	delete pMapScene;
+
 	delete pWorld;
 	GWorld = nullptr;
 
