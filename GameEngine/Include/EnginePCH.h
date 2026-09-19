@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // -----------------------------------------------------------------------
-// 저수준 C 헤더 (STL 금지, C 헤더는 허용)
+// 공통 C/C++ 런타임 헤더
 // -----------------------------------------------------------------------
 #include <cstdint>
 #include <cstdio>
@@ -10,6 +10,18 @@
 #include <malloc.h>
 #include <new>
 #include <cassert>
+#include <cstdarg>
+#include <cwchar>
+#include <cmath>
+#include <float.h>
+#include <iostream>
+#include <ctime>
+#include <io.h>
+#include <fcntl.h>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 // -----------------------------------------------------------------------
 // Windows 플랫폼 헤더
@@ -17,7 +29,16 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
-#include <iostream>
+
+// -----------------------------------------------------------------------
+// DirectX SDK / DirectXTK 헤더
+// -----------------------------------------------------------------------
+#include <d3d11.h>
+#include <d3d11sdklayers.h>
+#include <dxgi.h>
+#include <DirectXMath.h>
+#include <SpriteBatch.h>
+#include <CommonStates.h>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)
@@ -51,10 +72,19 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #define PLATFORM_WINDOWS 1
 
+// -----------------------------------------------------------------------
+// 링크 라이브러리
+// DirectXTK 라이브러리 경로는 Game/Test 프로젝트에서 설정한다.
+// -----------------------------------------------------------------------
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
+
 #ifdef _DEBUG
 #pragma comment(lib, "Engine_Debug.lib")
+#pragma comment(lib, "DirectXTK_Debug.lib")
 #else
 #pragma comment(lib, "Engine.lib")
+#pragma comment(lib, "DirectXTK.lib")
 #endif
 
 // -----------------------------------------------------------------------

@@ -5,10 +5,7 @@
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
 #include "Core/Math/FColor.h"
-#include <d3d11.h>
-#include <DirectXMath.h>
-#include <SpriteBatch.h>
-#include <CommonStates.h>
+
 
 #ifdef _DEBUG
 #pragma comment(lib, "DirectXTK_Debug.lib")

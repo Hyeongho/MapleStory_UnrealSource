@@ -52,6 +52,18 @@ public:
         return nullptr;
     }
 
+    template<typename T>
+    void GetComponents(TArray<T*>& OutComponents) const
+    {
+        for (int32 i = 0; i < m_Components.Num(); i++)
+        {
+            if (T* Component = Cast<T>(m_Components[i])) 
+            {
+                OutComponents.Add(Component);
+            }
+        }
+    }
+
     void RemoveComponent(UActorComponent* Comp);
 
     virtual void BeginPlay() override;

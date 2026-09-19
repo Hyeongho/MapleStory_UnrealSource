@@ -3,7 +3,6 @@
 #include "EnginePCH.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FMath.h"
-#include <DirectXMath.h>
 
 class FCamera2D
 {

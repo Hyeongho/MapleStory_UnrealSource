@@ -1,6 +1,5 @@
 ﻿#include "EnginePCH.h"
 #include "Render/WzTextureLoader.h"
-#include <windows.h>
 
 // ── DLL 함수 포인터 (WzTest/wz_test.cpp의 WzDll 네임스페이스와 동일한 시그니처) ──
 namespace

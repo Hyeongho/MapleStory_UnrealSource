@@ -55,6 +55,9 @@
     <Filter Include="07. Animation">
       <UniqueIdentifier>{c5d89ebf-30f5-40b6-9e88-91fd8095149e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="08. Physics">
+      <UniqueIdentifier>{2829071a-2745-4237-baf2-7c06c01afb2d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -285,6 +288,27 @@
     <ClInclude Include="Animation\UAnimStateMachine.h">
       <Filter>07. Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Physics\CollisionTypes.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\PhysicsWorld.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UBoxCollision.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UCircleCollision.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UPrimitiveComponent.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\URigidbody.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\FFoothold.h">
+      <Filter>08. Physics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -442,6 +466,27 @@
     </ClCompile>
     <ClCompile Include="Animation\UAnimNotify.cpp">
       <Filter>07. Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\CollisionTypes.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\PhysicsWorld.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UBoxCollision.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UCircleCollision.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UPrimitiveComponent.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\URigidbody.cpp">
+      <Filter>08. Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\FFoothold.cpp">
+      <Filter>08. Physics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

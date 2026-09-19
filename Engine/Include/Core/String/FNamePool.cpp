@@ -1,6 +1,5 @@
 ﻿#include "EnginePCH.h"
 #include "FNamePool.h"
-#include <cwchar>
 
 FNamePool::FNamePool()
 {

@@ -4,7 +4,6 @@
 #include "Render/RenderQueue.h"
 #include "Core/Math/FVector2D.h"
 #include "Core/Math/FLinearColor.h"
-#include <d3d11.h>
 
 class USpriteComponent :
     public USceneComponent

@@ -74,14 +74,14 @@
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
     <TargetName>$(ProjectName)_Debug</TargetName>
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>../../Engine/Include/;$(SolutionDir)ThirdParty\DirectXTK\Inc;$(IncludePath)</IncludePath>
+    <LibraryPath>../Bin/;$(SolutionDir)ThirdParty\DirectXTK\Lib;%(AdditionalLibraryDirectories);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
-    <IncludePath>../../Engine/Include/;$(IncludePath)</IncludePath>
-    <LibraryPath>../Bin/;$(LibraryPath)</LibraryPath>
+    <IncludePath>../../Engine/Include/;$(SolutionDir)ThirdParty\DirectXTK\Inc;$(IncludePath)</IncludePath>
+    <LibraryPath>../Bin/;$(SolutionDir)ThirdParty\DirectXTK\Lib;%(AdditionalLibraryDirectories);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

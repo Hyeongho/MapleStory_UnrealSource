@@ -41,7 +41,56 @@
 #include "Ability/UGameplayEffect.h"
 #include "Ability/UGameplayAbility.h"
 #include "Ability/UAbilitySystemComponent.h"
-#include <ctime>
+#include "Physics/UBoxCollision.h"
+#include "Physics/UCircleCollision.h"
+#include "Physics/URigidbody.h"
+#include "World/UWorld.h"
+#include "Animation/UAnimStateMachine.h"
+#include "Animation/UAnimNotify.h"
+
+// A COM test double: tracks ownership without a GPU or a window.
+class FTestTextureView : public ID3D11ShaderResourceView
+{
+public:
+	ULONG m_Refs = 1;
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void** Out) override { if (Out) *Out = nullptr; return E_NOINTERFACE; }
+	ULONG STDMETHODCALLTYPE AddRef() override { return ++m_Refs; }
+	ULONG STDMETHODCALLTYPE Release() override { return --m_Refs; }
+	void STDMETHODCALLTYPE GetDevice(ID3D11Device** Out) override { *Out = nullptr; }
+	HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID, UINT*, void*) override { return E_NOTIMPL; }
+	HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID, UINT, const void*) override { return E_NOTIMPL; }
+	HRESULT STDMETHODCALLTYPE SetPrivateDataInterface(REFGUID, const IUnknown*) override { return E_NOTIMPL; }
+	void STDMETHODCALLTYPE GetResource(ID3D11Resource** Out) override { *Out = nullptr; }
+	void STDMETHODCALLTYPE GetDesc(D3D11_SHADER_RESOURCE_VIEW_DESC* Out) override { *Out = {}; }
+};
+
+struct FSharedConversionBase { int32 m_Value = 42; };
+struct FSharedConversionDerived : FSharedConversionBase
+{
+	inline static int32 m_Destructions = 0;
+	~FSharedConversionDerived() { ++m_Destructions; }
+};
+struct FSharedConversionPrivate : private FSharedConversionBase {};
+struct FSharedConversionLeft : FSharedConversionBase {};
+struct FSharedConversionRight : FSharedConversionBase {};
+struct FSharedConversionAmbiguous : FSharedConversionLeft, FSharedConversionRight {};
+
+class FTestFrameNotify : public UAnimNotify
+{
+public:
+	int32 m_Count = 0;
+	void Notify(AActor*) override { ++m_Count; }
+};
+
+static_assert(__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(__is_constructible(TSharedPtr<const FSharedConversionBase>, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionDerived>, const TSharedPtr<FSharedConversionBase>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<const FSharedConversionBase>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<int>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionPrivate>&));
+static_assert(!__is_constructible(TSharedPtr<FSharedConversionBase>, const TSharedPtr<FSharedConversionAmbiguous>&));
+static_assert(__is_assignable(TSharedPtr<FSharedConversionBase>&, const TSharedPtr<FSharedConversionDerived>&));
+static_assert(!__is_assignable(TSharedPtr<FSharedConversionDerived>&, const TSharedPtr<FSharedConversionBase>&));
 
 namespace
 {
@@ -177,16 +226,49 @@ static int32 g_TestFailCount = 0;
 
 #undef check
 #define check(expr) \
-	do { \
-		if (!(expr)) { \
-			g_TestFailCount++; \
-			wprintf(L"[Tests] CHECK FAILED: %hs (%hs:%d)\n", #expr, __FILE__, __LINE__); \
-			assert(expr); \
-		} \
-	} while (0)
+do { \
+if (!(expr)) { \
+g_TestFailCount++; \
+wprintf(L"[Tests] CHECK FAILED: %hs (%hs:%d)\n", #expr, __FILE__, __LINE__); \
+assert(expr); \
+} \
+} while (0)
+
+// Phase 10 테스트에서 사용하는 도형 생성과 위치 설정 보조 함수.
+static void SetPhysicsTestPosition(USceneComponent& Component, float X, float Y)
+{
+	Component.SetRelativeTransform(FTransform2D(FVector2D(X, Y), 0.0f, FVector2D::One));
+}
+
+static UBoxCollision* AddPhysicsTestBox(UWorld& World, float X, float Y, float HalfX, float HalfY)
+{
+	UBoxCollision* Box = World.SpawnActor<AActor>()->AddComponent<UBoxCollision>();
+	Box->SetBoxExtent(FVector2D(HalfX, HalfY));
+	SetPhysicsTestPosition(*Box, X, Y);
+	return Box;
+}
+
+static URigidbody* AddPhysicsTestBody(UBoxCollision& Box)
+{
+	Box.SetCollisionObjectType(ECollisionChannel::Player);
+	return Box.GetOwner()->AddComponent<URigidbody>();
+}
+
+static bool IsPhysicsTestNear(float A, float B)
+{
+	return FMath::Abs(A - B) < 0.002f;
+}
 
 int main()
 {
+	// wprintf(L"...")가 콘솔에 쓸 때는 기본 "C" 로케일 기준으로 와이드->멀티바이트
+	// 변환을 거치는데, "C" 로케일은 ASCII 밖 문자(한글 등)를 변환하지 못해서
+	// 그 지점에서 출력이 끊긴다(이전에 겪은 버그). stdout을 UTF-16 텍스트
+	// 모드로 바꾸면 그 변환 자체를 건너뛰고 와이드 문자를 그대로 써서
+	// 한글도 정상 출력된다 — 이 프로세스 안의 모든 wprintf(FLogger의 콘솔
+	// 출력 포함)에 적용되므로 반드시 main() 맨 앞, 첫 wprintf 호출 전에 있어야 함.
+	_setmode(_fileno(stdout), _O_U16TEXT);
+
 	FMemory::InitMemory();
 
 	// --- operator new/delete + GMalloc ---
@@ -260,10 +342,10 @@ int main()
 	wprintf(L"[Tests] Phase 1 Memory (Full) - PASSED\n");
 
 	// ==========================================================
-// Phase 2 — TypeTraits
-// ==========================================================
+	// Phase 2 — TypeTraits
+	// ==========================================================
 
-// TIsPOD
+	// TIsPOD
 	struct FPODStruct { int32 x; int32 y; };  // 순수 POD
 	static_assert(TIsPOD<int32>::Value == true, "int32 must be POD");
 	static_assert(TIsPOD<float>::Value == true, "float must be POD");
@@ -1289,13 +1371,13 @@ int main()
 			FTimerHandle H;
 			FTimerDelegate D{ [](void*)
 			{
-				s_FireCount++;
-				for (int32 i = 0; i < 64; i++)
-				{
-					FTimerHandle Extra;
-					FTimerDelegate ExtraD{ [](void*) { s_ReentrantCount++; } };
-					GTimerManager->SetTimer(Extra, ExtraD, 100.0f, false);
-				}
+			s_FireCount++;
+			for (int32 i = 0; i < 64; i++)
+			{
+			FTimerHandle Extra;
+			FTimerDelegate ExtraD{ [](void*) { s_ReentrantCount++; } };
+			GTimerManager->SetTimer(Extra, ExtraD, 100.0f, false);
+			}
 			} };
 
 			GTimerManager->SetTimer(H, D, 1.0f, false);
@@ -2094,6 +2176,79 @@ int main()
 		wprintf(L"[Tests] Phase 7.5+ (5) TSparseArray/TMap/TSet Rework - ALL PASSED\n");
 	}
 
+	// Shared-pointer implicit conversion and const-view lifetime regression.
+	{
+#ifdef _DEBUG
+		const int64 Before = FMemoryTracker::GetLiveAllocCount();
+#endif
+		const int32 DestructionsBefore = FSharedConversionDerived::m_Destructions;
+		{
+			auto Derived = MakeShared<FSharedConversionDerived>();
+			TSharedPtr<FSharedConversionBase> Base = Derived;
+			TSharedPtr<const FSharedConversionBase> ConstBase = Derived;
+			check(Base.Get() == Derived.Get());
+			check(ConstBase->m_Value == 42);
+			check(Derived.GetRefCount() == 3);
+			Derived.Reset();
+			Base.Reset();
+			check(ConstBase.GetRefCount() == 1);
+		}
+#ifdef _DEBUG
+		check(FMemoryTracker::GetLiveAllocCount() == Before);
+#endif
+		check(FSharedConversionDerived::m_Destructions == DestructionsBefore + 1);
+	}
+
+	// Invalid animation input must not release old frames or retain partial input.
+	{
+		FTestTextureView Texture;
+		FTestFrameNotify Notify;
+		TArray<FFlipbookFrame> Valid;
+		FFlipbookFrame Frame;
+		Frame.m_pTexture = &Texture;
+		Frame.m_pNotify = &Notify;
+		Valid.Add(Frame);
+		TArray<FFlipbookFrame> Invalid = Valid;
+		Invalid.Add(FFlipbookFrame{});
+		TArray<FFlipbookFrame> Empty;
+		{
+			UFlipbookComponent Flipbook;
+			Flipbook.SetFrames(Valid);
+			check(Texture.m_Refs == 2);
+			Flipbook.Play();
+			Flipbook.Tick(0.05f);
+			Flipbook.SetFrames(Invalid, false);
+			check(Texture.m_Refs == 2);
+			Flipbook.Tick(0.06f);
+			check(Notify.m_Count == 1); // elapsed time, playing and loop flag preserved
+			Flipbook.SetFrames(Empty);
+			check(Texture.m_Refs == 1);
+			Flipbook.SetFrames(Invalid);
+			Flipbook.Play();
+			Flipbook.Tick(0.25f);
+			check(Texture.m_Refs == 1);
+			check(Notify.m_Count == 1);
+			Flipbook.SetFrames(Valid);
+		}
+		check(Texture.m_Refs == 1);
+		{
+			UAnimStateMachine StateMachine;
+			const FName Idle(L"NullContractIdle");
+			StateMachine.RegisterState(Idle, Valid);
+			StateMachine.SetState(Idle);
+			StateMachine.RegisterState(Idle, Invalid);
+			check(StateMachine.GetCurrentState() == Idle);
+			check(Texture.m_Refs == 2);
+			StateMachine.RegisterState(FName(L"RejectedState"), Invalid);
+			check(Texture.m_Refs == 2);
+			StateMachine.RegisterState(Idle, Empty);
+			check(Texture.m_Refs == 1);
+			StateMachine.RegisterState(Idle, Valid);
+		}
+		check(Texture.m_Refs == 1);
+		wprintf(L"[Tests] Shared conversion / animation null contract - PASSED\n");
+	}
+
 	// Phase 8 — Renderer(DX11) 코어 부트스트랩
 	// HWND가 필요 없는 부분(디바이스 생성)만 콘솔에서 검증한다.
 	// 실제 스프라이트 렌더링(SpriteBatch/RenderQueue/FCamera2D)은 Game.exe를 실행해
@@ -2105,6 +2260,235 @@ int main()
 		check(bDeviceOK);
 		wprintf(L"[Tests] Phase 8 FDXDevice::Initialize - %s\n", bDeviceOK ? L"PASSED" : L"FAILED");
 		TestDevice.Shutdown();
+	}
+
+	// Phase 10 — 충돌 도형 / Rigidbody / 발판·벽·천장 충돌
+	{
+		const int32 PhysicsFailuresBefore = g_TestFailCount;
+		{
+			UBoxCollision Box;
+			Box.SetBoxExtent(FVector2D(5.0f, 5.0f));
+			UCircleCollision Circle;
+			Circle.SetSphereRadius(2.0f);
+			SetPhysicsTestPosition(Circle, 7.0f, 0.0f);
+			check(Box.Overlaps(Circle)); // 경계에서 접하는 경우
+			check(Circle.Overlaps(Box));
+			SetPhysicsTestPosition(Circle, 7.0f, 7.0f);
+			check(!Box.Overlaps(Circle)); // 외접 사각형은 접하지만 실제 원과 Box는 겹치지 않음
+			UCircleCollision Second;
+			Second.SetSphereRadius(2.0f);
+			SetPhysicsTestPosition(Second, 11.0f, 7.0f);
+			check(Circle.Overlaps(Second));
+			SetPhysicsTestPosition(Second, 11.1f, 7.0f);
+			check(!Circle.Overlaps(Second));
+			Box.SetCenterOffset(FVector2D(1.0f, 2.0f));
+			Box.SetRelativeTransform(FTransform2D(FVector2D(10.0f, 20.0f), 0.0f, FVector2D(-2.0f, 3.0f)));
+			const FRect Bounds = Box.GetWorldBounds();
+			check(IsPhysicsTestNear(Bounds.m_Left, -2.0f) && IsPhysicsTestNear(Bounds.m_Bottom, 41.0f));
+			Circle.SetCollisionMask(0);
+			check(!Circle.Overlaps(Second));
+		}
+		{
+			UWorld World;
+			UBoxCollision* NearBox = AddPhysicsTestBox(World, 20, 0, 5, 5);
+			UBoxCollision* FarBox = AddPhysicsTestBox(World, 50, 0, 5, 5);
+			UCircleCollision* Circle = World.SpawnActor<AActor>()->AddComponent<UCircleCollision>();
+			Circle->SetSphereRadius(5);
+			Circle->SetCollisionObjectType(ECollisionChannel::Enemy);
+			SetPhysicsTestPosition(*Circle, 80, 0);
+			FHitResult Hit;
+			bool bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(bHit && Hit.m_pComponent == NearBox && IsPhysicsTestNear(Hit.m_Time, 0.15f));
+			check(Hit.m_Normal == FVector2D(-1, 0));
+			bHit = World.GetPhysicsWorld().Raycast(
+				FVector2D::Zero, FVector2D(100, 0), Hit, AllCollisionChannels, NearBox->GetOwner());
+			check(bHit && Hit.m_pComponent == FarBox && IsPhysicsTestNear(Hit.m_Time, 0.45f));
+			bHit = World.GetPhysicsWorld().Raycast(
+				FVector2D::Zero, FVector2D(100, 0), Hit, CollisionChannelMask(ECollisionChannel::Enemy));
+			check(bHit && Hit.m_pComponent == Circle && IsPhysicsTestNear(Hit.m_Time, 0.75f));
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D(80, 0), FVector2D(80, 0), Hit);
+			check(bHit && Hit.m_bStartPenetrating && Hit.m_Time == 0.0f);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D(0, 30), FVector2D(100, 30), Hit);
+			check(!bHit && !Hit.m_bBlockingHit && Hit.m_pComponent == nullptr);
+			SetPhysicsTestPosition(*FarBox, 20, 0);
+			TArray<FOverlapResult> Overlaps;
+			World.GetPhysicsWorld().FindOverlaps(Overlaps);
+			check(Overlaps.Num() == 1);
+			FarBox->SetCollisionMask(0);
+			World.GetPhysicsWorld().FindOverlaps(Overlaps);
+			check(Overlaps.Num() == 0);
+			World.DestroyActor(NearBox->GetOwner());
+			FarBox->SetCollisionEnabled(false);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(bHit && Hit.m_pComponent == Circle); // 액터 삭제 후 쿼리에 해제된 컴포넌트가 남지 않음
+			Circle->GetOwner()->RemoveComponent(Circle);
+			bHit = World.GetPhysicsWorld().Raycast(FVector2D::Zero, FVector2D(100, 0), Hit);
+			check(!bHit);
+		}
+		{
+			UWorld World;
+			AddPhysicsTestBox(World, 0, 100, 100, 2);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			USceneComponent* Visual = Box->GetOwner()->AddComponent<USceneComponent>();
+			Visual->SetAttachParent(Box);
+			Body->SetMaxFallSpeed(1000000);
+			Body->SetVelocity(FVector2D(0, 1000000));
+			World.Tick(0.5f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93)); // 빠르게 낙하해도 얇은 발판을 관통하지 않음
+			check(Body->IsGrounded() && IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+			check(Visual->GetWorldTransform().m_Location == Box->GetWorldCenter());
+			World.Tick(0.25f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93) && Body->IsGrounded());
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, -200));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 73) && !Body->IsGrounded());
+			Body->SetVelocity(FVector2D::Zero);
+			SetPhysicsTestPosition(*Box, 0, 96); // 발판과 일부 겹친 위치에 스폰한 상황
+			World.Tick(0.01f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 93) && Body->IsGrounded());
+			Body->SetVelocity(FVector2D(1000, 0));
+			World.Tick(0.2f);
+			check(Box->GetWorldCenter().m_X > 190 && !Body->IsGrounded());
+			Body->SetGravityScale(1);
+			Body->SetMaxFallSpeed(100);
+			World.Tick(0.5f);
+			check(Box->GetWorldCenter().m_Y > 93 && IsPhysicsTestNear(Body->GetVelocity().m_Y, 100));
+			const FVector2D Before = Box->GetWorldCenter();
+			World.Tick(0);
+			World.Tick(-1);
+			check(Box->GetWorldCenter() == Before);
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UBoxCollision* Wall = AddPhysicsTestBox(World, 30, 0, 2, 100);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetVelocity(FVector2D(10000, 20));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 23));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 2)); // 벽을 따라 수직 이동은 유지
+			check(IsPhysicsTestNear(Body->GetVelocity().m_X, 0) && !Body->IsGrounded());
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 13)); // 접촉면에서 멀어지는 이동은 허용
+			Wall->SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			Body->SetVelocity(FVector2D(1000, 0));
+			World.Tick(0.1f);
+			check(Box->GetWorldCenter().m_X > 100); // 양쪽 충돌 마스크를 모두 반영
+			AddPhysicsTestBox(World, 0, -20, 100, 2);
+			SetPhysicsTestPosition(*Box, 0, 0);
+			Body->SetVelocity(FVector2D(0, -1000));
+			World.Tick(0.05f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0) && !Body->IsGrounded());
+			Body->SetSimulatePhysics(false);
+			Body->SetVelocity(FVector2D(100, 100));
+			World.Tick(1);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
+		}
+		wprintf(L"[Physics] Phase 10 initial stage: %d failure(s)\n", g_TestFailCount - PhysicsFailuresBefore);
+	}
+
+	// Phase 10 — 단방향 선분 발판 / 경사면 / 발판 연결
+	{
+		const int32 FootholdFailuresBefore = g_TestFailCount;
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			bool bAdded = Physics.AddFoothold(FFoothold(1, FVector2D(-100, 100), FVector2D(100, 100)));
+			check(bAdded);
+			bAdded = Physics.AddFoothold(FFoothold(1, FVector2D(0, 0), FVector2D(10, 0)));
+			check(!bAdded); // 기존 ID 덮어쓰기 방지
+			bAdded = Physics.AddFoothold(FFoothold(2, FVector2D(0, 0), FVector2D(0, 100)));
+			check(!bAdded); // 수직 벽은 발판으로 등록하지 않음
+
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 130, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, -400));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 50));
+			check(!Body->IsGrounded()); // 아래에서 위로 통과
+
+			Body->SetMaxFallSpeed(100000);
+			Body->SetVelocity(FVector2D(0, 100000));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 95));
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 1);
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+
+			const bool bRemoved = Physics.RemoveFoothold(1);
+			check(bRemoved && Physics.FindFoothold(1) == nullptr);
+			check(!Body->IsGrounded() && Body->GetCurrentFootholdId() == INDEX_NONE);
+			Body->SetGravityScale(1);
+			World.Tick(0.1f);
+			check(Box->GetWorldCenter().m_Y > 95);
+		}
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			// 역순 끝점도 같은 경사로 처리하며, 끝점을 공유하는 선분끼리 이동한다.
+			bool bAdded = Physics.AddFoothold(FFoothold(10, FVector2D(100, 50), FVector2D(0, 100)));
+			check(bAdded);
+			bAdded = Physics.AddFoothold(FFoothold(11, FVector2D(100, 50), FVector2D(200, 100)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 20, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, 1000));
+			World.Tick(0.1f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 85));
+			check(Body->GetCurrentFootholdId() == 10);
+
+			Body->SetVelocity(FVector2D(100, 0));
+			World.Tick(1.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 140));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 65));
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 11);
+			check(IsPhysicsTestNear(Body->GetVelocity().m_X, 100));
+
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(1.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 20));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 85));
+			check(Body->GetCurrentFootholdId() == 10);
+
+			Body->SetGravityScale(1);
+			Body->SetVelocity(FVector2D(-100, 0));
+			World.Tick(0.5f);
+			check(Box->GetWorldCenter().m_X < 0 && Box->GetWorldCenter().m_Y > 95);
+			check(!Body->IsGrounded() && Body->GetCurrentFootholdId() == INDEX_NONE);
+		}
+		{
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			const bool bAdded = Physics.AddFoothold(FFoothold(20, FVector2D(-100, 100), FVector2D(100, 100)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetGravityScale(0);
+			Body->SetVelocity(FVector2D(0, 1000));
+			Box->SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 200) && !Body->IsGrounded());
+
+			FHitResult Hit;
+			bool bHit = Physics.Raycast(FVector2D(0, 0), FVector2D(0, 200), Hit);
+			check(bHit && Hit.m_FootholdId == 20 && Hit.m_pComponent == nullptr);
+			check(IsPhysicsTestNear(Hit.m_Time, 0.5f) && Hit.m_Normal.m_Y < 0);
+			bHit = Physics.Raycast(FVector2D(0, 200), FVector2D(0, 0), Hit,
+				CollisionChannelMask(ECollisionChannel::WorldStatic));
+			check(bHit && Hit.m_FootholdId == 20); // 쿼리는 아래쪽에서도 검출
+			bHit = Physics.Raycast(FVector2D(0, 0), FVector2D(0, 150), Hit,
+				CollisionChannelMask(ECollisionChannel::Enemy));
+			check(!bHit && Hit.m_FootholdId == INDEX_NONE);
+			Physics.ClearFootholds();
+			check(Physics.FindFoothold(20) == nullptr);
+		}
+		wprintf(L"[Physics] Foothold / slopes: %d failure(s)\n", g_TestFailCount - FootholdFailuresBefore);
 	}
 
 	if (g_TestFailCount > 0)

@@ -3,7 +3,7 @@
 
 UWorld* GWorld = nullptr;
 
-UWorld::UWorld()
+UWorld::UWorld() : m_PhysicsWorld(*this)
 {
 }
 
@@ -49,6 +49,8 @@ void UWorld::Tick(float DeltaTime)
 	{
 		m_Actors[i]->Tick(DeltaTime);
 	}
+
+	m_PhysicsWorld.Tick(DeltaTime);
 }
 
 void UWorld::Render(FRenderQueue& Queue)

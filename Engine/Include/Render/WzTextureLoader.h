@@ -3,7 +3,6 @@
 #include "EnginePCH.h"
 #include "Render/DXDevice.h"
 #include "Core/Math/FVector2D.h"
-#include <d3d11.h>
 
 struct FAvatarTexture
 {

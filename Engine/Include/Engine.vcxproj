@@ -228,6 +228,13 @@
     <ClInclude Include="Object\UClass.h" />
     <ClInclude Include="Object\UObject.h" />
     <ClInclude Include="Object\USceneComponent.h" />
+    <ClInclude Include="Physics\CollisionTypes.h" />
+    <ClInclude Include="Physics\FFoothold.h" />
+    <ClInclude Include="Physics\PhysicsWorld.h" />
+    <ClInclude Include="Physics\UBoxCollision.h" />
+    <ClInclude Include="Physics\UCircleCollision.h" />
+    <ClInclude Include="Physics\UPrimitiveComponent.h" />
+    <ClInclude Include="Physics\URigidbody.h" />
     <ClInclude Include="Render\FCamera2D.h" />
     <ClInclude Include="Render\DXDevice.h" />
     <ClInclude Include="Render\DXSwapChain.h" />
@@ -287,6 +294,13 @@
     <ClCompile Include="Object\UClass.cpp" />
     <ClCompile Include="Object\UObject.cpp" />
     <ClCompile Include="Object\USceneComponent.cpp" />
+    <ClCompile Include="Physics\CollisionTypes.cpp" />
+    <ClCompile Include="Physics\FFoothold.cpp" />
+    <ClCompile Include="Physics\PhysicsWorld.cpp" />
+    <ClCompile Include="Physics\UBoxCollision.cpp" />
+    <ClCompile Include="Physics\UCircleCollision.cpp" />
+    <ClCompile Include="Physics\UPrimitiveComponent.cpp" />
+    <ClCompile Include="Physics\URigidbody.cpp" />
     <ClCompile Include="Render\FCamera2D.cpp" />
     <ClCompile Include="Render\DXDevice.cpp" />
     <ClCompile Include="Render\DXSwapChain.cpp" />

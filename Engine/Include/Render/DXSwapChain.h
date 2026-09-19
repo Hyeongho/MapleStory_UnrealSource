@@ -3,8 +3,6 @@
 #include "EnginePCH.h"
 #include "DXDevice.h"
 #include "Core/Math/FLinearColor.h"
-#include <d3d11.h>
-#include <dxgi.h>
 
 class FDXSwapChain
 {
