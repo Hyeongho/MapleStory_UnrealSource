@@ -28,5 +28,5 @@ private:
 	// 소유권 주의: USpriteComponent::SetTexture는 참조를 이전받고,
 	// UFlipbookComponent::SetFrames는 스스로 AddRef한다 — 애니메이션 경로에서
 	// SetTexture를 부르면 프레임 0이 이중 소유가 되므로 부르지 않는다.
-	static void SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, const FVector2D& Location, bool bFlip, ELayer Layer, int32 Z0, int32 Z1);
+	static void SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAnimation& Anim, const FVector2D& Location, bool bFlip, ELayer Layer, int32 Z0, int32 Z1, bool bUseFrameZ = false);
 };

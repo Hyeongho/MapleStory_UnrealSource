@@ -5,6 +5,8 @@
 #include "Render/WzMapLoader.h"
 
 class FRenderQueue;
+class UWorld;
+class ACharacter;
 
 // 배경(back)과 타일을 담아두고 매 프레임 직접 RenderQueue에 제출하는 맵 씬.
 //
@@ -23,18 +25,38 @@ public:
 	FMapScene() = default;
 	~FMapScene();
 
-	// 소유한 텍스처를 통째로 정리한다(맵 이동 시 재사용).
-	void Clear();
+	FMapScene(const FMapScene&) = delete;
+	FMapScene& operator=(const FMapScene&) = delete;
 
-	// FMapLoader가 채워 넣는다 — 애니메이션은 소유권째 이관된다.
+	// 맵 이동 시 씬 리소스와 이 맵에서 생성한 액터만 정리한다.
+	// // 로드할 때 사용한 월드를 전달한다. 캐릭터 등 외부 액터는 유지한다.
+	void Clear(UWorld& World);
+	void TrackActor(uint32 ActorId);
+
+	// 맵 데이터 등록 — FMapLoader가 애니메이션 소유권을 이관한다.
 	void AddBack(const FMapBackItem& Item, FWzAnimation&& Anim);
 	void AddTile(int32 LayerIndex, const FMapTileItem& Item, FWzAnimation&& Anim);
+	void SetFootholds(const TArray<FMapFootholdItem>& Footholds);
 
-	// 애니메이션 프레임 진행에 쓰는 누적 시간. 매 프레임 호출.
+	// 캐릭터 그리기 순서 — 발판 ID에 해당하는 Life 컨테이너에 배치한다.
+	bool SetCharacterFoothold(ACharacter& Character, int32 FootholdId) const;
+	int32 FindFootholdBelow(const FVector2D& Position) const;
+	void UpdateCharacterLayer(ACharacter& Character) const;
+
+	// 갱신 / 렌더링
 	void Tick(float DeltaTime);
 
 	// 컨테이너 순서(Background/Front, 레이어별 Tile)대로 엔트리를 제출한다.
 	void Render(FRenderQueue& Queue);
+
+private:
+	// WZ type 값을 MapRender2의 반복·스크롤 플래그로 변환한다.
+	static constexpr int32 TILE_HORIZONTAL = 1;
+	static constexpr int32 TILE_VERTICAL = 2;
+	static constexpr int32 TILE_SCROLL_HORIZONTAL = 4;
+	static constexpr int32 TILE_SCROLL_VERTICAL = 8;
+	static int32 GetBackTileMode(int32 Type);
+	static float GetBackScrollOffset(const FMapBackItem& Item, int32 Rate, int32 ExplicitDistance, double TimeMs, int32 RepeatDistance);
 
 private:
 	struct FBackEntry
@@ -50,13 +72,18 @@ private:
 		int32 m_LayerIndex = 0;
 	};
 
-	// 경과 시간(ms)에 맞는 프레임을 고른다. 프레임이 1개면 항상 그 프레임.
+	// 텍스처는 씬이, 추적한 액터의 실제 수명은 UWorld가 소유한다.
+	void ReleaseResources();
+
+	// 단일 프레임도 알파 보간과 repeat 계약을 적용한다.
 	const FWzAnimFrame* PickFrame(const FWzAnimation& Anim, int32* OutFrameAlpha) const;
 
 	void RenderBack(FRenderQueue& Queue, const FBackEntry& Entry);
 
 	TArray<FBackEntry> m_Backs;
 	TArray<FTileEntry> m_Tiles;
+	TArray<FMapFootholdItem> m_Footholds;
+	TArray<uint32> m_ActorIds;
 
-	float m_TimeMs = 0.0f;
+	double m_TimeMs = 0.0;
 };

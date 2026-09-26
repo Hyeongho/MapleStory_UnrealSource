@@ -148,6 +148,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	FCamera2D* pCamera = new FCamera2D();
 	pCamera->SetViewportSize((float)WINDOW_WIDTH, (float)WINDOW_HEIGHT);
+	pCamera->SetDisplayMode(2); // MapRender2의 1366x768 배경 선택 규칙
 	GCamera2D = pCamera;
 
 	FTimerManager* pTimerManager = new FTimerManager();
@@ -174,6 +175,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ACharacter* pPlayerCharacter = pWorld->SpawnActor<ACharacter>();
 	pPlayerCharacter->LoadAvatar(*pDevice, TestWzPath, TestLoadoutSpec, "stand1", 0);
 	pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
+
+	// 물리 연동 전 데모는 시작 위치 아래의 발판으로 렌더링 레이어만 선택한다.
+	const int32 InitialFootholdId = pMapScene->FindFootholdBelow(FVector2D(-300.0f, 100.0f));
+	pMapScene->SetCharacterFoothold(*pPlayerCharacter, InitialFootholdId);
 
 	TArray<FFlipbookFrame> WalkFrames;
 	for (int32 i = 0; ; i++)
@@ -258,14 +263,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		GTimerManager->Tick(DeltaTime);
 		pWorld->Tick(DeltaTime);
 		pMapScene->Tick(DeltaTime);
+		
+		// 강체가 있는 캐릭터는 실제 접지 발판 ID를 사용한다. 점프 중에는 레이어를 유지한다.
+		pMapScene->UpdateCharacterLayer(*pPlayerCharacter);
 
 		// 카메라를 먼저 갱신한다 — 배경 타일링이 제출 시점에 카메라의 클립
 		// 사각형을 읽어 "화면을 덮으려면 몇 번 반복할지"를 계산하기 때문에,
 		// 렌더 뒤에 옮기면 한 프레임 늦은 범위로 그리게 된다.
-		pCamera->SetLocation(FVector2D(100.0f, 0.0f));
+		pCamera->SetLocation(FVector2D(100.0f, -100.0f));
 
 		// 맵 씬(배경·타일)과 액터(오브젝트·포털·리액터·캐릭터)가 같은 큐에
-		// 제출하고, 순서는 큐의 전역 비교자가 (Layer, Z0, Z1)로 결정한다.
+		// 제출하고, (Layer, 발판 컨테이너 순서, Z0, Z1)로 정렬한다.
 		pMapScene->Render(*pRenderQueue);
 		pWorld->Render(*pRenderQueue);
 

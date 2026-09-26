@@ -66,7 +66,7 @@ void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bL
 
 		FFlipbookFrame Frame = Frames[i];
 
-		if (Frame.m_Duration <= 0.0f)
+		if (!_finite(Frame.m_Duration) || Frame.m_Duration <= 0.0f)
 		{
 			Frame.m_Duration = 0.001f;
 		}
@@ -77,6 +77,7 @@ void UFlipbookComponent::SetFrames(const TArray<FFlipbookFrame>& Frames, bool bL
 	m_bLoop = bLoop;
 	m_CurrentFrameIndex = 0;
 	m_ElapsedInFrame = 0.0f;
+	ApplyCurrentFrame();
 }
 
 void UFlipbookComponent::Play()
@@ -89,14 +90,23 @@ void UFlipbookComponent::Stop()
 	m_bPlaying = false;
 }
 
+void UFlipbookComponent::SetUseFrameZ(bool bUseFrameZ)
+{
+	m_bUseFrameZ = bUseFrameZ;
+	ApplyCurrentFrame();
+
+}
+
 void UFlipbookComponent::BeginPlay()
 {
 	m_pTargetSprite = GetOwner() ? GetOwner()->GetComponent<USpriteComponent>() : nullptr;
+
+	ApplyCurrentFrame();
 }
 
 void UFlipbookComponent::Tick(float DeltaTime)
 {
-	if (!m_bPlaying || m_Frames.Num() == 0)
+	if (!m_bPlaying || m_Frames.Num() == 0 || !_finite(DeltaTime) || DeltaTime < 0.0f)
 	{
 		return;
 	}
@@ -121,7 +131,7 @@ void UFlipbookComponent::Tick(float DeltaTime)
 		else
 		{
 			m_bPlaying = false;
-			m_ElapsedInFrame = 0.0f;
+			m_ElapsedInFrame = pCurrent->m_Duration;
 			break;
 		}
 
@@ -135,6 +145,45 @@ void UFlipbookComponent::Tick(float DeltaTime)
 
 	if (m_pTargetSprite)
 	{
+		// 프레임 구간 안에서 a0 → a1로 보간(FrameAnimator.cs:100). 대부분의
+		// 프레임은 둘이 같아서 상수가 된다. 텍스처와 달리 소유권 문제가 없는
+		// 별도 슬롯이라, m_pTexture를 건드리지 않고 그냥 밀어 넣으면 된다.
+		float FrameProgress = pCurrent->m_Duration > 0.0f ? (m_ElapsedInFrame / pCurrent->m_Duration) : 0.0f;
+		FrameProgress = FMath::Clamp(FrameProgress, 0.0f, 1.0f);
+		int32 FrameAlpha = (int32)(pCurrent->m_A0 + (pCurrent->m_A1 - pCurrent->m_A0) * FrameProgress);
+
+		m_pTargetSprite->SetFrameAlpha(FrameAlpha);
+		m_pTargetSprite->SetBlend(pCurrent->m_bBlend ? EBlendMode::Additive : EBlendMode::NonPremultiplied);
+
+		ULONG After = pCurrent->m_pTexture->AddRef();
+
+#ifdef _DEBUG
+		// 진단용 — Idle<->Move 반복 전환 크래시 원인 규명 임시 코드. 프레임
+		// 인덱스가 바뀔 때만(스팸 방지) 표시 직전 refcount를 찍는다.
+		static int32 s_LastLoggedIndex = -1;
+		if (m_CurrentFrameIndex != s_LastLoggedIndex)
+		{
+			s_LastLoggedIndex = m_CurrentFrameIndex;
+			wchar_t Buf[256];
+			swprintf_s(Buf, L"[Flipbook] Tick 실제 AddRef: frameIndex=%d tex=%p 이 AddRef 후 refcount=%lu\n", m_CurrentFrameIndex, (void*)pCurrent->m_pTexture, After);
+			OutputDebugStringW(Buf);
+		}
+#endif
+
+		m_pTargetSprite->SetTexture(pCurrent->m_pTexture, pCurrent->m_Origin);
+	}
+}
+
+void UFlipbookComponent::ApplyCurrentFrame()
+{
+	if (m_pTargetSprite && m_Frames.Num() > 0)
+	{
+		const FFlipbookFrame* pCurrent = &m_Frames[m_CurrentFrameIndex];
+		if (m_bUseFrameZ)
+		{
+			m_pTargetSprite->SetZ0(pCurrent->m_Z);
+		}
+
 		// 프레임 구간 안에서 a0 → a1로 보간(FrameAnimator.cs:100). 대부분의
 		// 프레임은 둘이 같아서 상수가 된다. 텍스처와 달리 소유권 문제가 없는
 		// 별도 슬롯이라, m_pTexture를 건드리지 않고 그냥 밀어 넣으면 된다.

@@ -19,17 +19,13 @@ enum class ELayer : uint8
 {
 	Background = 0, // Scene.Back — back 중 front=0
 
-	// 맵 레이어 0~7은 10~33을 쓴다(아래 MakeMapXxxLayer 참고).
-
-	// 게임플레이 스프라이트(캐릭터 등) 기본값 — 맵 레이어 전부보다 앞,
-	// 포털보다는 뒤. life(몹/NPC)를 레퍼런스처럼 발판 레이어에 넣는 건
-	// 아직 범위 밖이라 단일 값으로 둔다.
-	Object = 35,
-
-	Portal = 40, // Scene.Fly.Portal
-	Front = 50,  // Scene.Front — back 중 front=1
-	Effect = 60,
-	UI = 70,
+	// 맵 레이어 0~7은 10~41을 사용한다.
+	Portal = 50, // Scene.Fly.Portal
+	Sky = 51,    // 발판에 속하지 않는 공중 Life
+	Object = Sky, // 맵 컨테이너를 지정하지 않은 일반 스프라이트
+	Front = 60,  // Scene.Front — back 중 front=1
+	Effect = 70,
+	UI = 80,
 
 	// 이전 이름 유지 — front=1 back을 가리키던 값이라 Front와 같다.
 	BackFront = Front,
@@ -38,7 +34,7 @@ enum class ELayer : uint8
 // 맵 레이어 N(0~7)은 Obj / Reactor / Tile 세 칸을 차지한다 — 레이어 사이 순서가
 // 레이어 안쪽 순서를 항상 지배하고, 안쪽은 레퍼런스 LayerNode와 같은 순서다.
 constexpr int32 MAP_LAYER_BASE = 10;
-constexpr int32 MAP_LAYER_STRIDE = 3;
+constexpr int32 MAP_LAYER_STRIDE = 4;
 
 inline ELayer MakeMapObjLayer(int32 LayerIndex)
 {
@@ -55,13 +51,21 @@ inline ELayer MakeMapTileLayer(int32 LayerIndex)
 	return (ELayer)(MAP_LAYER_BASE + LayerIndex * MAP_LAYER_STRIDE + 2);
 }
 
+inline ELayer MakeMapLifeLayer(int32 LayerIndex)
+{
+	return (ELayer)(MAP_LAYER_BASE + LayerIndex * MAP_LAYER_STRIDE + 3);
+}
+
 struct FRenderQueueEntry
 {
-	ID3D11ShaderResourceView* m_pTexture = nullptr; // non-owning
+	ID3D11ShaderResourceView* m_pTexture = nullptr; // 비소유
 	FVector2D m_Position;
 	FVector2D m_Scale = FVector2D(1.0f, 1.0f);
 	float m_RotationRadians = 0.0f;
 	FLinearColor m_Tint = FLinearColor::White;
+
+	// 발판 컨테이너 순서는 그 안의 Z보다 먼저 비교한다. 일반 도형은 0이다.
+	int32 m_ContainerOrder = 0;
 
 	// 정렬 키 — 레퍼런스 MeshItem의 Z0/Z1과 같은 의미.
 	// Z0: back=0, obj=WZ의 z, tile=캔버스의 z, 그 외=프레임 z
@@ -78,7 +82,10 @@ struct FRenderQueueEntry
 	// (x, y)마다 m_Position + m_TileOffset * (x, y)에 한 번씩 그린다.
 	// 기본값은 "원점에 한 번만"이라 일반 스프라이트는 신경 쓸 필요가 없다.
 	FVector2D m_TileOffset = FVector2D::Zero;
-	int32 m_TileL = 0, m_TileT = 0, m_TileR = 1, m_TileB = 1;
+	int32 m_TileL = 0;
+	int32 m_TileT = 0;
+	int32 m_TileR = 1;
+	int32 m_TileB = 1;
 };
 
 class FRenderQueue
@@ -95,6 +102,9 @@ public:
 	void Flush(FSpriteBatch& SpriteBatch);
 	void FlushUI(FSpriteBatch& SpriteBatch);
 	void Clear();
+
+	// 렌더링 및 진단용 정렬 결과. 다음 Submit/Clear 전까지만 참조한다.
+	const TArray<FRenderQueueEntry>& GetSortedEntries();
 
 	int32 Num() const
 	{

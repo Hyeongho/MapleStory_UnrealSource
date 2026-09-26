@@ -36,6 +36,12 @@ public:
 		m_Z1 = Z1;
 	}
 
+	// 발판별 컨테이너 순서. 레이어 안에서 Z0/Z1보다 우선한다.
+	void SetContainerOrder(int32 Order)
+	{
+		m_ContainerOrder = Order;
+	}
+
 	// 아이템 단위 알파(0~255) — back의 a, 오브젝트 페이드 등. 프레임 알파와
 	// 곱해져 최종 알파가 된다(MeshBatcher.cs:139 — A0 * (Alpha/255)).
 	void SetAlpha(int32 Alpha)
@@ -106,7 +112,7 @@ private:
 	FVector2D m_Origin = FVector2D::Zero;
 	int32 m_Z0 = 0;
 	int32 m_Z1 = 0;
-	int32 m_ZOrder = 0;
+	int32 m_ContainerOrder = 0;
 	ELayer m_Layer = ELayer::Object;
 	FLinearColor m_Tint = FLinearColor::White;
 	int32 m_Alpha = 255;      // 아이템 단위

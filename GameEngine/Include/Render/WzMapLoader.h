@@ -148,7 +148,7 @@ struct FWzAnimFrame
 struct FWzAnimation
 {
 	TArray<FWzAnimFrame> m_Frames;
-	bool m_bRepeat = false;
+	bool m_bRepeat = true;
 	bool m_bIsSpine = false; // true면 이번 범위 밖 — 호출자가 건너뛴다
 	bool m_bHasFlowX = false, m_bHasFlowY = false;
 	int32 m_FlowX = 0, m_FlowY = 0;
@@ -162,6 +162,9 @@ struct FWzAnimation
 
 	// 보유한 모든 프레임 텍스처를 Release한다. 소유자가 수명이 끝날 때 호출.
 	void ReleaseFrames();
+
+	// 단일 프레임 알파 보간과 비반복 종료를 포함한 프레임 타임라인.
+	const FWzAnimFrame* GetFrameAtTime(double TimeMs, int32& OutAlpha) const;
 };
 
 class FWzMapLoader

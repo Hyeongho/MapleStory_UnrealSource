@@ -7,7 +7,7 @@
 #include "Animation/UFlipbookComponent.h"
 #include "Core/Containers/TArray.h"
 
-void FMapLoader::SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, const FVector2D& Location, bool bFlip, ELayer Layer, int32 Z0, int32 Z1)
+void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAnimation& Anim, const FVector2D& Location, bool bFlip, ELayer Layer, int32 Z0, int32 Z1, bool bUseFrameZ)
 {
 	if (!Anim.IsValid())
 	{
@@ -15,6 +15,7 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, con
 	}
 
 	AActor* Actor = World.SpawnActor<AActor>();
+	Scene.TrackActor(Actor->GetActorId());
 	USpriteComponent* SpriteComp = Actor->AddComponent<USpriteComponent>();
 	SpriteComp->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
 	SpriteComp->SetFlipHorizontal(bFlip);
@@ -22,7 +23,7 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, con
 	SpriteComp->SetZ0(Z0);
 	SpriteComp->SetZ1(Z1);
 
-	if (Anim.m_Frames.Num() == 1)
+	if (Anim.m_Frames.Num() == 1 && Anim.m_Frames[0].m_A0 == Anim.m_Frames[0].m_A1)
 	{
 		// 단일 프레임 — 텍스처 소유권을 스프라이트로 넘긴다. 넘긴 뒤에는
 		// 이 참조를 다시 Release하면 안 된다(SetTexture가 AddRef하지 않음).
@@ -50,6 +51,7 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, con
 		Frame.m_A0 = Src.m_A0;
 		Frame.m_A1 = Src.m_A1;
 		Frame.m_bBlend = Src.m_bBlend;
+		Frame.m_Z = Src.m_Z;
 		Frames.Add(Frame);
 	}
 
@@ -57,13 +59,14 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, const FWzAnimation& Anim, con
 	// 길이로 나눈 나머지 위치를 재생해서 그냥 계속 돈다. WZ의 repeat 노드는
 	// RepeatableFrameAnimator의 추가 동작(구간 반복)을 위한 것이라 여기선 쓰지 않는다.
 	UFlipbookComponent* FlipbookComp = Actor->AddComponent<UFlipbookComponent>();
-	FlipbookComp->SetFrames(Frames, /*bLoop=*/ true);
+	FlipbookComp->SetUseFrameZ(bUseFrameZ);
+	FlipbookComp->SetFrames(Frames, Anim.m_bRepeat);
 	FlipbookComp->Play();
 }
 
 void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
 {
-	OutScene.Clear();
+	OutScene.Clear(World);
 
 	// ── back ──
 	TArray<FMapBackItem> BackItems;
@@ -105,7 +108,7 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, 
 
 			// 오브젝트의 정렬 1차 키는 프레임이 아니라 WZ obj 노드의 z다
 			// (GetMeshObj) — 타일과 다르므로 헷갈리지 말 것.
-			SpawnAnimatedActor(World, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), Item.m_F != 0, MakeMapObjLayer(LayerIndex), Item.m_Z, Item.m_Index);
+			SpawnAnimatedActor(World, OutScene, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), Item.m_F != 0, MakeMapObjLayer(LayerIndex), Item.m_Z, Item.m_Index);
 
 			// 프레임은 컴포넌트가 각자 확보했으므로 로컬 몫은 반납한다.
 			Anim.ReleaseFrames();
@@ -132,6 +135,7 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, 
 	// ── 발판(파싱·보관만) ──
 	TArray<FMapFootholdItem> Footholds;
 	FWzMapLoader::LoadMapFootholds(WzPath, MapPath, Footholds);
+	OutScene.SetFootholds(Footholds);
 
 	// ── 리액터 ──
 	// 레퍼런스는 리액터를 "발판이 있는 첫 레이어"에 넣는다(MapData.cs:454-469).
@@ -169,7 +173,8 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, 
 		}
 
 		int32 Z0 = Anim.m_Frames.Num() > 0 ? Anim.m_Frames[0].m_Z : 0;
-		SpawnAnimatedActor(World, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), Item.m_F != 0, MakeMapReactorLayer(ReactorLayer), Z0, Item.m_Index);
+		SpawnAnimatedActor(World, OutScene, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), Item.m_F != 0, MakeMapReactorLayer(ReactorLayer), Z0, Item.m_Index, true);
+
 
 		Anim.ReleaseFrames();
 	}
@@ -190,7 +195,7 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, 
 		}
 
 		int32 Z0 = Anim.m_Frames.Num() > 0 ? Anim.m_Frames[0].m_Z : 0;
-		SpawnAnimatedActor(World, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), false, ELayer::Portal, Z0, Item.m_Index);
+		SpawnAnimatedActor(World, OutScene, Anim, FVector2D((float)Item.m_X, (float)Item.m_Y), false, ELayer::Portal, Z0, Item.m_Index, true);
 
 		Anim.ReleaseFrames();
 	}

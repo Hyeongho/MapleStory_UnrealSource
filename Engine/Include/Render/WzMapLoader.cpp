@@ -1,6 +1,7 @@
 #include "EnginePCH.h"
 #include "Render/WzMapLoader.h"
 #include "Render/WzTextureLoader.h"
+#include "Core/Math/FMath.h"
 
 // ── DLL 함수 포인터 (WzTest/WzNativeLib/WzExports.cs의 wz_map_read_* 4종과 동일한 시그니처) ──
 //
@@ -20,7 +21,6 @@ namespace
 	using FnMapReadInfo = int(*)(const char* WzPath, const char* MapPath, FNativeMapInfo* OutInfo);
 	using FnMapReadBack = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadLayer = int(*)(const char* WzPath, const char* MapPath, int LayerIndex, char* OutTs, int TsBufferSize, int* OutTsMag, const uint8_t** OutTiles, int* OutTileCount, const uint8_t** OutObjs, int* OutObjCount);
-	using FnMapReadFootholds = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadFootholds = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadPortals = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadReactors = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
@@ -97,6 +97,8 @@ namespace
 	// 올리고, 네이티브 버퍼 2개(blob + 프레임 배열)를 해제한다.
 	bool BuildAnimation(FDXDevice& Device, FWzMapDllState& DllState, const uint8_t* Blob, const FNativeAnimMeta& Meta, const uint8_t* FramesRaw, FWzAnimation& OutAnim)
 	{
+		OutAnim.ReleaseFrames();
+
 		OutAnim.m_bIsSpine = Meta.m_IsSpine != 0;
 		OutAnim.m_bRepeat = Meta.m_Repeat != 0;
 		OutAnim.m_bHasFlowX = Meta.m_HasFlowX != 0;
@@ -108,23 +110,44 @@ namespace
 		OutAnim.m_BoundsW = Meta.m_BoundsW;
 		OutAnim.m_BoundsH = Meta.m_BoundsH;
 
-		if (!Blob || !FramesRaw || Meta.m_FrameCount <= 0)
+		if (!Blob || !FramesRaw || Meta.m_FrameCount <= 0 || Meta.m_PixelBytes <= 0 || OutAnim.m_bIsSpine)
 		{
 			if (Blob)
 			{
 				DllState.Free((const char*)Blob);
 			}
+
 			if (FramesRaw)
 			{
 				DllState.Free((const char*)FramesRaw);
 			}
+
 			return false;
 		}
 
 		const FNativeAnimFrame* NativeFrames = reinterpret_cast<const FNativeAnimFrame*>(FramesRaw);
+
+		bool bComplete = true;
+
 		for (int32 i = 0; i < Meta.m_FrameCount; i++)
 		{
 			const FNativeAnimFrame& Src = NativeFrames[i];
+
+			if (Src.m_Width <= 0 || Src.m_Height <= 0 || Src.m_PixelOffset < 0 || Src.m_PixelOffset > Meta.m_PixelBytes)
+			{
+				bComplete = false;
+
+				break;
+			}
+
+			const uint64 FrameBytes = (uint64)Src.m_Width * (uint64)Src.m_Height * 4;
+
+			if (FrameBytes > (uint64)(Meta.m_PixelBytes - Src.m_PixelOffset))
+			{
+				bComplete = false;
+
+				break;
+			}
 
 			FWzAnimFrame Frame;
 			Frame.m_pTexture = FWzTextureLoader::UploadBGRATexture(Device, Blob + Src.m_PixelOffset, Src.m_Width, Src.m_Height);
@@ -141,10 +164,23 @@ namespace
 			{
 				OutAnim.m_Frames.Add(Frame);
 			}
+
+			else
+			{
+				bComplete = false;
+				break;
+			}
 		}
 
 		DllState.Free((const char*)Blob);
 		DllState.Free((const char*)FramesRaw);
+
+		if (!bComplete)
+		{
+			// 일부 프레임만 재생하면 길이와 경계 정보가 달라지므로 전체를 폐기한다.
+			OutAnim.ReleaseFrames();
+			UE_LOG(LogRenderer, Warning, L"Map animation rejected invalid pixels or texture upload failure");
+		}
 
 		return OutAnim.m_Frames.Num() > 0;
 	}
@@ -161,6 +197,54 @@ void FWzAnimation::ReleaseFrames()
 		}
 	}
 	m_Frames.Reset();
+}
+
+const FWzAnimFrame* FWzAnimation::GetFrameAtTime(double TimeMs, int32& OutAlpha) const
+{
+	OutAlpha = 255;
+	if (m_Frames.Num() == 0)
+	{
+		return nullptr;
+	}
+
+	double TotalMs = 0.0;
+
+	for (int32 i = 0; i < m_Frames.Num(); i++)
+	{
+		const float Duration = m_Frames[i].m_Duration;
+		TotalMs += (_finite(Duration) && Duration > 0.0f ? Duration : 0.001f) * 1000.0;
+	}
+
+	TimeMs = _finite(TimeMs) ? FMath::Max(0.0, TimeMs) : 0.0;
+
+	if (!m_bRepeat && TimeMs >= TotalMs)
+	{
+		const FWzAnimFrame& Last = m_Frames[m_Frames.Num() - 1];
+		OutAlpha = Last.m_A1;
+
+		return &Last;
+	}
+
+	double Cursor = m_bRepeat ? fmod(TimeMs, TotalMs) : TimeMs;
+
+	for (int32 i = 0; i < m_Frames.Num(); i++)
+	{
+		const FWzAnimFrame& Frame = m_Frames[i];
+
+		const double FrameMs = (_finite(Frame.m_Duration) && Frame.m_Duration > 0.0f ? Frame.m_Duration : 0.001f) * 1000.0;
+
+		if (Cursor < FrameMs || i == m_Frames.Num() - 1)
+		{
+			const double Progress = FMath::Clamp(Cursor / FrameMs, 0.0, 1.0);
+			OutAlpha = (int32)(Frame.m_A0 + (Frame.m_A1 - Frame.m_A0) * Progress);
+
+			return &Frame;
+		}
+
+		Cursor -= FrameMs;
+	}
+
+	return nullptr;
 }
 
 bool FWzMapLoader::LoadMapInfo(const char* WzPath, const char* MapPath, FMapInfo& OutInfo)
