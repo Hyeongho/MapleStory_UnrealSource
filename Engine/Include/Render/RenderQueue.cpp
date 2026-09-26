@@ -120,6 +120,12 @@ void FRenderQueue::Clear()
 	m_Entries.Reset();
 }
 
+const TArray<FRenderQueueEntry>& FRenderQueue::GetSortedEntries()
+{
+	SortEntries();
+	return m_Entries;
+}
+
 void FRenderQueue::SortEntries()
 {
 	m_Entries.StableSort([](const FRenderQueueEntry& A, const FRenderQueueEntry& B)
@@ -127,6 +133,11 @@ void FRenderQueue::SortEntries()
 			if (A.m_Layer != B.m_Layer)
 			{
 				return A.m_Layer < B.m_Layer;
+			}
+
+			if (A.m_ContainerOrder != B.m_ContainerOrder)
+			{
+				return A.m_ContainerOrder < B.m_ContainerOrder;
 			}
 
 			if (A.m_Z0 != B.m_Z0)

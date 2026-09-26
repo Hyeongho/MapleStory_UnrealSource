@@ -7,14 +7,19 @@
 #include "Physics/PhysicsWorld.h"
 
 class FRenderQueue;
+class FMapScene;
+class APlayerController;
 
 class UWorld :
     public UObject
 {
 	DECLARE_CLASS(UWorld, UObject)
 public:
+	// 생성 / 소멸
 	UWorld();
 	virtual ~UWorld() override;
+	UWorld(const UWorld&) = delete;
+	UWorld& operator=(const UWorld&) = delete;
 
 	// AActor::AddComponent<T>()와 동일한 패턴(Malloc+placement-new)으로
 	// 액터를 만들고, 스폰 직후 BeginPlay()까지 자동 호출한다(언리얼 관례) —
@@ -35,8 +40,18 @@ public:
 	// EndPlay() + 명시적 소멸자 호출 + FMemory::Free, m_Actors에서 제거.
 	void DestroyActor(AActor* Actor);
 
-	void Tick(float DeltaTime);       // m_Actors 순회하며 Actor->Tick(DeltaTime)
-	void Render(FRenderQueue& Queue); // m_Actors 순회하며 Actor->Render(Queue)
+	// 월드 갱신 / 렌더링 — 맵 씬이 있는 경우에만 함께 처리한다.
+	virtual void Tick(float DeltaTime) override;
+	void Render(FRenderQueue& Queue);
+
+	// 선택적 맵 씬 관리 — 일반 월드와 물리 테스트는 맵 씬 없이 사용할 수 있다.
+	FMapScene& CreateMapScene();
+	void DestroyMapScene();
+	FMapScene* GetMapScene();
+	const FMapScene* GetMapScene() const;
+
+	// 현재 단일 로컬 플레이어의 컨트롤러 조회. 없으면 nullptr를 반환한다.
+	APlayerController* GetFirstPlayerController() const;
 
 	// 나중에 네트워크 리플리케이션을 붙일 때 "메시지로 들어온 ID → 로컬
 	// 액터"를 찾는 자리 — 지금은 선형 탐색으로 충분(액터 수가 적음).
@@ -57,9 +72,14 @@ public:
 		return m_PhysicsWorld;
 	}
 
+protected:
+	// 물리 갱신 이후 현재 맵의 발판 정보로 캐릭터 렌더링 레이어를 갱신한다.
+	void UpdateCharacterLayers();
+
 private:
 	TArray<AActor*> m_Actors;
 	FPhysicsWorld m_PhysicsWorld;
+	FMapScene* m_pMapScene = nullptr; // 월드가 소유하며 맵 로드 시에만 생성한다.
 };
 
 extern UWorld* GWorld;

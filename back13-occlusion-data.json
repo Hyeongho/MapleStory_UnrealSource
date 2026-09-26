@@ -1,0 +1,494 @@
+{
+  "layers": [
+    {
+      "layer": 0,
+      "tiles": 0,
+      "objs": 0,
+      "back13PixelsRemaining": 77001,
+      "occluders": []
+    },
+    {
+      "layer": 1,
+      "tiles": 0,
+      "objs": 17,
+      "back13PixelsRemaining": 77001,
+      "occluders": []
+    },
+    {
+      "layer": 2,
+      "tiles": 0,
+      "objs": 3,
+      "back13PixelsRemaining": 77001,
+      "occluders": []
+    },
+    {
+      "layer": 3,
+      "tiles": 0,
+      "objs": 0,
+      "back13PixelsRemaining": 77001,
+      "occluders": []
+    },
+    {
+      "layer": 4,
+      "tiles": 0,
+      "objs": 10,
+      "back13PixelsRemaining": 58860,
+      "occluders": [
+        {
+          "kind": "obj",
+          "slot": 0,
+          "pixelsCovered": 3319,
+          "rect": [
+            745,
+            469,
+            1047,
+            526
+          ]
+        },
+        {
+          "kind": "obj",
+          "slot": 1,
+          "pixelsCovered": 3739,
+          "rect": [
+            1013,
+            469,
+            1315,
+            526
+          ]
+        },
+        {
+          "kind": "obj",
+          "slot": 2,
+          "pixelsCovered": 777,
+          "rect": [
+            1281,
+            469,
+            1583,
+            526
+          ]
+        },
+        {
+          "kind": "obj",
+          "slot": 7,
+          "pixelsCovered": 2804,
+          "rect": [
+            -57,
+            469,
+            245,
+            526
+          ]
+        },
+        {
+          "kind": "obj",
+          "slot": 9,
+          "pixelsCovered": 3776,
+          "rect": [
+            210,
+            469,
+            512,
+            526
+          ]
+        },
+        {
+          "kind": "obj",
+          "slot": 8,
+          "pixelsCovered": 3726,
+          "rect": [
+            477,
+            469,
+            779,
+            526
+          ]
+        }
+      ]
+    },
+    {
+      "layer": 5,
+      "tiles": 135,
+      "objs": 1,
+      "back13PixelsRemaining": 1842,
+      "occluders": [
+        {
+          "kind": "tile",
+          "slot": 72,
+          "pixelsCovered": 189,
+          "rect": [
+            1303,
+            564,
+            1393,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 80,
+          "pixelsCovered": 2454,
+          "rect": [
+            1303,
+            523,
+            1393,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 106,
+          "pixelsCovered": 3499,
+          "rect": [
+            1123,
+            523,
+            1213,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 99,
+          "pixelsCovered": 270,
+          "rect": [
+            1213,
+            564,
+            1303,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 86,
+          "pixelsCovered": 3467,
+          "rect": [
+            1033,
+            524,
+            1123,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 105,
+          "pixelsCovered": 270,
+          "rect": [
+            1123,
+            564,
+            1213,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 100,
+          "pixelsCovered": 3507,
+          "rect": [
+            943,
+            523,
+            1033,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 91,
+          "pixelsCovered": 270,
+          "rect": [
+            943,
+            564,
+            1033,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 4,
+          "pixelsCovered": 1667,
+          "rect": [
+            -47,
+            524,
+            43,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 15,
+          "pixelsCovered": 3476,
+          "rect": [
+            43,
+            524,
+            133,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 19,
+          "pixelsCovered": 270,
+          "rect": [
+            223,
+            564,
+            313,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 17,
+          "pixelsCovered": 3498,
+          "rect": [
+            313,
+            523,
+            403,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 26,
+          "pixelsCovered": 3467,
+          "rect": [
+            133,
+            524,
+            223,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 16,
+          "pixelsCovered": 270,
+          "rect": [
+            403,
+            564,
+            493,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 7,
+          "pixelsCovered": 3503,
+          "rect": [
+            403,
+            523,
+            493,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 14,
+          "pixelsCovered": 270,
+          "rect": [
+            133,
+            564,
+            223,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 28,
+          "pixelsCovered": 270,
+          "rect": [
+            43,
+            564,
+            133,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 12,
+          "pixelsCovered": 270,
+          "rect": [
+            673,
+            564,
+            763,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 36,
+          "pixelsCovered": 3487,
+          "rect": [
+            583,
+            524,
+            673,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 27,
+          "pixelsCovered": 270,
+          "rect": [
+            583,
+            564,
+            673,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 38,
+          "pixelsCovered": 3498,
+          "rect": [
+            763,
+            523,
+            853,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 43,
+          "pixelsCovered": 3487,
+          "rect": [
+            223,
+            524,
+            313,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 37,
+          "pixelsCovered": 129,
+          "rect": [
+            -47,
+            564,
+            43,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 46,
+          "pixelsCovered": 270,
+          "rect": [
+            493,
+            564,
+            583,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 47,
+          "pixelsCovered": 3491,
+          "rect": [
+            853,
+            523,
+            943,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 25,
+          "pixelsCovered": 3507,
+          "rect": [
+            673,
+            523,
+            763,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 59,
+          "pixelsCovered": 270,
+          "rect": [
+            763,
+            564,
+            853,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 39,
+          "pixelsCovered": 270,
+          "rect": [
+            313,
+            564,
+            403,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 63,
+          "pixelsCovered": 270,
+          "rect": [
+            1033,
+            564,
+            1123,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 50,
+          "pixelsCovered": 270,
+          "rect": [
+            853,
+            564,
+            943,
+            624
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 69,
+          "pixelsCovered": 3454,
+          "rect": [
+            1213,
+            524,
+            1303,
+            564
+          ]
+        },
+        {
+          "kind": "tile",
+          "slot": 56,
+          "pixelsCovered": 3458,
+          "rect": [
+            493,
+            524,
+            583,
+            564
+          ]
+        }
+      ]
+    },
+    {
+      "layer": 6,
+      "tiles": 0,
+      "objs": 8,
+      "back13PixelsRemaining": 1795,
+      "occluders": [
+        {
+          "kind": "obj",
+          "slot": 7,
+          "pixelsCovered": 47,
+          "rect": [
+            187,
+            287,
+            302,
+            525
+          ]
+        }
+      ]
+    },
+    {
+      "layer": 7,
+      "tiles": 0,
+      "objs": 0,
+      "back13PixelsRemaining": 1795,
+      "occluders": []
+    }
+  ],
+  "back13PixelsRemainingAfterMapAndLaterBacks": 1680,
+  "decodeFailures": []
+}

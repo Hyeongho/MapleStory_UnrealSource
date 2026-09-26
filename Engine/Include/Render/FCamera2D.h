@@ -36,6 +36,14 @@ public:
 		m_ViewportHeight = Height; 
 	}
 
+	float GetViewportWidth() const { return m_ViewportWidth; }
+	float GetViewportHeight() const { return m_ViewportHeight; }
+
+	// MapRender2의 screenMode 선택값: 0=800x600, 1=1024x768, 2=1366x768, 3=전체 화면.
+	// 실제 뷰포트 크기 변경은 SetViewportSize에서 별도로 수행한다.
+	void SetDisplayMode(int32 DisplayMode) { m_DisplayMode = FMath::Clamp(DisplayMode, 0, 3); }
+	int32 GetDisplayMode() const { return m_DisplayMode; }
+
 	FVector2D WorldToScreen(const FVector2D& WorldPos) const;
 	FVector2D ScreenToWorld(const FVector2D& ScreenPos) const;
 
@@ -50,6 +58,7 @@ private:
 	float m_Zoom = 1.0f;
 	float m_ViewportWidth = 0.0f;
 	float m_ViewportHeight = 0.0f;
+	int32 m_DisplayMode = 0;
 };
 
 extern FCamera2D* GCamera2D;

@@ -55,6 +55,7 @@ void USpriteComponent::Render(FRenderQueue& Queue)
 	// (MeshBatcher.cs:139의 A0 * (mesh.Alpha/255)와 같은 결과).
 	Entry.m_Tint.m_A = m_Tint.m_A * ((float)m_Alpha / 255.0f) * ((float)m_FrameAlpha / 255.0f);
 	Entry.m_Z0 = m_Z0;
+	Entry.m_ContainerOrder = m_ContainerOrder;
 	Entry.m_Z1 = m_Z1;
 	Entry.m_Layer = m_Layer;
 	Entry.m_Blend = m_Blend;

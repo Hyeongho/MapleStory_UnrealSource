@@ -20,9 +20,14 @@ public:
 
 	void SetFacingRight(bool bFacingRight);
 
+	// 맵의 Life 컨테이너 설정. INDEX_NONE은 발판에 속하지 않는 Sky 컨테이너다.
+	void SetMapLayer(int32 LayerIndex, int32 FootholdOrder = 0);
+	int32 GetMapLayer() const;
+
 	USpriteComponent* GetSpriteComponent() const { return m_pSpriteComponent; }
 
 private:
 	USpriteComponent* m_pSpriteComponent = nullptr;
+	int32 m_MapLayer = INDEX_NONE;
 };
 

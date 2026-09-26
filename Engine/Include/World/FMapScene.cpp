@@ -4,53 +4,77 @@
 #include "Render/FCamera2D.h"
 #include "Core/Math/FMath.h"
 #include "Core/Math/FRect.h"
+#include "World/UWorld.h"
+#include "Object/ACharacter.h"
+#include "Physics/URigidbody.h"
 
-namespace
+int32 FMapScene::GetBackTileMode(int32 Type)
 {
-	// TileMode.cs의 비트 플래그. WZ의 type(0~7)을 BackItem.GetBackTileMode와
-	// 동일하게 이 플래그 조합으로 바꾼다.
-	constexpr int32 TILE_HORIZONTAL = 1;
-	constexpr int32 TILE_VERTICAL = 2;
-	constexpr int32 TILE_SCROLL_HORIZONTAL = 4;
-	constexpr int32 TILE_SCROLL_VERTICAL = 8;
-
-	int32 GetBackTileMode(int32 Type)
+	switch (Type)
 	{
-		switch (Type)
-		{
-		case 1:  return TILE_HORIZONTAL;
-		case 2:  return TILE_VERTICAL;
-		case 3:  return TILE_HORIZONTAL | TILE_VERTICAL;
-		case 4:  return TILE_HORIZONTAL | TILE_SCROLL_HORIZONTAL;
-		case 5:  return TILE_VERTICAL | TILE_SCROLL_VERTICAL;
-		case 6:  return TILE_HORIZONTAL | TILE_VERTICAL | TILE_SCROLL_HORIZONTAL;
-		case 7:  return TILE_HORIZONTAL | TILE_VERTICAL | TILE_SCROLL_VERTICAL;
-		default: return 0;
-		}
+	case 1:  return TILE_HORIZONTAL;
+	case 2:  return TILE_VERTICAL;
+	case 3:  return TILE_HORIZONTAL | TILE_VERTICAL;
+	case 4:  return TILE_HORIZONTAL | TILE_SCROLL_HORIZONTAL;
+	case 5:  return TILE_VERTICAL | TILE_SCROLL_VERTICAL;
+	case 6:  return TILE_HORIZONTAL | TILE_VERTICAL | TILE_SCROLL_HORIZONTAL;
+	case 7:  return TILE_HORIZONTAL | TILE_VERTICAL | TILE_SCROLL_VERTICAL;
+	default: return 0;
 	}
+}
 
-	// FrmMapRender2.SceneRendering.cs:1381-1385의 GetBackScrollOffset.
-	// distance는 w가 켜져 있고 값이 0이 아니면 |값|, 아니면 100.
-	float GetBackScrollOffset(const FMapBackItem& Item, int32 Rate, int32 ExplicitDistance, float TimeMs)
-	{
-		int32 Distance = (Item.m_W != 0 && ExplicitDistance != 0) ? FMath::Abs(ExplicitDistance) : 100;
-		if (Distance == 0)
-		{
-			return 0.0f;
-		}
+float FMapScene::GetBackScrollOffset(const FMapBackItem& Item, int32 Rate, int32 ExplicitDistance, double TimeMs, int32 RepeatDistance)
+{
+	// 이동 속도는 W/Wx/Wy와 기본 거리 100을 사용하는 기존 규칙을 유지한다.
+	const double Distance = Item.m_W != 0 && ExplicitDistance != 0 ? fabs((double)ExplicitDistance) : 100.0;
+	const double Offset = (double)Rate * Distance * TimeMs / 20000.0;
 
-		// 레퍼런스가 double로 계산한다(rate*distance*time이 금방 커져서 float로는
-		// 정밀도가 떨어진다) — 같은 정밀도를 유지하려고 여기서도 double로 계산 후 캐스팅.
-		return (float)fmod((double)Rate * Distance * TimeMs / 20000.0, (double)Distance);
-	}
+	// 반복하는 축은 타일 간격만큼 이동한 뒤 되감아야 이웃 이미지와 이어진다.
+	// 속도 기준 거리로 되감으면 cx/cy와 다른 지점에서 구름이 원래 위치로 튄다.
+	// 반복하지 않는 flow 배경은 기존 되감기 규칙을 유지한다.
+	const double WrapDistance = RepeatDistance > 0 ? (double)RepeatDistance : Distance;
+	return (float)fmod(Offset, WrapDistance);
+}
+
+FMapScene::FMapScene(UWorld& World) : m_World(World)
+{
 }
 
 FMapScene::~FMapScene()
 {
-	Clear();
+	// 맵 액터는 소유 월드가 Clear로 정리하며 소멸자는 씬 자원만 해제한다.
+	ReleaseResources();
 }
 
 void FMapScene::Clear()
+{
+	for (int32 i = 0; i < m_ActorIds.Num(); i++)
+	{
+		if (AActor* Actor = m_World.FindActorById(m_ActorIds[i]))
+		{
+			m_World.DestroyActor(Actor);
+		}
+	}
+	m_ActorIds.Empty();
+	ReleaseResources();
+
+	// 유지한 캐릭터가 이전 맵의 발판 레이어를 계속 사용하지 않도록 해제한다.
+	const TArray<AActor*>& Actors = m_World.GetActors();
+	for (int32 i = 0; i < Actors.Num(); i++)
+	{
+		if (ACharacter* pCharacter = Cast<ACharacter>(Actors[i]))
+		{
+			pCharacter->SetMapLayer(INDEX_NONE);
+		}
+	}
+}
+
+void FMapScene::TrackActor(uint32 ActorId)
+{
+	m_ActorIds.Add(ActorId);
+}
+
+void FMapScene::ReleaseResources()
 {
 	// 배경·타일 텍스처는 액터가 아니라 이 씬이 직접 소유한다.
 	for (int32 i = 0; i < m_Backs.Num(); i++)
@@ -65,7 +89,8 @@ void FMapScene::Clear()
 
 	m_Backs.Empty();
 	m_Tiles.Empty();
-	m_TimeMs = 0.0f;
+	m_Footholds.Empty();
+	m_TimeMs = 0.0;
 }
 
 void FMapScene::AddBack(const FMapBackItem& Item, FWzAnimation&& Anim)
@@ -85,83 +110,120 @@ void FMapScene::AddTile(int32 LayerIndex, const FMapTileItem& Item, FWzAnimation
 	m_Tiles.Add(MoveTemp(Entry));
 }
 
+void FMapScene::SetFootholds(const TArray<FMapFootholdItem>& Footholds)
+{
+	m_Footholds = Footholds;
+}
+
+bool FMapScene::SetCharacterFoothold(ACharacter& Character, int32 FootholdId) const
+{
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		const FMapFootholdItem& Foothold = m_Footholds[i];
+		if (Foothold.m_Id == FootholdId)
+		{
+			// 배열 순서는 MapRender2의 발판 컨테이너 생성 순서와 같다.
+			Character.SetMapLayer(Foothold.m_Layer, i);
+			return true;
+		}
+	}
+	Character.SetMapLayer(INDEX_NONE);
+	return false;
+}
+
+int32 FMapScene::FindFootholdBelow(const FVector2D& Position) const
+{
+	int32 Result = INDEX_NONE;
+	float ClosestY = 0.0f;
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		const FMapFootholdItem& Foothold = m_Footholds[i];
+		if (Foothold.m_X1 == Foothold.m_X2)
+		{
+			continue;
+		}
+		const float Left = (float)FMath::Min(Foothold.m_X1, Foothold.m_X2);
+		const float Right = (float)FMath::Max(Foothold.m_X1, Foothold.m_X2);
+		if (Position.m_X < Left || Position.m_X > Right)
+		{
+			continue;
+		}
+		const float Ratio = (Position.m_X - Foothold.m_X1) / ((float)Foothold.m_X2 - Foothold.m_X1);
+		const float Y = Foothold.m_Y1 + Ratio * ((float)Foothold.m_Y2 - Foothold.m_Y1);
+		if (Y >= Position.m_Y && (Result == INDEX_NONE || Y < ClosestY))
+		{
+			Result = Foothold.m_Id;
+			ClosestY = Y;
+		}
+	}
+	return Result;
+}
+
+void FMapScene::UpdateCharacterLayer(ACharacter& Character) const
+{
+	const URigidbody* Body = Character.GetComponent<URigidbody>();
+	if (Body && Body->GetCurrentFootholdId() != INDEX_NONE)
+	{
+		SetCharacterFoothold(Character, Body->GetCurrentFootholdId());
+	}
+	// 점프 중에는 마지막 발판 레이어를 유지하여 앞뒤 관계가 갑자기 바뀌지 않게 한다.
+}
+
 void FMapScene::Tick(float DeltaTime)
 {
-	m_TimeMs += DeltaTime * 1000.0f;
+	if (_finite(DeltaTime) && DeltaTime >= 0.0f)
+	{
+		m_TimeMs += (double)DeltaTime * 1000.0;
+	}
 }
 
 const FWzAnimFrame* FMapScene::PickFrame(const FWzAnimation& Anim, int32* OutFrameAlpha) const
 {
-	if (Anim.m_Frames.Num() == 0)
-	{
-		return nullptr;
-	}
-
+	int32 Alpha = 255;
+	const FWzAnimFrame* Frame = Anim.GetFrameAtTime(m_TimeMs, Alpha);
 	if (OutFrameAlpha)
 	{
-		*OutFrameAlpha = 255;
+		*OutFrameAlpha = Alpha;
 	}
-
-	if (Anim.m_Frames.Num() == 1)
-	{
-		if (OutFrameAlpha)
-		{
-			*OutFrameAlpha = Anim.m_Frames[0].m_A0;
-		}
-		return &Anim.m_Frames[0];
-	}
-
-	// 전체 길이로 나눈 나머지 위치의 프레임을 고른다(FrameAnimator의 타임라인).
-	float TotalMs = 0.0f;
-	for (int32 i = 0; i < Anim.m_Frames.Num(); i++)
-	{
-		TotalMs += Anim.m_Frames[i].m_Duration * 1000.0f;
-	}
-
-	if (TotalMs <= 0.0f)
-	{
-		return &Anim.m_Frames[0];
-	}
-
-	float Cursor = FMath::FMod(m_TimeMs, TotalMs);
-	for (int32 i = 0; i < Anim.m_Frames.Num(); i++)
-	{
-		float FrameMs = Anim.m_Frames[i].m_Duration * 1000.0f;
-		if (Cursor < FrameMs)
-		{
-			if (OutFrameAlpha)
-			{
-				// 프레임 구간 안에서 a0 → a1 보간(FrameAnimator.cs:100).
-				float Progress = FrameMs > 0.0f ? (Cursor / FrameMs) : 0.0f;
-				const FWzAnimFrame& Frame = Anim.m_Frames[i];
-				*OutFrameAlpha = (int32)(Frame.m_A0 + (Frame.m_A1 - Frame.m_A0) * Progress);
-			}
-			return &Anim.m_Frames[i];
-		}
-
-		Cursor -= FrameMs;
-	}
-
-	return &Anim.m_Frames[Anim.m_Frames.Num() - 1];
+	return Frame;
 }
 
-void FMapScene::RenderBack(FRenderQueue& Queue, const FBackEntry& Entry)
+void FMapScene::RenderBack(FRenderQueue& Queue, FBackEntry& Entry)
 {
 	int32 FrameAlpha = 255;
 	const FWzAnimFrame* pFrame = PickFrame(Entry.m_Anim, &FrameAlpha);
 	if (!pFrame || !pFrame->m_pTexture)
 	{
+		if (!Entry.m_bLoggedRenderState)
+		{
+			UE_LOG(LogRenderer, Warning, L"[MapBack] skipped without texture: slot=%d resource=%hs/%d", Entry.m_Item.m_Index, Entry.m_Item.m_Bs, Entry.m_Item.m_No);
+			Entry.m_bLoggedRenderState = true;
+		}
 		return;
 	}
 
 	const FMapBackItem& Item = Entry.m_Item;
+	if (Item.m_ScreenMode != 0 && GCamera2D)
+	{
+		const bool bLegacyResolution = (Item.m_ScreenMode & 2) != 0
+			&& GCamera2D->GetViewportWidth() == 1024.0f && GCamera2D->GetViewportHeight() == 768.0f;
+		if (!bLegacyResolution && Item.m_ScreenMode != GCamera2D->GetDisplayMode() + 1)
+		{
+			if (!Entry.m_bLoggedRenderState)
+			{
+				UE_LOG(LogRenderer, Log, L"[MapBack] filtered by screenMode: slot=%d resource=%hs/%d screenMode=%d displayMode=%d", Item.m_Index, Item.m_Bs, Item.m_No, Item.m_ScreenMode, GCamera2D->GetDisplayMode());
+				Entry.m_bLoggedRenderState = true;
+			}
+			return;
+		}
+	}
 	int32 TileMode = GetBackTileMode(Item.m_Type);
 
-	// cx/cy가 0이고 가로세로 둘 다 반복이면 프레임 크기로 대체
+	// 어느 축이든 반복하면 cx/cy의 0 값을 전체 프레임 경계 크기로 대체한다.
 	// (SceneRendering.cs:1374-1379).
 	int32 Cx = Item.m_Cx;
 	int32 Cy = Item.m_Cy;
-	if ((TileMode & (TILE_HORIZONTAL | TILE_VERTICAL)) == (TILE_HORIZONTAL | TILE_VERTICAL))
+	if ((TileMode & (TILE_HORIZONTAL | TILE_VERTICAL)) != 0)
 	{
 		if (Cx == 0)
 		{
@@ -175,47 +237,46 @@ void FMapScene::RenderBack(FRenderQueue& Queue, const FBackEntry& Entry)
 
 	FVector2D Position((float)Item.m_X, (float)Item.m_Y);
 
-	// 파라랙스는 스크롤이 아닌 축에만 적용된다. 레퍼런스는 position에
-	// Camera.Center * (100 + rx)/100을 더한 뒤 카메라 변환에서 다시 빼는데,
-	// 우리 엔진은 엔트리의 ParallaxFactor로 같은 결과를 낸다:
-	//   화면 = Position - Camera * ParallaxFactor  ⇒  ParallaxFactor = -rx/100
-	// (rx=0이면 화면 고정, rx=-100이면 월드 고정 — 레퍼런스와 동일.)
-	// 다만 ParallaxFactor는 X/Y 공용 스칼라라, 두 축의 rx/ry가 다르면
-	// 가로(rx)를 따른다(메이플 배경 스크롤은 사실상 가로 위주).
-	float ParallaxFactor = -(float)Item.m_Rx / 100.0f;
+	// MapRender2처럼 X/Y를 각각 보정한 후 같은 위치로 반복 범위를 계산한다.
+	const FVector2D CameraCenter = GCamera2D ? GCamera2D->GetLocation() : FVector2D::Zero;
 
 	bool bHasFlow = Entry.m_Anim.m_bHasFlowX || Entry.m_Anim.m_bHasFlowY;
 	if (bHasFlow)
 	{
-		// spine flow 계열 — 두 축 모두 시간 기반 스크롤이라 파라랙스를 쓰지 않는다.
+		// flow는 일반 프레임 배경에도 적용한다. 이 분기에서는 카메라 보정이 없다.
 		int32 FlowRate = Entry.m_Anim.m_FlowX != 0 ? Entry.m_Anim.m_FlowX : Entry.m_Anim.m_FlowY;
 		if (FlowRate != 0)
 		{
 			if (Entry.m_Anim.m_FlowX != 0)
 			{
-				Position.m_X += GetBackScrollOffset(Item, FlowRate, Item.m_Wx, m_TimeMs);
+				Position.m_X += GetBackScrollOffset(Item, FlowRate, Item.m_Wx, m_TimeMs, (TileMode & TILE_HORIZONTAL) != 0 ? Cx : 0);
 			}
 
 			if (Entry.m_Anim.m_FlowY != 0)
 			{
-				Position.m_Y += GetBackScrollOffset(Item, FlowRate, Item.m_Wy, m_TimeMs);
+				Position.m_Y += GetBackScrollOffset(Item, FlowRate, Item.m_Wy, m_TimeMs, (TileMode & TILE_VERTICAL) != 0 ? Cy : 0);
 			}
 		}
-
-		ParallaxFactor = 0.0f;
 	}
 
 	else
 	{
 		if (TileMode & TILE_SCROLL_HORIZONTAL)
 		{
-			Position.m_X += GetBackScrollOffset(Item, Item.m_Rx, Item.m_Wx, m_TimeMs);
-			ParallaxFactor = 0.0f; // 스크롤 축은 카메라를 따라가지 않는다.
+			Position.m_X += GetBackScrollOffset(Item, Item.m_Rx, Item.m_Wx, m_TimeMs, Cx);
+		}
+		else
+		{
+			Position.m_X += CameraCenter.m_X * (100.0f + Item.m_Rx) / 100.0f;
 		}
 
 		if (TileMode & TILE_SCROLL_VERTICAL)
 		{
-			Position.m_Y += GetBackScrollOffset(Item, Item.m_Ry, Item.m_Wy, m_TimeMs);
+			Position.m_Y += GetBackScrollOffset(Item, Item.m_Ry, Item.m_Wy, m_TimeMs, Cy);
+		}
+		else
+		{
+			Position.m_Y += CameraCenter.m_Y * (100.0f + Item.m_Ry) / 100.0f;
 		}
 	}
 
@@ -241,7 +302,8 @@ void FMapScene::RenderBack(FRenderQueue& Queue, const FBackEntry& Entry)
 	Draw.m_Z1 = Item.m_Index;
 	Draw.m_Layer = (Item.m_Front != 0) ? ELayer::Front : ELayer::Background;
 	Draw.m_Blend = pFrame->m_bBlend ? EBlendMode::Additive : EBlendMode::NonPremultiplied;
-	Draw.m_ParallaxFactor = ParallaxFactor;
+	// 위치를 이미 보정했으므로 Flush에서 다시 시차 보정을 하지 않는다.
+	Draw.m_ParallaxFactor = 1.0f;
 
 	// 타일링 반복 범위 — 화면(클립 사각형)을 덮는 데 필요한 만큼만 그린다
 	// (SceneRendering.cs:1448-1465과 동일한 식).
@@ -277,6 +339,12 @@ void FMapScene::RenderBack(FRenderQueue& Queue, const FBackEntry& Entry)
 	}
 
 	Queue.Submit(Draw);
+	if (!Entry.m_bLoggedRenderState)
+	{
+		// 제출한 사실을 한 번만 기록한다. 실제 GPU 출력과 다른 이미지의 가림은 별도다.
+		UE_LOG(LogRenderer, Log, L"[MapBack] submitted: slot=%d resource=%hs/%d position=(%.1f,%.1f) repeats=(%d,%d,%d,%d) step=(%.1f,%.1f) alpha=%.3f", Item.m_Index, Item.m_Bs, Item.m_No, Draw.m_Position.m_X, Draw.m_Position.m_Y, Draw.m_TileL, Draw.m_TileT, Draw.m_TileR, Draw.m_TileB, Draw.m_TileOffset.m_X, Draw.m_TileOffset.m_Y, Draw.m_Tint.m_A);
+		Entry.m_bLoggedRenderState = true;
+	}
 }
 
 void FMapScene::Render(FRenderQueue& Queue)

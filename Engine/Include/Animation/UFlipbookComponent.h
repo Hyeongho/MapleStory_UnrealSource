@@ -19,6 +19,7 @@ struct FFlipbookFrame
 	int32 m_A0 = 255;
 	int32 m_A1 = 255;
 	bool m_bBlend = false; // WZ의 blend — true면 가산 블렌딩
+	int32 m_Z = 0;
 };
 
 class UFlipbookComponent :
@@ -37,15 +38,21 @@ public:
 	void Play();
 	void Stop();
 
+	// 포털·리액터는 프레임 Z를 사용하고, 오브젝트는 배치 Z를 유지한다.
+	void SetUseFrameZ(bool bUseFrameZ);
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
 private:
+	void ApplyCurrentFrame();
+
 	TArray<FFlipbookFrame> m_Frames;
 	USpriteComponent* m_pTargetSprite = nullptr; // 캐시, 비소유
 	int32 m_CurrentFrameIndex = 0;
 	float m_ElapsedInFrame = 0.0f;
 	bool m_bLoop = true;
 	bool m_bPlaying = false;
+	bool m_bUseFrameZ = false;
 };
 

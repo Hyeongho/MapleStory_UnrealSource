@@ -4,6 +4,7 @@
 ACharacter::ACharacter()
 {
 	m_pSpriteComponent = AddComponent<USpriteComponent>();
+	SetMapLayer(INDEX_NONE);
 }
 
 ACharacter::~ACharacter()
@@ -27,4 +28,27 @@ void ACharacter::SetLocation(const FVector2D& Location)
 void ACharacter::SetFacingRight(bool bFacingRight)
 {
 	m_pSpriteComponent->SetFlipHorizontal(bFacingRight);
+}
+
+void ACharacter::SetMapLayer(int32 LayerIndex, int32 FootholdOrder)
+{
+	if (LayerIndex == INDEX_NONE)
+	{
+		m_MapLayer = INDEX_NONE;
+		m_pSpriteComponent->SetLayer(ELayer::Sky);
+		m_pSpriteComponent->SetContainerOrder(0);
+		return;
+	}
+	if (LayerIndex < 0 || LayerIndex > 7)
+	{
+		return;
+	}
+	m_MapLayer = LayerIndex;
+	m_pSpriteComponent->SetLayer(MakeMapLifeLayer(LayerIndex));
+	m_pSpriteComponent->SetContainerOrder(FootholdOrder);
+}
+
+int32 ACharacter::GetMapLayer() const
+{
+	return m_MapLayer;
 }
