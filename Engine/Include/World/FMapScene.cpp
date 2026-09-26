@@ -123,7 +123,29 @@ const FWzAnimFrame* FMapScene::PickFrame(const FWzAnimation& Anim, int32* OutFra
 		return &Anim.m_Frames[0];
 	}
 
-	float Cursor = FMath::FMod(m_TimeMs, TotalMs);
+	float Cursor;
+	if (Anim.m_bRepeat)
+	{
+		Cursor = FMath::FMod(m_TimeMs, TotalMs);
+	}
+	else
+	{
+		// RepeatableFrameAnimator.Update()의 !IsLoop 분기 대응 — repeat=0이면
+		// 한 바퀴만 돌고 마지막 프레임에서 멈춘다(모듈로로 되감지 않는다).
+		// 멈춘 뒤에는 마지막 프레임의 a1을 알파로 쓴다(UpdateFrame의 IsStopped
+		// 분기: CurrentFrame.A0 = frame.A1 — 보간 없이 그대로).
+		if (m_TimeMs >= TotalMs)
+		{
+			const FWzAnimFrame& LastFrame = Anim.m_Frames[Anim.m_Frames.Num() - 1];
+			if (OutFrameAlpha)
+			{
+				*OutFrameAlpha = LastFrame.m_A1;
+			}
+			return &LastFrame;
+		}
+		Cursor = m_TimeMs;
+	}
+
 	for (int32 i = 0; i < Anim.m_Frames.Num(); i++)
 	{
 		float FrameMs = Anim.m_Frames[i].m_Duration * 1000.0f;
@@ -157,11 +179,19 @@ void FMapScene::RenderBack(FRenderQueue& Queue, const FBackEntry& Entry)
 	const FMapBackItem& Item = Entry.m_Item;
 	int32 TileMode = GetBackTileMode(Item.m_Type);
 
-	// cx/cy가 0이고 가로세로 둘 다 반복이면 프레임 크기로 대체
-	// (SceneRendering.cs:1374-1379).
+	// cx/cy가 0이면 프레임 Bounds 크기로 대체 — 가로/세로 중 "하나라도" 타일링이면
+	// 대상이 된다(SceneRendering.cs:1374: "(back.TileMode & TileMode.BothTile) != 0"
+	// — BothTile = Horizontal | Vertical 두 비트의 OR 마스크에 대한 "하나라도 겹치면"
+	// 검사이지, "둘 다 켜져야"가 아니다). 예전 코드는 "== (H|V)"로 두 비트가 모두
+	// 켜진 경우(type 3/6/7)만 대체했는데, 그러면 type 4(가로 타일+가로 스크롤만,
+	// 세로 비트 없음)처럼 흔한 단일축 스크롤 배경은 cx=0을 그대로 들고 있다가
+	// 아래 "Cx > 0" 검사에 걸려 타일 반복 자체가 생략됐다 — 스크롤 오프셋(Position)은
+	// 계속 흘러가는데 사본이 1장뿐이니 매 주기 끝에서 화면 밖으로 사라졌다가 원위치로
+	// 훌쩍 리셋되는 것처럼 보였다(카메라 패럴랙스가 아니라 이게 "계속 이동이 아니라
+	// 루프처럼 보인다"는 증상의 실제 원인).
 	int32 Cx = Item.m_Cx;
 	int32 Cy = Item.m_Cy;
-	if ((TileMode & (TILE_HORIZONTAL | TILE_VERTICAL)) == (TILE_HORIZONTAL | TILE_VERTICAL))
+	if ((TileMode & (TILE_HORIZONTAL | TILE_VERTICAL)) != 0)
 	{
 		if (Cx == 0)
 		{
