@@ -64,9 +64,10 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 	FlipbookComp->Play();
 }
 
-void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FMapScene& OutScene, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
+void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
 {
-	OutScene.Clear(World);
+	FMapScene& OutScene = World.CreateMapScene();
+	OutScene.Clear();
 
 	// ── back ──
 	TArray<FMapBackItem> BackItems;

@@ -53,24 +53,38 @@ float FMapScene::GetBackScrollOffset(const FMapBackItem& Item, int32 Rate, int32
 	return (float)fmod(Offset, WrapDistance);
 }
 
+FMapScene::FMapScene(UWorld& World) : m_World(World)
+{
+}
+
 FMapScene::~FMapScene()
 {
 	// 월드가 먼저 소멸했을 수도 있으므로 소멸자에서 액터에 접근하지 않는다.
 	ReleaseResources();
 }
 
-void FMapScene::Clear(UWorld& World)
+void FMapScene::Clear()
 {
 	for (int32 i = 0; i < m_ActorIds.Num(); i++)
 	{
-		if (AActor* Actor = World.FindActorById(m_ActorIds[i]))
+		if (AActor* Actor = m_World.FindActorById(m_ActorIds[i]))
 		{
-			World.DestroyActor(Actor);
+			m_World.DestroyActor(Actor);
 		}
 	}
 
 	m_ActorIds.Empty();
 	ReleaseResources();
+
+	// 유지한 캐릭터가 이전 맵의 발판 레이어를 계속 사용하지 않도록 해제한다.
+	const TArray<AActor*>& Actors = m_World.GetActors();
+	for (int32 i = 0; i < Actors.Num(); i++)
+	{
+		if (ACharacter* pCharacter = Cast<ACharacter>(Actors[i]))
+		{
+			pCharacter->SetMapLayer(INDEX_NONE);
+		}
+	}
 }
 
 void FMapScene::TrackActor(uint32 ActorId)

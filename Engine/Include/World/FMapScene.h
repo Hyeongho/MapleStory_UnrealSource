@@ -25,12 +25,12 @@ public:
 	FMapScene() = default;
 	~FMapScene();
 
-	FMapScene(const FMapScene&) = delete;
+	explicit FMapScene(UWorld& World);
 	FMapScene& operator=(const FMapScene&) = delete;
 
 	// 맵 이동 시 씬 리소스와 이 맵에서 생성한 액터만 정리한다.
-	// // 로드할 때 사용한 월드를 전달한다. 캐릭터 등 외부 액터는 유지한다.
-	void Clear(UWorld& World);
+	// 생성 시 연결한 월드만 사용하며 캐릭터 등 외부 액터는 유지한다.
+	void Clear();
 	void TrackActor(uint32 ActorId);
 
 	// 맵 데이터 등록 — FMapLoader가 애니메이션 소유권을 이관한다.
@@ -84,6 +84,8 @@ private:
 	TArray<FTileEntry> m_Tiles;
 	TArray<FMapFootholdItem> m_Footholds;
 	TArray<uint32> m_ActorIds;
+
+	UWorld& m_World;
 
 	double m_TimeMs = 0.0;
 };
