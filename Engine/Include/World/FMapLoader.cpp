@@ -4,6 +4,7 @@
 #include "World/UWorld.h"
 #include "Object/AActor.h"
 #include "Render/USpriteComponent.h"
+#include "Render/FCamera2D.h"
 #include "Animation/UFlipbookComponent.h"
 #include "Core/Containers/TArray.h"
 
@@ -63,10 +64,24 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 	FlipbookComp->Play();
 }
 
-void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
+void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
 {
 	FMapScene& OutScene = World.CreateMapScene();
 	OutScene.Clear();
+	Camera.ClearWorldBounds();
+	FMapInfo MapInfo;
+	if (FWzMapLoader::LoadMapInfo(WzPath, MapPath, MapInfo))
+	{
+		if (!Camera.SetWorldBounds(FRect((float)MapInfo.m_VRLeft, (float)MapInfo.m_VRTop,
+			(float)MapInfo.m_VRRight, (float)MapInfo.m_VRBottom)))
+		{
+			UE_LOG(LogRenderer, Warning, L"맵 VR 경계가 유효하지 않아 카메라 제한을 적용하지 않았습니다.");
+		}
+	}
+	else
+	{
+		UE_LOG(LogRenderer, Warning, L"맵 info를 읽지 못해 카메라 제한을 적용하지 않았습니다.");
+	}
 
 	// ── back ──
 	TArray<FMapBackItem> BackItems;

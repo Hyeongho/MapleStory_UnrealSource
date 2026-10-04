@@ -5,6 +5,69 @@ FCamera2D* GCamera2D = nullptr;
 
 FCamera2D::FCamera2D() = default;
 
+void FCamera2D::SetLocation(const FVector2D& Location)
+{
+	m_Location = Location;
+	ClampToWorldBounds();
+}
+
+void FCamera2D::SetZoom(float Zoom)
+{
+	if (_finite(Zoom))
+	{
+		m_Zoom = FMath::Clamp(Zoom, 0.01f, 100.0f);
+		ClampToWorldBounds();
+	}
+}
+
+void FCamera2D::SetViewportSize(float Width, float Height)
+{
+	if (_finite(Width) && _finite(Height) && Width >= 0.0f && Height >= 0.0f)
+	{
+		m_ViewportWidth = Width;
+		m_ViewportHeight = Height;
+		ClampToWorldBounds();
+	}
+}
+
+bool FCamera2D::SetWorldBounds(const FRect& Bounds)
+{
+	if (!_finite(Bounds.m_Left) || !_finite(Bounds.m_Top) ||
+		!_finite(Bounds.m_Right) || !_finite(Bounds.m_Bottom) ||
+		Bounds.m_Right <= Bounds.m_Left || Bounds.m_Bottom <= Bounds.m_Top)
+	{
+		ClearWorldBounds();
+		return false;
+	}
+	m_WorldBounds = Bounds;
+	m_bHasWorldBounds = true;
+	ClampToWorldBounds();
+	return true;
+}
+
+void FCamera2D::ClearWorldBounds()
+{
+	m_bHasWorldBounds = false;
+}
+
+void FCamera2D::ClampToWorldBounds()
+{
+	if (!m_bHasWorldBounds)
+	{
+		return;
+	}
+	const float HalfWidth = m_ViewportWidth * 0.5f / m_Zoom;
+	const float HalfHeight = m_ViewportHeight * 0.5f / m_Zoom;
+
+	// 화면이 맵보다 넓으면 해당 축은 맵 중앙에 고정한다.
+	m_Location.m_X = HalfWidth * 2.0f >= m_WorldBounds.Width()
+		? m_WorldBounds.Center().m_X
+		: FMath::Clamp(m_Location.m_X, m_WorldBounds.m_Left + HalfWidth, m_WorldBounds.m_Right - HalfWidth);
+	m_Location.m_Y = HalfHeight * 2.0f >= m_WorldBounds.Height()
+		? m_WorldBounds.Center().m_Y
+		: FMath::Clamp(m_Location.m_Y, m_WorldBounds.m_Top + HalfHeight, m_WorldBounds.m_Bottom - HalfHeight);
+}
+
 FVector2D FCamera2D::WorldToScreen(const FVector2D& WorldPos) const
 {
 	FVector2D Centered = (WorldPos - m_Location) * m_Zoom;

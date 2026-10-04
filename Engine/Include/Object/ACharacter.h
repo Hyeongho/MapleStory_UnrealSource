@@ -17,6 +17,12 @@ public:
 	void LoadAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, const char* ActionName, int32 FrameIndex, const char* EmotionName = "default", int32 EmotionFrameIndex = 0);
 
 	void SetLocation(const FVector2D& Location);
+	FVector2D GetLocation() const;
+
+	// 이번 프레임의 이동 방향을 모은 뒤 Tick에서 위치를 갱신한다.
+	void AddMovementInput(const FVector2D& Direction);
+	void SetMoveSpeed(float Speed);
+	virtual void Tick(float DeltaTime) override;
 
 	void SetFacingRight(bool bFacingRight);
 
@@ -29,5 +35,7 @@ public:
 private:
 	USpriteComponent* m_pSpriteComponent = nullptr;
 	int32 m_MapLayer = INDEX_NONE;
+	FVector2D m_PendingMovementInput = FVector2D::Zero;
+	float m_MoveSpeed = 200.0f;
 };
 

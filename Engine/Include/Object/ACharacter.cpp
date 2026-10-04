@@ -22,7 +22,53 @@ void ACharacter::LoadAvatar(FDXDevice& Device, const char* WzPath, const char* L
 
 void ACharacter::SetLocation(const FVector2D& Location)
 {
-	m_pSpriteComponent->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
+	FTransform2D Transform = m_pSpriteComponent->GetRelativeTransform();
+	Transform.m_Location = Location;
+	m_pSpriteComponent->SetRelativeTransform(Transform);
+}
+
+FVector2D ACharacter::GetLocation() const
+{
+	return m_pSpriteComponent->GetWorldTransform().m_Location;
+}
+
+void ACharacter::AddMovementInput(const FVector2D& Direction)
+{
+	if (_finite(Direction.m_X) && _finite(Direction.m_Y))
+	{
+		m_PendingMovementInput += Direction;
+	}
+}
+
+void ACharacter::SetMoveSpeed(float Speed)
+{
+	if (_finite(Speed) && Speed >= 0.0f)
+	{
+		m_MoveSpeed = Speed;
+	}
+}
+
+void ACharacter::Tick(float DeltaTime)
+{
+	FVector2D Direction = m_PendingMovementInput;
+	m_PendingMovementInput = FVector2D::Zero;
+	if (_finite(DeltaTime) && DeltaTime > 0.0f)
+	{
+		if (Direction.SizeSquared() > 1.0f)
+		{
+			Direction.Normalize();
+		}
+		if (!Direction.IsNearlyZero())
+		{
+			// 물리 몸체 연결 전에는 입력으로 스프라이트 위치를 직접 갱신한다.
+			SetLocation(GetLocation() + Direction * m_MoveSpeed * DeltaTime);
+			if (Direction.m_X != 0.0f)
+			{
+				SetFacingRight(Direction.m_X > 0.0f);
+			}
+		}
+	}
+	Super::Tick(DeltaTime);
 }
 
 void ACharacter::SetFacingRight(bool bFacingRight)

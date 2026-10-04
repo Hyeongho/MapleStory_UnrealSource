@@ -5,6 +5,7 @@
 #include "Render/RenderQueue.h"
 
 class FDXDevice;
+class FCamera2D;
 class UWorld;
 class FMapScene;
 
@@ -19,9 +20,10 @@ public:
 	// WzPath: Map.wz 파일 경로 또는 WZ 폴더 경로
 	// MapPath: WZ 루트 기준 맵 .img 경로 (예: "Map\\Map\\Map2\\240020210.img")
 	// World가 소유하는 맵 씬을 필요할 때 생성하고 배경·타일을 채운다.
+	// Camera에는 맵 info의 VR 경계를 적용한다.
 	// OutFootholds: 널이 아니면 발판 원본 그래프를 채운다 — 이번 라운드에서는
 	// 물리에 연동하지 않고 보관만 한다.
-	static void LoadMap(FDXDevice& Device, UWorld& World, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds = nullptr);
+	static void LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds = nullptr);
 
 private:
 	// 애니메이션 프레임 묶음을 액터 하나에 태운다(스프라이트 + 필요 시 플립북).

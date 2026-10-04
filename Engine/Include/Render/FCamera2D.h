@@ -10,31 +10,26 @@ class FCamera2D
 public:
 	FCamera2D();
 
-	void SetLocation(const FVector2D& Location) 
-	{ 
-		m_Location = Location; 
-	}
+	// 카메라의 위치는 화면 중심의 월드 좌표다.
+	void SetLocation(const FVector2D& Location);
 
 	const FVector2D& GetLocation() const 
 	{ 
 		return m_Location; 
 	}
 
-	void SetZoom(float Zoom) 
-	{ 
-		m_Zoom = FMath::Clamp(Zoom, 0.01f, 100.0f); 
-	}
+	void SetZoom(float Zoom);
 
 	float GetZoom() const 
 	{ 
 		return m_Zoom; 
 	}
 
-	void SetViewportSize(float Width, float Height) 
-	{ 
-		m_ViewportWidth = Width; 
-		m_ViewportHeight = Height; 
-	}
+	void SetViewportSize(float Width, float Height);
+
+	// 맵의 VR 영역으로 보이는 화면 전체를 제한한다. 유효하지 않으면 제한을 해제한다.
+	bool SetWorldBounds(const FRect& Bounds);
+	void ClearWorldBounds();
 
 	float GetViewportWidth() const { return m_ViewportWidth; }
 	float GetViewportHeight() const { return m_ViewportHeight; }
@@ -54,7 +49,11 @@ public:
 	DirectX::XMMATRIX GetViewMatrix() const;
 
 private:
+	void ClampToWorldBounds();
+
 	FVector2D m_Location = FVector2D::Zero;
+	FRect m_WorldBounds;
+	bool m_bHasWorldBounds = false;
 	float m_Zoom = 1.0f;
 	float m_ViewportWidth = 0.0f;
 	float m_ViewportHeight = 0.0f;

@@ -12,6 +12,7 @@ public:
 	// 생성 / 소멸
 	AMaplePlayerController();
 	virtual ~AMaplePlayerController() override;
+	virtual void ProcessPlayerInput(float DeltaTime) override;
 
 protected:
 	// 키를 변경할 때는 매핑을, 동작을 변경할 때는 바인딩을 수정한다.

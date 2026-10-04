@@ -3,6 +3,7 @@
 #include "World/FMapScene.h"
 #include "Object/ACharacter.h"
 #include "Object/APlayerController.h"
+#include "Physics/URigidbody.h"
 
 UWorld* GWorld = nullptr;
 
@@ -43,6 +44,16 @@ void UWorld::DestroyActor(AActor* Actor)
 	}
 
 	m_Actors.RemoveAtSwap(Index);
+	if (ACharacter* pCharacter = Cast<ACharacter>(Actor))
+	{
+		if (APlayerController* pController = GetFirstPlayerController())
+		{
+			if (pController->GetCharacter() == pCharacter)
+			{
+				pController->UnPossess();
+			}
+		}
+	}
 
 	Actor->EndPlay();
 	Actor->~AActor();
@@ -130,12 +141,22 @@ void UWorld::UpdateCharacterLayers()
 	{
 		return;
 	}
+	APlayerController* pController = GetFirstPlayerController();
 	for (int32 i = 0; i < m_Actors.Num(); i++)
 	{
 		ACharacter* pCharacter = Cast<ACharacter>(m_Actors[i]);
 		if (pCharacter)
 		{
 			m_pMapScene->UpdateCharacterLayer(*pCharacter);
+			if (pController && pController->GetCharacter() == pCharacter && !pCharacter->GetComponent<URigidbody>())
+			{
+				// 물리 몸체가 없는 플레이어만 위치 아래의 발판으로 그리기 순서를 갱신한다.
+				const int32 FootholdId = m_pMapScene->FindFootholdBelow(pCharacter->GetLocation());
+				if (FootholdId != INDEX_NONE)
+				{
+					m_pMapScene->SetCharacterFoothold(*pCharacter, FootholdId);
+				}
+			}
 		}
 	}
 }
