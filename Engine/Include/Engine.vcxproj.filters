@@ -58,6 +58,9 @@
     <Filter Include="08. Physics">
       <UniqueIdentifier>{2829071a-2745-4237-baf2-7c06c01afb2d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="09. Input">
+      <UniqueIdentifier>{d2620816-2aa0-4574-b1b7-849c8d052717}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -330,6 +333,21 @@
     <ClInclude Include="UGameInstance.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Input\InputDelegates.h">
+      <Filter>09. Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\UInputComponent.h">
+      <Filter>09. Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\InputTypes.h">
+      <Filter>09. Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\UPlayerInput.h">
+      <Filter>09. Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\APlayerController.h">
+      <Filter>02. Object</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -529,6 +547,15 @@
     </ClCompile>
     <ClCompile Include="UGameInstance.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\UInputComponent.cpp">
+      <Filter>09. Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\UPlayerInput.cpp">
+      <Filter>09. Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\APlayerController.cpp">
+      <Filter>02. Object</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

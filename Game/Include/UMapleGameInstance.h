@@ -21,7 +21,10 @@ public:
 	// 게임 수명 / 프레임 갱신
 	virtual bool Init(UEngine& Engine) override;
 	virtual void Shutdown() override;
-	virtual void Tick(float DeltaTime) override;
+	
+protected:
+	// 게임별 키 설정과 동작 바인딩을 담당하는 컨트롤러를 생성한다.
+	virtual APlayerController* CreatePlayerController(UWorld& World) override;
 
 protected:
 	// 게임 구현을 확장할 때 사용하는 캐릭터 및 애니메이션 준비 단계

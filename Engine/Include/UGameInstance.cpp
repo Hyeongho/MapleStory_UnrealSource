@@ -1,6 +1,8 @@
 #include "EnginePCH.h"
 #include "UGameInstance.h"
 #include "Engine.h"
+#include "World/UWorld.h"
+#include "Object/APlayerController.h"
 
 UGameInstance::UGameInstance() = default;
 
@@ -16,6 +18,11 @@ bool UGameInstance::Init(UEngine& Engine)
 	m_pEngine = &Engine;
 
 	return true;
+}
+
+APlayerController* UGameInstance::CreatePlayerController(UWorld& World)
+{
+	return World.SpawnActor<APlayerController>();
 }
 
 void UGameInstance::Shutdown()

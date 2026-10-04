@@ -2,6 +2,7 @@
 #include "World/UWorld.h"
 #include "World/FMapScene.h"
 #include "Object/ACharacter.h"
+#include "Object/APlayerController.h"
 
 UWorld* GWorld = nullptr;
 
@@ -139,4 +140,19 @@ void UWorld::UpdateCharacterLayers()
 			m_pMapScene->UpdateCharacterLayer(*pCharacter);
 		}
 	}
+}
+
+
+APlayerController* UWorld::GetFirstPlayerController() const
+{
+	// 액터 배열에서 조회하므로 컨트롤러를 파괴한 뒤 별도 포인터가 남지 않는다.
+	for (int32 i = 0; i < m_Actors.Num(); i++)
+	{
+		if (APlayerController* pController = Cast<APlayerController>(m_Actors[i]))
+		{
+			return pController;
+		}
+	}
+
+	return nullptr;
 }

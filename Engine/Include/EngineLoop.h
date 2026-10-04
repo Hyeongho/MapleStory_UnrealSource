@@ -28,7 +28,7 @@ private:
 	// Windows 창과 메시지 처리는 실행 파일 대신 엔진 루프가 담당한다.
 	bool CreateAppWindow(const FEngineInitParams& Params);
 	bool PumpMessages();
-
+	bool ProcessInputMessage(UINT Message, WPARAM wParam);
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 	static const wchar_t* WINDOW_CLASS_NAME;
 

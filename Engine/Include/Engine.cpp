@@ -8,6 +8,7 @@
 #include "Render/FCamera2D.h"
 #include "Timer/FTimerManager.h"
 #include "World/UWorld.h"
+#include "Object/APlayerController.h"
 
 UEngine* GEngine = nullptr;
 
@@ -207,4 +208,17 @@ FTimerManager& UEngine::GetTimerManager() const
 {
 	check(m_pTimerManager);
 	return *m_pTimerManager;
+}
+
+UPlayerInput& UEngine::GetPlayerInput() const
+{
+	// 플랫폼 코드에 조회 경로만 제공한다. 입력의 실제 소유자는 컨트롤러다.
+	return GetPlayerController().GetPlayerInput();
+}
+
+APlayerController& UEngine::GetPlayerController() const
+{
+	APlayerController* pController = GetWorld().GetFirstPlayerController();
+	check(pController);
+	return *pController;
 }

@@ -11,6 +11,8 @@ class FRenderQueue;
 class FCamera2D;
 class FTimerManager;
 class UWorld;
+class UPlayerInput;
+class APlayerController;
 
 // 실행 파일은 설정만 전달하고 실제 시스템 생성과 해제는 엔진이 담당한다.
 struct FEngineInitParams
@@ -48,10 +50,11 @@ public:
 	UWorld& GetWorld() const;
 	FCamera2D& GetCamera() const;
 	FTimerManager& GetTimerManager() const;
+	UPlayerInput& GetPlayerInput() const;
+	APlayerController& GetPlayerController() const;
 
 protected:
 	// 엔진 파생 클래스에서도 월드와 공통 시스템을 사용할 수 있다.
-	void UpdateCharacterLayers();
 	UWorld* m_pWorld = nullptr;
 	FCamera2D* m_pCamera = nullptr;
 	FTimerManager* m_pTimerManager = nullptr;

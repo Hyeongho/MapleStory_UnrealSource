@@ -3,6 +3,9 @@
 #include "UGameInstance.h"
 #include "Timer/FTimerManager.h"
 #include "Core/Memory/FMemoryTracker.h"
+#include "Input/UPlayerInput.h"
+#include "Object/APlayerController.h"
+#include "World/UWorld.h"
 
 const wchar_t* FEngineLoop::WINDOW_CLASS_NAME = L"MapleStoryWindowClass";
 
@@ -52,6 +55,7 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int32 ShowCommand, const FEngineInit
 	m_bInitialized = true;
 	m_bRunning = true;
 	ShowWindow(m_hWnd, ShowCommand);
+	m_pEngine->GetPlayerInput().SetFocus(GetFocus() == m_hWnd);
 	UpdateWindow(m_hWnd);
 	return true;
 }
@@ -63,8 +67,19 @@ int32 FEngineLoop::Run()
 		return -1;
 	}
 
-	while (PumpMessages())
+	while (m_bRunning)
 	{
+		// 전환 기록을 비운 뒤 메시지를 받아야 짧게 눌렀다 떼는 키 입력도 남는다.
+		if (APlayerController* pController = m_pEngine->GetWorld().GetFirstPlayerController())
+		{
+			pController->GetPlayerInput().BeginFrame();
+		}
+
+		if (!PumpMessages())
+		{
+			break;
+		}
+
 		Tick();
 	}
 
@@ -83,8 +98,20 @@ void FEngineLoop::Tick()
 
 	const float DeltaTime = GetDeltaTime();
 
+	if (APlayerController* pController = m_pEngine->GetWorld().GetFirstPlayerController())
+	{
+		pController->ProcessPlayerInput(DeltaTime);
+	}
+
 	m_pGameInstance->PreTick(DeltaTime);
 	m_pEngine->Tick(DeltaTime);
+
+	// 다시 조회하여 입력 또는 월드 갱신 중 파괴된 컨트롤러를 사용하지 않는다.
+	if (APlayerController* pController = m_pEngine->GetWorld().GetFirstPlayerController())
+	{
+		pController->UpdateCamera(DeltaTime);
+	}
+
 	m_pGameInstance->Tick(DeltaTime);
 
 	if (m_bRunning)
@@ -186,6 +213,54 @@ bool FEngineLoop::PumpMessages()
 	}
 
 	return m_bRunning;
+}
+
+bool FEngineLoop::ProcessInputMessage(UINT Message, WPARAM wParam)
+{
+	if (!m_pEngine || !m_pEngine->IsInitialized())
+	{
+		return false;
+	}
+
+	APlayerController* pController = m_pEngine->GetWorld().GetFirstPlayerController();
+
+	if (!pController)
+	{
+		return false;
+	}
+
+	UPlayerInput& Input = pController->GetPlayerInput();
+
+	switch (Message)
+	{
+	case WM_SETFOCUS:
+		Input.SetFocus(true);
+		break;
+
+	case WM_KILLFOCUS:
+		Input.SetFocus(false);
+		break;
+
+	case WM_ENTERSIZEMOVE:
+	case WM_ENTERMENULOOP:
+		// 창 이동이나 시스템 메뉴의 별도 메시지 루프에서 키 해제를 놓치지 않게 한다.
+		Input.Reset();
+		break;
+
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYDOWN:
+	case WM_SYSKEYUP:
+	{
+		const bool bDown = Message == WM_KEYDOWN || Message == WM_SYSKEYDOWN;
+		Input.InputKey(FKey((uint16)wParam), bDown);
+		// Alt+F4 등 시스템 단축키는 Windows 기본 처리도 수행한다.
+		return Message == WM_KEYDOWN || Message == WM_KEYUP;
+	}
+
+	}
+
+	return false;
 }
 
 LRESULT CALLBACK FEngineLoop::WindowProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam)

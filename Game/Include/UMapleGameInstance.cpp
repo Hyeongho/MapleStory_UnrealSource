@@ -1,6 +1,7 @@
 ﻿#include "EnginePCH.h"
 #include "UMapleGameInstance.h"
 #include "Engine.h"
+#include "AMaplePlayerController.h"
 #include "Object/ACharacter.h"
 #include "Animation/UFlipbookComponent.h"
 #include "Animation/UAnimStateMachine.h"
@@ -30,8 +31,9 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), MAPLE_WZ_PATH, MAPLE_MAP_PATH);
 	InitPlayer();
 
-	// 구름 13번을 확인하던 기존 카메라 위치를 유지한다.
+	// 시작 위치만 지정하며 이후에는 방향키 입력으로 카메라를 움직인다.
 	Engine.GetCamera().SetLocation(FVector2D(100.0f, 300.0f));
+
 	return true;
 }
 
@@ -42,17 +44,17 @@ void UMapleGameInstance::Shutdown()
 	{
 		GetEngine().GetTimerManager().ClearTimer(m_AnimDemoToggleHandle);
 	}
+
 	m_pAnimStateMachine = nullptr;
 	m_pPlayerCharacter = nullptr;
 	m_bMoving = false;
+
 	Super::Shutdown();
 }
 
-void UMapleGameInstance::Tick(float DeltaTime)
+APlayerController* UMapleGameInstance::CreatePlayerController(UWorld& World)
 {
-	Super::Tick(DeltaTime);
-	// 카메라 정책은 게임에서 결정하며, 엔진은 이 갱신 뒤에 렌더링한다.
-	GetEngine().GetCamera().SetLocation(FVector2D(100.0f, 300.0f));
+	return World.SpawnActor<AMaplePlayerController>();
 }
 
 void UMapleGameInstance::InitPlayer()
@@ -71,6 +73,7 @@ void UMapleGameInstance::InitPlayer()
 
 	m_pPlayerCharacter->AddComponent<UFlipbookComponent>();
 	m_pAnimStateMachine = m_pPlayerCharacter->AddComponent<UAnimStateMachine>();
+
 	const bool bHasMove = RegisterAvatarState(FName(L"Move"), "swingT3");
 	const bool bHasIdle = RegisterAvatarState(FName(L"Idle"), "stand1");
 
@@ -93,6 +96,7 @@ void UMapleGameInstance::InitPlayer()
 bool UMapleGameInstance::RegisterAvatarState(FName StateName, const char* ActionName)
 {
 	TArray<FFlipbookFrame> Frames;
+
 	for (int32 i = 0; ; i++)
 	{
 		FAvatarTexture Frame = FWzTextureLoader::LoadAvatarTexture(GetEngine().GetDevice(), MAPLE_WZ_PATH, MAPLE_LOADOUT_SPEC, ActionName, i);
@@ -100,6 +104,7 @@ bool UMapleGameInstance::RegisterAvatarState(FName StateName, const char* Action
 		{
 			break;
 		}
+
 		Frames.Add(FFlipbookFrame{ Frame.m_pTexture, Frame.m_Origin, Frame.m_DelayMs / 1000.0f });
 	}
 

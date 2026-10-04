@@ -8,6 +8,7 @@
 
 class FRenderQueue;
 class FMapScene;
+class APlayerController;
 
 class UWorld :
     public UObject
@@ -48,6 +49,9 @@ public:
 	void DestroyMapScene();
 	FMapScene* GetMapScene();
 	const FMapScene* GetMapScene() const;
+
+	// 현재 단일 로컬 플레이어의 컨트롤러 조회. 없으면 nullptr를 반환한다.
+	APlayerController* GetFirstPlayerController() const;
 
 	// 나중에 네트워크 리플리케이션을 붙일 때 "메시지로 들어온 ID → 로컬
 	// 액터"를 찾는 자리 — 지금은 선형 탐색으로 충분(액터 수가 적음).

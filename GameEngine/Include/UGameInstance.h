@@ -4,6 +4,8 @@
 #include "Object/UObject.h"
 
 class UEngine;
+class UWorld;
+class APlayerController;
 
 class UGameInstance :
     public UObject
@@ -29,6 +31,10 @@ public:
 
 	// 게임 구현 클래스는 생성된 엔진 시스템을 이 경로로 사용한다.
 	UEngine& GetEngine() const;
+
+protected:
+	// 게임별 컨트롤러를 해당 월드에 스폰한다. 실제 소유자는 월드다.
+	virtual APlayerController* CreatePlayerController(UWorld& World);
 
 private:
 	UEngine* m_pEngine = nullptr;
