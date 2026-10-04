@@ -17,6 +17,9 @@ bool UGameInstance::Init(UEngine& Engine)
 
 	m_pEngine = &Engine;
 
+	APlayerController* pController = CreatePlayerController(Engine.GetWorld());
+	return pController && pController->InitPlayer(Engine.GetCamera());
+
 	return true;
 }
 

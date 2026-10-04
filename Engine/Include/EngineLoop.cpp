@@ -273,6 +273,11 @@ LRESULT CALLBACK FEngineLoop::WindowProc(HWND hWnd, UINT Message, WPARAM wParam,
 		SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pLoop));
 	}
 
+	if (pLoop && pLoop->ProcessInputMessage(Message, wParam))
+	{
+		return 0;
+	}
+
 	switch (Message)
 	{
 	case WM_CLOSE:
