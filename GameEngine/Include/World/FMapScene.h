@@ -22,10 +22,12 @@ class ACharacter;
 class FMapScene
 {
 public:
-	FMapScene() = default;
+	explicit FMapScene(UWorld& World);
 	~FMapScene();
 
-	explicit FMapScene(UWorld& World);
+public:
+	// 월드에 연결된 맵 리소스의 중복 소유를 방지한다.
+	FMapScene(const FMapScene&) = delete;
 	FMapScene& operator=(const FMapScene&) = delete;
 
 	// 맵 이동 시 씬 리소스와 이 맵에서 생성한 액터만 정리한다.
