@@ -32,11 +32,5 @@ protected:
 	bool RegisterAvatarState(FName StateName, const char* ActionName);
 	ACharacter* m_pPlayerCharacter = nullptr; // 실제 소유자는 엔진의 UWorld다.
 	UAnimStateMachine* m_pAnimStateMachine = nullptr;
-
-private:
-	// 입력을 연결하기 전까지 기존 데모의 상태 전환을 유지한다.
-	void ToggleAnimDemoState();
-	FTimerHandle m_AnimDemoToggleHandle;
-	bool m_bMoving = false;
 };
 

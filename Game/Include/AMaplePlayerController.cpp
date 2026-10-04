@@ -2,10 +2,29 @@
 #include "AMaplePlayerController.h"
 #include "Input/UPlayerInput.h"
 #include "Input/UInputComponent.h"
+#include "Object/ACharacter.h"
+#include "Animation/UAnimStateMachine.h"
 
 AMaplePlayerController::AMaplePlayerController() = default;
 
 AMaplePlayerController::~AMaplePlayerController() = default;
+
+void AMaplePlayerController::ProcessPlayerInput(float DeltaTime)
+{
+	Super::ProcessPlayerInput(DeltaTime);
+	ACharacter* pCharacter = GetCharacter();
+	if (!pCharacter)
+	{
+		return;
+	}
+
+	UAnimStateMachine* pStateMachine = pCharacter->GetComponent<UAnimStateMachine>();
+
+	if (pStateMachine && pStateMachine->HasState(FName(L"Idle")) && pStateMachine->HasState(FName(L"Move")))
+	{
+		pStateMachine->SetState(m_MoveInput.IsNearlyZero() ? FName(L"Idle") : FName(L"Move"));
+	}
+}
 
 void AMaplePlayerController::SetupInputMappings()
 {

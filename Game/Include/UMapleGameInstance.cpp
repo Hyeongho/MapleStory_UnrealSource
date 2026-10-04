@@ -28,7 +28,8 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 	}
 
 	// 게임이 맵을 선택하면 해당 월드가 맵 씬을 생성하고 소유한다.
-	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), MAPLE_WZ_PATH, MAPLE_MAP_PATH);
+	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), Engine.GetCamera(), MAPLE_WZ_PATH, MAPLE_MAP_PATH);
+
 	InitPlayer();
 
 	// 시작 위치만 지정하며 이후에는 방향키 입력으로 카메라를 움직인다.
@@ -39,15 +40,16 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 
 void UMapleGameInstance::Shutdown()
 {
-	// 콜백이 게임 인스턴스를 참조하므로 엔진의 타이머가 살아 있을 때 취소한다.
-	if (m_AnimDemoToggleHandle.IsValid())
+	if (m_pPlayerCharacter)
 	{
-		GetEngine().GetTimerManager().ClearTimer(m_AnimDemoToggleHandle);
+		if (APlayerController* pController = GetEngine().GetWorld().GetFirstPlayerController())
+		{
+			pController->UnPossess();
+		}
 	}
 
 	m_pAnimStateMachine = nullptr;
 	m_pPlayerCharacter = nullptr;
-	m_bMoving = false;
 
 	Super::Shutdown();
 }
@@ -62,7 +64,7 @@ void UMapleGameInstance::InitPlayer()
 	UEngine& Engine = GetEngine();
 	m_pPlayerCharacter = Engine.GetWorld().SpawnActor<ACharacter>();
 	m_pPlayerCharacter->LoadAvatar(Engine.GetDevice(), MAPLE_WZ_PATH, MAPLE_LOADOUT_SPEC, "stand1", 0);
-	m_pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
+	m_pPlayerCharacter->SetLocation(FVector2D(-300.0f, 50.0f));
 
 	// 물리 연동 전에는 시작 위치 아래의 발판으로 렌더링 레이어만 선택한다.
 	if (FMapScene* pMapScene = Engine.GetWorld().GetMapScene())
@@ -74,7 +76,7 @@ void UMapleGameInstance::InitPlayer()
 	m_pPlayerCharacter->AddComponent<UFlipbookComponent>();
 	m_pAnimStateMachine = m_pPlayerCharacter->AddComponent<UAnimStateMachine>();
 
-	const bool bHasMove = RegisterAvatarState(FName(L"Move"), "swingT3");
+	const bool bHasMove = RegisterAvatarState(FName(L"Move"), "walk1");
 	const bool bHasIdle = RegisterAvatarState(FName(L"Idle"), "stand1");
 
 	if (bHasIdle)
@@ -87,9 +89,10 @@ void UMapleGameInstance::InitPlayer()
 		m_pAnimStateMachine->SetState(FName(L"Move"));
 	}
 
-	if (bHasIdle && bHasMove)
+	// 카메라는 캐릭터를 화면 중심에 두고 맵의 VR 경계 안에서 따라간다.
+	if (APlayerController* pController = Engine.GetWorld().GetFirstPlayerController())
 	{
-		Engine.GetTimerManager().SetTimer(m_AnimDemoToggleHandle, FTimerDelegate::CreateRaw<UMapleGameInstance, &UMapleGameInstance::ToggleAnimDemoState>(this), 2.0f, true);
+		pController->Possess(m_pPlayerCharacter);
 	}
 }
 
@@ -122,16 +125,4 @@ bool UMapleGameInstance::RegisterAvatarState(FName StateName, const char* Action
 	}
 
 	return true;
-}
-
-void UMapleGameInstance::ToggleAnimDemoState()
-{
-	if (!m_pAnimStateMachine || !m_pPlayerCharacter)
-	{
-		return;
-	}
-
-	m_bMoving = !m_bMoving;
-	m_pAnimStateMachine->SetState(m_bMoving ? FName(L"Move") : FName(L"Idle"));
-	m_pPlayerCharacter->SetFacingRight(m_bMoving);
 }

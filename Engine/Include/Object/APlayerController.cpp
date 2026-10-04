@@ -1,5 +1,6 @@
 #include "EnginePCH.h"
 #include "Object/APlayerController.h"
+#include "Object/ACharacter.h"
 #include "Input/UPlayerInput.h"
 #include "Input/UInputComponent.h"
 #include "Render/FCamera2D.h"
@@ -35,12 +36,34 @@ bool APlayerController::InitPlayer(FCamera2D& Camera)
 
 void APlayerController::EndPlay()
 {
+	UnPossess();
+
 	m_pInputComponent->ClearAxisBindings();
 	m_pPlayerInput->SetFocus(false);
 	m_MoveInput = FVector2D::Zero;
 	m_pCamera = nullptr;
 
 	Super::EndPlay();
+}
+
+void APlayerController::Possess(ACharacter* Character)
+{
+	m_pCharacter = Character;
+
+	if (m_pCamera && Character)
+	{
+		m_pCamera->SetLocation(Character->GetLocation());
+	}
+}
+
+void APlayerController::UnPossess()
+{
+	m_pCharacter = nullptr;
+}
+
+ACharacter* APlayerController::GetCharacter() const
+{
+	return m_pCharacter;
 }
 
 void APlayerController::SetupInputMappings()
@@ -73,6 +96,11 @@ void APlayerController::ProcessPlayerInput(float DeltaTime)
 	if (m_pCamera)
 	{
 		m_pInputComponent->ProcessInput(*m_pPlayerInput);
+
+		if (m_pCharacter)
+		{
+			m_pCharacter->AddMovementInput(m_MoveInput);
+		}
 	}
 }
 
@@ -88,7 +116,20 @@ void APlayerController::MoveVertical(float Value)
 
 void APlayerController::UpdateCamera(float DeltaTime)
 {
-	if (!m_pCamera || !m_bCameraInputEnabled || !m_pPlayerInput->HasFocus() || !_finite(DeltaTime) || DeltaTime <= 0.0f)
+	if (!m_pCamera)
+	{
+		return;
+	}
+
+	if (m_pCharacter)
+	{
+		// 월드 갱신 후의 캐릭터 위치를 화면 중심으로 사용한다.
+		m_pCamera->SetLocation(m_pCharacter->GetLocation());
+
+		return;
+	}
+
+	if (!m_bCameraInputEnabled || !m_pPlayerInput->HasFocus() || !_finite(DeltaTime) || DeltaTime <= 0.0f)
 	{
 		return;
 	}

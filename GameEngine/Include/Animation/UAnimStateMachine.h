@@ -28,6 +28,7 @@ public:
 	// 이름이면 ensure() 경고만 남기고 조용히 무시(예외 없는 엔진이라
 	// 크래시하지 않음).
 	void SetState(FName StateName);
+	bool HasState(FName StateName) const;
 
 	FName GetCurrentState() const { return m_CurrentState; }
 

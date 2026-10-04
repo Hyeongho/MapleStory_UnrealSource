@@ -7,6 +7,7 @@
 class UPlayerInput;
 class UInputComponent;
 class FCamera2D;
+class ACharacter;
 
 class APlayerController :
     public AActor
@@ -22,6 +23,11 @@ public:
 	// 카메라 연결과 입력 준비 / 수명 종료
 	bool InitPlayer(FCamera2D& Camera);
 	virtual void EndPlay() override;
+
+	// 월드가 소유하는 캐릭터를 조종 대상으로 연결한다.
+	void Possess(ACharacter* Character);
+	void UnPossess();
+	ACharacter* GetCharacter() const;
 
 	// 입력 처리는 월드 갱신 전, 카메라 갱신은 월드 갱신 후에 실행한다.
 	virtual void ProcessPlayerInput(float DeltaTime);
@@ -45,6 +51,7 @@ protected:
 	UPlayerInput* m_pPlayerInput = nullptr; // 컨트롤러가 소유한다.
 	UInputComponent* m_pInputComponent = nullptr; // AActor의 컴포넌트 배열이 소유한다.
 	FCamera2D* m_pCamera = nullptr; // 엔진이 소유하며 월드보다 오래 살아 있다.
+	ACharacter* m_pCharacter = nullptr; // 월드가 소유한다.
 	FVector2D m_MoveInput = FVector2D::Zero;
 
 private:

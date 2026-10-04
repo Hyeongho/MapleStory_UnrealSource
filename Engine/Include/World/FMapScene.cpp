@@ -173,6 +173,7 @@ void FMapScene::UpdateCharacterLayer(ACharacter& Character) const
 	{
 		SetCharacterFoothold(Character, Body->GetCurrentFootholdId());
 	}
+	// 점프 중에는 마지막 발판 레이어를 유지하여 앞뒤 관계가 갑자기 바뀌지 않게 한다.
 }
 
 void FMapScene::Tick(float DeltaTime)

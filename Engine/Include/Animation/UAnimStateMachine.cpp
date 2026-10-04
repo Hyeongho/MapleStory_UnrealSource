@@ -96,6 +96,11 @@ void UAnimStateMachine::SetState(FName StateName)
 	}
 }
 
+bool UAnimStateMachine::HasState(FName StateName) const
+{
+	return m_States.Contains(StateName);
+}
+
 void UAnimStateMachine::BeginPlay()
 {
 	m_pFlipbook = GetOwner() ? GetOwner()->GetComponent<UFlipbookComponent>() : nullptr;
