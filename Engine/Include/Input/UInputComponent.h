@@ -5,10 +5,11 @@
 #include "Core/String/FName.h"
 #include "Core/Containers/TArray.h"
 #include "Input/InputDelegates.h"
+#include "Input/InputTypes.h"
 
 class UPlayerInput;
 
-// 키 해석은 UPlayerInput에 맡기고 이름이 있는 입력 축을 게임 함수에 연결한다.
+// 키 해석은 UPlayerInput에 맡기고 이름이 있는 입력 축·동작을 게임 함수에 연결한다.
 class UInputComponent : public UActorComponent
 {
 	DECLARE_CLASS(UInputComponent, UActorComponent)
@@ -29,7 +30,17 @@ public:
 		BindAxis(AxisName, FInputAxisDelegate::CreateRaw<T, Method>(pObject));
 	}
 
-	// 컨트롤러가 월드 갱신 전에 호출한다. 입력이 없을 때도 0을 전달한다.
+	void BindAction(FName ActionName, EInputEvent InputEvent, const FInputActionDelegate& Delegate);
+	void RemoveActionBindings(FName ActionName);
+	void ClearActionBindings();
+
+	template<typename T, void(T::* Method)()>
+	void BindAction(FName ActionName, EInputEvent InputEvent, T* pObject)
+	{
+		BindAction(ActionName, InputEvent, FInputActionDelegate::CreateRaw<T, Method>(pObject));
+	}
+
+	// 컨트롤러가 월드 갱신 전에 호출한다. 축은 입력이 없을 때도 0을 전달한다.
 	void ProcessInput(const UPlayerInput& PlayerInput);
 
 private:
@@ -38,6 +49,13 @@ private:
 		FName m_AxisName;
 		FInputAxisDelegate m_Delegate;
 	};
+	struct FInputActionBinding
+	{
+		FName m_ActionName;
+		EInputEvent m_InputEvent = EInputEvent::Pressed;
+		FInputActionDelegate m_Delegate;
+	};
 
 	TArray<FInputAxisBinding, TInlineAllocator<4>> m_AxisBindings;
+	TArray<FInputActionBinding, TInlineAllocator<4>> m_ActionBindings;
 };

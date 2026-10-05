@@ -7,6 +7,7 @@
 #include "World/UWorld.h"
 #include "Object/ACharacter.h"
 #include "Physics/URigidbody.h"
+#include "Physics/PhysicsWorld.h"
 
 int32 FMapScene::GetBackTileMode(int32 Type)
 {
@@ -74,8 +75,26 @@ void FMapScene::TrackActor(uint32 ActorId)
 	m_ActorIds.Add(ActorId);
 }
 
+void FMapScene::UnregisterPhysicsFootholds()
+{
+	for (int32 i = 0; i < m_PhysicsVerticalFootholdIds.Num(); i++)
+	{
+		m_World.GetPhysicsWorld().RemoveVerticalFoothold(m_PhysicsVerticalFootholdIds[i]);
+	}
+	m_PhysicsVerticalFootholdIds.Empty();
+
+	for (int32 i = 0; i < m_PhysicsFootholdIds.Num(); i++)
+	{
+		m_World.GetPhysicsWorld().RemoveFoothold(m_PhysicsFootholdIds[i]);
+	}
+	m_PhysicsFootholdIds.Empty();
+}
+
 void FMapScene::ReleaseResources()
 {
+	// 이 맵이 등록한 발판만 해제해 월드의 다른 물리 발판은 유지한다.
+	UnregisterPhysicsFootholds();
+
 	// 배경·타일 텍스처는 액터가 아니라 이 씬이 직접 소유한다.
 	for (int32 i = 0; i < m_Backs.Num(); i++)
 	{
@@ -112,7 +131,30 @@ void FMapScene::AddTile(int32 LayerIndex, const FMapTileItem& Item, FWzAnimation
 
 void FMapScene::SetFootholds(const TArray<FMapFootholdItem>& Footholds)
 {
+	UnregisterPhysicsFootholds();
+
 	m_Footholds = Footholds;
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		const FMapFootholdItem& Item = m_Footholds[i];
+		if (Item.m_X1 == Item.m_X2)
+		{
+			if (m_World.GetPhysicsWorld().AddVerticalFoothold(Item.m_Id, Item.m_Layer, Item.m_Group,
+				FVector2D((float)Item.m_X1, (float)Item.m_Y1), FVector2D((float)Item.m_X2, (float)Item.m_Y2),
+				CollisionChannelMask(ECollisionChannel::Player) | CollisionChannelMask(ECollisionChannel::Enemy)))
+			{
+				m_PhysicsVerticalFootholdIds.Add(Item.m_Id);
+			}
+			continue;
+		}
+
+		const FFoothold Foothold(Item.m_Id, FVector2D((float)Item.m_X1, (float)Item.m_Y1),
+			FVector2D((float)Item.m_X2, (float)Item.m_Y2), Item.m_Layer, Item.m_Group);
+		if (m_World.GetPhysicsWorld().AddFoothold(Foothold))
+		{
+			m_PhysicsFootholdIds.Add(Item.m_Id);
+		}
+	}
 }
 
 bool FMapScene::SetCharacterFoothold(ACharacter& Character, int32 FootholdId) const

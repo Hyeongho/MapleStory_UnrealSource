@@ -8,7 +8,7 @@ class FRenderQueue;
 class UWorld;
 class ACharacter;
 
-// 배경(back)과 타일을 담아두고 매 프레임 직접 RenderQueue에 제출하는 맵 씬.
+// 배경(back)과 타일을 렌더 큐에 제출하고 발판을 물리 월드에 등록하는 맵 씬.
 //
 // 왜 액터가 아닌가: 레퍼런스(WzComparerR2.MapRender)도 맵은 씬 그래프를 매
 // 프레임 훑어 그리는 구조이고, 타일은 한 맵에 수천 개라 전부 액터로 만들면
@@ -72,6 +72,9 @@ private:
 		int32 m_LayerIndex = 0;
 	};
 
+	// 등록한 발판만 물리 월드에서 해제한다.
+	void UnregisterPhysicsFootholds();
+
 	// 텍스처는 씬이, 추적한 액터의 실제 수명은 UWorld가 소유한다.
 	void ReleaseResources();
 
@@ -83,6 +86,8 @@ private:
 	TArray<FBackEntry> m_Backs;
 	TArray<FTileEntry> m_Tiles;
 	TArray<FMapFootholdItem> m_Footholds;
+	TArray<int32> m_PhysicsFootholdIds;
+	TArray<int32> m_PhysicsVerticalFootholdIds;
 	TArray<uint32> m_ActorIds;
 	UWorld& m_World; // 소유 월드에 대한 비소유 참조. 월드가 씬보다 오래 살아 있다.
 

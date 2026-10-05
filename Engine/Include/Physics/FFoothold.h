@@ -2,16 +2,18 @@
 #include "Physics/CollisionTypes.h"
 
 // 월드 좌표의 단방향 발판. 끝점 순서와 관계없이 위쪽 면에 착지한다.
-// 수직 선분은 발판으로 등록하지 않는다. 벽과 천장은 정적 Box가 담당한다.
+// 수직 선분은 별도 단방향 충돌로 등록한다.
 class FFoothold
 {
 public:
 	// 생성
 	FFoothold();
-	FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End);
+	FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End, int32 Layer = INDEX_NONE, int32 Group = INDEX_NONE);
 
 	// 식별 정보 / 월드 좌표 조회
 	int32 GetId() const;
+	int32 GetLayer() const;
+	int32 GetGroup() const;
 	const FVector2D& GetStart() const;
 	const FVector2D& GetEnd() const;
 
@@ -37,6 +39,8 @@ public:
 private:
 	// 식별 정보 / 월드 좌표
 	int32 m_Id = INDEX_NONE;
+	int32 m_Layer = INDEX_NONE;
+	int32 m_Group = INDEX_NONE;
 	FVector2D m_Start;
 	FVector2D m_End;
 

@@ -94,7 +94,7 @@ struct FMapReactorItem
 };
 
 // 발판 원본 그래프 — id/layer/group/prev/next/piece를 전부 보존한다.
-// 물리 연동(FPhysicsWorld::AddFoothold)은 이번 범위 밖, 파싱·보관까지만.
+// 맵 씬은 수평·경사 발판과 수직 선분의 방향·그룹을 물리에 등록한다.
 struct FMapFootholdItem
 {
 	int32 m_Id = 0;

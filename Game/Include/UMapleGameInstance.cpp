@@ -10,6 +10,7 @@
 #include "World/UWorld.h"
 #include "World/FMapLoader.h"
 #include "World/FMapScene.h"
+#include "Physics/PhysicsWorld.h"
 
 static const char* MAPLE_WZ_PATH = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
 static const char* MAPLE_MAP_PATH = R"(Map\Map\Map2\200000100.img)";
@@ -27,7 +28,13 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 	}
 
 	// 게임이 맵을 선택하면 해당 월드가 맵 씬을 생성하고 소유한다.
-	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), Engine.GetCamera(), MAPLE_WZ_PATH, MAPLE_MAP_PATH);
+	FMapLoadOptions MapOptions;
+	// 이 맵에서 표시하지 않을 obj 리소스를 Game에서 선택한다.
+	// Emplace("guide", "tutorial")은 그 아래의 모든 오브젝트를 제외한다.
+	// Emplace("guide", "tutorial", "key")는 key 아래의 모든 오브젝트를 제외한다.
+	// 동일한 리소스의 특정 배치만 제외하려면 뒤에 레이어와 슬롯 번호를 추가한다.
+	MapOptions.m_ExcludedObjects.Emplace("guide", "tutorial", "key", "4");
+	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), Engine.GetCamera(), MAPLE_WZ_PATH, MAPLE_MAP_PATH, MapOptions);
 	InitPlayer();
 	return true;
 }
@@ -58,12 +65,18 @@ void UMapleGameInstance::InitPlayer()
 	m_pPlayerCharacter->LoadAvatar(Engine.GetDevice(), MAPLE_WZ_PATH, MAPLE_LOADOUT_SPEC, "stand1", 0);
 	m_pPlayerCharacter->SetLocation(FVector2D(-300.0f, 100.0f));
 
-	// 물리 연동 전에는 시작 위치 아래의 발판으로 렌더링 레이어만 선택한다.
+	// 시작점 아래의 실제 맵 발판에 발을 놓고, 같은 발판의 렌더링 레이어를 쓴다.
 	if (FMapScene* pMapScene = Engine.GetWorld().GetMapScene())
 	{
-		const int32 InitialFootholdId = pMapScene->FindFootholdBelow(FVector2D(-300.0f, 100.0f));
-		pMapScene->SetCharacterFoothold(*m_pPlayerCharacter, InitialFootholdId);
+		const int32 InitialFootholdId = pMapScene->FindFootholdBelow(m_pPlayerCharacter->GetLocation());
+		if (const FFoothold* Foothold = Engine.GetWorld().GetPhysicsWorld().FindFoothold(InitialFootholdId))
+		{
+			const FVector2D Location = m_pPlayerCharacter->GetLocation();
+			m_pPlayerCharacter->SetLocation(FVector2D(Location.m_X, Foothold->GetHeightAtX(Location.m_X)));
+			pMapScene->SetCharacterFoothold(*m_pPlayerCharacter, InitialFootholdId);
+		}
 	}
+	m_pPlayerCharacter->EnablePhysics(FVector2D(12.0f, 24.0f));
 
 	m_pPlayerCharacter->AddComponent<UFlipbookComponent>();
 	m_pAnimStateMachine = m_pPlayerCharacter->AddComponent<UAnimStateMachine>();

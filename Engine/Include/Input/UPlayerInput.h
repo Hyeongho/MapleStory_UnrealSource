@@ -29,6 +29,13 @@ public:
 	void RemoveAxisMappings(FName AxisName);
 	float GetAxisValue(FName AxisName) const;
 
+	// 게임별 동작 매핑 설정 / 눌림·해제 조회
+	void AddActionMapping(const FInputActionKeyMapping& Mapping);
+	void RemoveActionMappings(FName ActionName);
+	bool WasActionPressed(FName ActionName) const;
+	bool WasActionReleased(FName ActionName) const;
+	bool HasKeyMapping(FKey Key) const;
+
 	// 키 상태 조회
 	bool IsKeyDown(FKey Key) const;
 	bool WasKeyPressed(FKey Key) const;
@@ -44,5 +51,6 @@ private:
 
 	FKeyState m_Keys[256];
 	TArray<FInputAxisKeyMapping> m_AxisMappings;
+	TArray<FInputActionKeyMapping> m_ActionMappings;
 	bool m_bHasFocus = false;
 };

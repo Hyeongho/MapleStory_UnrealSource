@@ -15,6 +15,7 @@ APlayerController::~APlayerController()
 {
 	// 델리게이트가 컨트롤러를 참조하므로 입력 객체를 해제하기 전에 끊는다.
 	m_pInputComponent->ClearAxisBindings();
+	m_pInputComponent->ClearActionBindings();
 	delete m_pPlayerInput;
 	m_pPlayerInput = nullptr;
 }
@@ -35,6 +36,7 @@ void APlayerController::EndPlay()
 {
 	UnPossess();
 	m_pInputComponent->ClearAxisBindings();
+	m_pInputComponent->ClearActionBindings();
 	m_pPlayerInput->SetFocus(false);
 	m_MoveInput = FVector2D::Zero;
 	m_pCamera = nullptr;
@@ -75,6 +77,7 @@ void APlayerController::SetupInputMappings()
 void APlayerController::SetupInputComponent()
 {
 	m_pInputComponent->ClearAxisBindings();
+	m_pInputComponent->ClearActionBindings();
 	m_pInputComponent->BindAxis<APlayerController, &APlayerController::MoveHorizontal>(FName(L"MoveHorizontal"), this);
 	m_pInputComponent->BindAxis<APlayerController, &APlayerController::MoveVertical>(FName(L"MoveVertical"), this);
 }

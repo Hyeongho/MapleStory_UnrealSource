@@ -8,6 +8,28 @@
 #include "Animation/UFlipbookComponent.h"
 #include "Core/Containers/TArray.h"
 
+bool FMapLoader::IsObjectExcluded(const FMapObjItem& Item, int32 LayerIndex, const FMapLoadOptions& Options)
+{
+	for (int32 i = 0; i < Options.m_ExcludedObjects.Num(); i++)
+	{
+		const FMapObjectExclusion& Rule = Options.m_ExcludedObjects[i];
+		if (!Rule.m_Os || !Rule.m_L0 || (Rule.m_L2 && !Rule.m_L1)
+			|| (Rule.m_Layer != INDEX_NONE && Rule.m_Layer != LayerIndex)
+			|| (Rule.m_Index != INDEX_NONE && Rule.m_Index != Item.m_Index))
+		{
+			continue;
+		}
+
+		if (strcmp(Rule.m_Os, Item.m_Os) == 0 && strcmp(Rule.m_L0, Item.m_L0) == 0
+			&& (!Rule.m_L1 || strcmp(Rule.m_L1, Item.m_L1) == 0)
+			&& (!Rule.m_L2 || strcmp(Rule.m_L2, Item.m_L2) == 0))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAnimation& Anim, const FVector2D& Location, bool bFlip, ELayer Layer, int32 Z0, int32 Z1, bool bUseFrameZ)
 {
 	if (!Anim.IsValid())
@@ -66,6 +88,12 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 
 void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds)
 {
+	LoadMap(Device, World, Camera, WzPath, MapPath, FMapLoadOptions(), OutFootholds);
+}
+
+void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath,
+	const FMapLoadOptions& Options, TArray<FMapFootholdItem>* OutFootholds)
+{
 	FMapScene& OutScene = World.CreateMapScene();
 	OutScene.Clear();
 	Camera.ClearWorldBounds();
@@ -105,6 +133,7 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 	UE_LOG(LogRenderer, Log, L"[MapBack] load summary: loaded=%d placements=%d", LoadedBackCount, BackItems.Num());
 
 	// ── 레이어 0~7: obj(액터) + tile(씬) ──
+	int32 ExcludedObjectCount = 0;
 	for (int32 LayerIndex = 0; LayerIndex <= 7; LayerIndex++)
 	{
 		char TileSet[64];
@@ -120,6 +149,11 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 		for (int32 i = 0; i < Objs.Num(); i++)
 		{
 			const FMapObjItem& Item = Objs[i];
+			if (IsObjectExcluded(Item, LayerIndex, Options))
+			{
+				ExcludedObjectCount++;
+				continue;
+			}
 
 			FWzAnimation Anim;
 			if (!FWzMapLoader::LoadObjAnim(Device, WzPath, Item, Anim))
@@ -152,8 +186,13 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 			OutScene.AddTile(LayerIndex, Tiles[i], MoveTemp(Anim));
 		}
 	}
+	if (Options.m_ExcludedObjects.Num() > 0)
+	{
+		UE_LOG(LogRenderer, Log, L"[MapObj] exclusion rules=%d, skipped placements=%d",
+			Options.m_ExcludedObjects.Num(), ExcludedObjectCount);
+	}
 
-	// ── 발판(파싱·보관만) ──
+	// ── 발판: 수평·경사면과 방향이 있는 수직 선분을 물리 월드에 등록 ──
 	TArray<FMapFootholdItem> Footholds;
 	FWzMapLoader::LoadMapFootholds(WzPath, MapPath, Footholds);
 	OutScene.SetFootholds(Footholds);
