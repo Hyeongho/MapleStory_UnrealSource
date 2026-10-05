@@ -42,6 +42,7 @@ public:
 	inline static const FKey Down = FKey(VK_DOWN);
 	inline static const FKey Left = FKey(VK_LEFT);
 	inline static const FKey Right = FKey(VK_RIGHT);
+	inline static const FKey Alt = FKey(VK_MENU);
 	inline static const FKey SpaceBar = FKey(VK_SPACE);
 	inline static const FKey Escape = FKey(VK_ESCAPE);
 };
@@ -54,6 +55,23 @@ struct FInputAxisKeyMapping
 	float m_Scale = 1.0f;
 
 	FInputAxisKeyMapping(FName AxisName, FKey Key, float Scale = 1.0f) : m_AxisName(AxisName), m_Key(Key), m_Scale(Scale)
+	{
+	}
+};
+
+// 한 번 누르기와 떼기를 구분하는 동작 입력이다.
+enum class EInputEvent : uint8
+{
+	Pressed,
+	Released
+};
+
+struct FInputActionKeyMapping
+{
+	FName m_ActionName;
+	FKey m_Key;
+
+	FInputActionKeyMapping(FName ActionName, FKey Key) : m_ActionName(ActionName), m_Key(Key)
 	{
 	}
 };

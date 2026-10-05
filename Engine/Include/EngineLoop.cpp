@@ -253,9 +253,11 @@ bool FEngineLoop::ProcessInputMessage(UINT Message, WPARAM wParam)
 	case WM_SYSKEYUP:
 	{
 		const bool bDown = Message == WM_KEYDOWN || Message == WM_SYSKEYDOWN;
-		Input.InputKey(FKey((uint16)wParam), bDown);
-		// Alt+F4 등 시스템 단축키는 Windows 기본 처리도 수행한다.
-		return Message == WM_KEYDOWN || Message == WM_KEYUP;
+		const FKey Key((uint16)wParam);
+		Input.InputKey(Key, bDown);
+		// Alt와 함께 누른 방향키도 게임에 매핑돼 있으면 시스템 메뉴로 넘기지 않는다.
+		// Alt+F4는 예외로 Windows 기본 처리에 맡겨 창 닫기를 유지한다.
+		return Message == WM_KEYDOWN || Message == WM_KEYUP || (wParam != VK_F4 && Input.HasKeyMapping(Key));
 	}
 
 	}

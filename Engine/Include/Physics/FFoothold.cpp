@@ -3,13 +3,23 @@
 
 FFoothold::FFoothold() = default;
 
-FFoothold::FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End) : m_Id(Id), m_Start(Start), m_End(End)
+FFoothold::FFoothold(int32 Id, const FVector2D& Start, const FVector2D& End, int32 Layer, int32 Group) : m_Id(Id), m_Layer(Layer), m_Group(Group), m_Start(Start), m_End(End)
 {
 }
 
 int32 FFoothold::GetId() const
 {
 	return m_Id;
+}
+
+int32 FFoothold::GetLayer() const
+{
+	return m_Layer;
+}
+
+int32 FFoothold::GetGroup() const
+{
+	return m_Group;
 }
 
 const FVector2D& FFoothold::GetStart() const

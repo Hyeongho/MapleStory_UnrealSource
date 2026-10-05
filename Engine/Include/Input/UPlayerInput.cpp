@@ -115,6 +115,97 @@ float UPlayerInput::GetAxisValue(FName AxisName) const
 	return Value;
 }
 
+void UPlayerInput::AddActionMapping(const FInputActionKeyMapping& Mapping)
+{
+	if (Mapping.m_ActionName.IsNone() || !Mapping.m_Key.IsValid())
+	{
+		return;
+	}
+
+	for (int32 i = 0; i < m_ActionMappings.Num(); i++)
+	{
+		if (m_ActionMappings[i].m_ActionName == Mapping.m_ActionName && m_ActionMappings[i].m_Key == Mapping.m_Key)
+		{
+			return;
+		}
+	}
+
+	m_ActionMappings.Add(Mapping);
+}
+
+void UPlayerInput::RemoveActionMappings(FName ActionName)
+{
+	for (int32 i = m_ActionMappings.Num() - 1; i >= 0; i--)
+	{
+		if (m_ActionMappings[i].m_ActionName == ActionName)
+		{
+			m_ActionMappings.RemoveAt(i);
+		}
+	}
+}
+
+bool UPlayerInput::WasActionPressed(FName ActionName) const
+{
+	if (!m_bHasFocus)
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < m_ActionMappings.Num(); i++)
+	{
+		if (m_ActionMappings[i].m_ActionName == ActionName && WasKeyPressed(m_ActionMappings[i].m_Key))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPlayerInput::WasActionReleased(FName ActionName) const
+{
+	if (!m_bHasFocus)
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < m_ActionMappings.Num(); i++)
+	{
+		if (m_ActionMappings[i].m_ActionName == ActionName && WasKeyReleased(m_ActionMappings[i].m_Key))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UPlayerInput::HasKeyMapping(FKey Key) const
+{
+	if (!Key.IsValid())
+	{
+		return false;
+	}
+
+	for (int32 i = 0; i < m_AxisMappings.Num(); i++)
+	{
+		if (m_AxisMappings[i].m_Key == Key)
+		{
+			return true;
+		}
+	}
+
+	for (int32 i = 0; i < m_ActionMappings.Num(); i++)
+	{
+		if (m_ActionMappings[i].m_Key == Key)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool UPlayerInput::IsKeyDown(FKey Key) const
 {
 	return Key.IsValid() && m_Keys[Key.GetCode()].m_bDown;

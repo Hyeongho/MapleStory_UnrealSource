@@ -20,9 +20,16 @@ public:
 	void SetVelocity(const FVector2D& Velocity);
 	const FVector2D& GetVelocity() const;
 
+	// 접지 중인 강체에만 위쪽 초기 속도를 준다. 성공하면 즉시 접지 상태를 해제한다.
+	bool TryJump(float Speed);
+
+	// 하단 점프 요청. 실제 착지 가능 높이는 물리 월드가 다음 Tick에서 검사한다.
+	void RequestDropThroughFoothold();
+
 	// 중력 / 낙하 설정
 	void SetGravityScale(float Scale);
 	void SetMaxFallSpeed(float Speed);
+	void SetMaxDropHeight(float Height);
 
 	// 로프·사다리 이동 입력과 속도
 	// Direction은 -1(위)부터 1(아래)까지이며, 0이면 영역 안에서 멈춘다.
@@ -44,6 +51,7 @@ protected:
 	FVector2D m_Velocity;
 	float m_GravityScale = 1.0f;
 	float m_MaxFallSpeed = 2000.0f;
+	float m_MaxDropHeight = 300.0f;
 	float m_ClimbInput = 0.0f;
 	float m_ClimbSpeed = 100.0f;
 
@@ -56,4 +64,12 @@ private:
 	bool m_bIsGrounded = false;
 	bool m_bIsClimbing = false;
 	int32 m_CurrentFootholdId = INDEX_NONE;
+
+	// 점프 중에도 직전에 밟은 발판 그룹을 우선 판정하는 데 사용한다.
+	int32 m_LastFootholdId = INDEX_NONE;
+
+	// 하단 점프 중에는 이 단방향 발판의 지지·충돌 판정만 건너뛴다.
+	int32 m_IgnoredFootholdId = INDEX_NONE;
+
+	bool m_bDropThroughRequested = false;
 };

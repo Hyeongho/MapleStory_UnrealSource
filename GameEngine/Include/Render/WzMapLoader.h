@@ -94,14 +94,19 @@ struct FMapReactorItem
 };
 
 // 발판 원본 그래프 — id/layer/group/prev/next/piece를 전부 보존한다.
-// 물리 연동(FPhysicsWorld::AddFoothold)은 이번 범위 밖, 파싱·보관까지만.
+// 맵 씬은 수평·경사 발판과 수직 선분의 방향·그룹을 물리에 등록한다.
 struct FMapFootholdItem
 {
 	int32 m_Id = 0;
 	int32 m_Layer = 0;
 	int32 m_Group = 0;
-	int32 m_X1 = 0, m_Y1 = 0, m_X2 = 0, m_Y2 = 0;
-	int32 m_Prev = 0, m_Next = 0, m_Piece = 0;
+	int32 m_X1 = 0;
+	int32 m_Y1 = 0;
+	int32 m_X2 = 0;
+	int32 m_Y2 = 0;
+	int32 m_Prev = 0;
+	int32 m_Next = 0;
+	int32 m_Piece = 0;
 };
 
 // ── 애니메이션(프레임 목록) ─────────────────────────────────────────────
@@ -112,13 +117,19 @@ struct FMapFootholdItem
 struct FNativeAnimFrame
 {
 	int32 m_PixelOffset = 0;
-	int32 m_Width = 0, m_Height = 0;
-	int32 m_OriginX = 0, m_OriginY = 0;
+	int32 m_Width = 0;
+	int32 m_Height = 0;
+	int32 m_OriginX = 0;
+	int32 m_OriginY = 0;
 	int32 m_Z = 0;
 	int32 m_DelayMs = 120;
-	int32 m_A0 = 255, m_A1 = 255;
+	int32 m_A0 = 255;
+	int32 m_A1 = 255;
 	int32 m_Blend = 0;
-	int32 m_LtX = 0, m_LtY = 0, m_RbX = 0, m_RbY = 0;
+	int32 m_LtX = 0;
+	int32 m_LtY = 0;
+	int32 m_RbX = 0;
+	int32 m_RbY = 0;
 };
 
 struct FNativeAnimMeta
@@ -126,9 +137,14 @@ struct FNativeAnimMeta
 	int32 m_FrameCount = 0;
 	int32 m_Repeat = 0;
 	int32 m_IsSpine = 0;
-	int32 m_HasFlowX = 0, m_FlowX = 0;
-	int32 m_HasFlowY = 0, m_FlowY = 0;
-	int32 m_BoundsX = 0, m_BoundsY = 0, m_BoundsW = 0, m_BoundsH = 0;
+	int32 m_HasFlowX = 0;
+	int32 m_FlowX = 0;
+	int32 m_HasFlowY = 0;
+	int32 m_FlowY = 0;
+	int32 m_BoundsX = 0;
+	int32 m_BoundsY = 0;
+	int32 m_BoundsW = 0;
+	int32 m_BoundsH = 0;
 	int32 m_PixelBytes = 0;
 };
 
@@ -150,10 +166,15 @@ struct FWzAnimation
 	TArray<FWzAnimFrame> m_Frames;
 	bool m_bRepeat = true;
 	bool m_bIsSpine = false; // true면 이번 범위 밖 — 호출자가 건너뛴다
-	bool m_bHasFlowX = false, m_bHasFlowY = false;
-	int32 m_FlowX = 0, m_FlowY = 0;
+	bool m_bHasFlowX = false;
+	bool m_bHasFlowY = false;
+	int32 m_FlowX = 0;
+	int32 m_FlowY = 0;
 	// 전 프레임 (-origin, size)의 합집합 — back의 cx/cy 기본값·타일 컬링용.
-	int32 m_BoundsX = 0, m_BoundsY = 0, m_BoundsW = 0, m_BoundsH = 0;
+	int32 m_BoundsX = 0;
+	int32 m_BoundsY = 0;
+	int32 m_BoundsW = 0;
+	int32 m_BoundsH = 0;
 
 	bool IsValid() const
 	{
