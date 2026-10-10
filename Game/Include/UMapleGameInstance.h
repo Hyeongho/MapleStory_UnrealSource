@@ -20,6 +20,8 @@ public:
 	// 게임 수명
 	virtual bool Init(UEngine& Engine) override;
 	virtual void Shutdown() override;
+	// 물리 갱신이 끝난 실제 이동 상태로 플레이어 애니메이션을 선택한다.
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 	// 게임별 키 설정과 동작 바인딩을 담당하는 컨트롤러를 생성한다.

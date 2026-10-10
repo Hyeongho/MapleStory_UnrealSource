@@ -8,6 +8,7 @@
 #include "Render/FCamera2D.h"
 #include "Timer/FTimerManager.h"
 #include "World/UWorld.h"
+#include "Physics/PhysicsWorld.h"
 #include "Object/APlayerController.h"
 
 UEngine* GEngine = nullptr;
@@ -171,6 +172,12 @@ void UEngine::Render()
 	m_pWorld->Render(*m_pRenderQueue);
 	m_pSwapChain->Clear(m_ClearColor);
 	m_pRenderQueue->Flush(*m_pSpriteBatch);
+#ifdef _DEBUG
+	// 맵과 액터 위에 충돌 범위를 겹쳐 그리고, UI는 그 뒤에 화면 좌표로 출력한다.
+	m_pSpriteBatch->Begin(m_pCamera->GetViewMatrix());
+	m_pWorld->GetPhysicsWorld().DrawDebug(*m_pSpriteBatch, *m_pCamera);
+	m_pSpriteBatch->End();
+#endif
 	m_pRenderQueue->FlushUI(*m_pSpriteBatch);
 	m_pSwapChain->Present(m_SyncInterval);
 }

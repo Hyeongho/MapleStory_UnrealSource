@@ -6,7 +6,7 @@
 
 class FDXDevice;
 
-// WzNativeLib.dll의 wz_map_read_info/back/layer/footholds export 4종을
+// WzNativeLib.dll의 wz_map_read_* 배치 정보 API를
 // 감싼 정적 로더 — WzTextureLoader와 동일한 목적(WZ 데이터를 엔진
 // 컨테이너로 변환)이지만 대상이 텍스처가 아니라 맵 구조 데이터라 별도
 // 클래스로 분리했다. C# 쪽 [StructLayout(Pack=4)] 블리터블 구조체와
@@ -104,6 +104,20 @@ struct FMapFootholdItem
 	int32 m_Prev = 0, m_Next = 0, m_Piece = 0;
 };
 
+// 로프·사다리 배치 원본. uf는 상단 이탈 여부, page는 매달린 캐릭터의 맵 레이어다.
+// piece는 원본 배치 정보로 보존하며 발판 ID로 사용하지 않는다.
+struct FMapLadderRopeItem
+{
+	int32 m_Index = 0;
+	int32 m_X = 0, m_Y1 = 0, m_Y2 = 0;
+	int32 m_L = 0; // 0은 로프, 1은 사다리
+	int32 m_Uf = 0;
+	int32 m_Page = 0;
+	int32 m_Piece = 0;
+};
+
+static_assert(sizeof(FMapLadderRopeItem) == 32, "FMapLadderRopeItem must match the DLL layout");
+
 // ── 애니메이션(프레임 목록) ─────────────────────────────────────────────
 //
 // 브리지의 NativeAnimFrame/NativeAnimMeta와 1:1 대응. 픽셀은 프레임마다
@@ -186,6 +200,9 @@ public:
 	// foothold\{0~7}\{group}\{id} 전체를 평탄화한 배열. 수직 선분 포함,
 	// 파싱 단계에서는 아무것도 거르지 않는다.
 	static void LoadMapFootholds(const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>& OutFootholds);
+
+	// ladderRope 항목. 노드가 없으면 빈 배열, 구버전 DLL이면 경고 후 빈 배열을 반환한다.
+	static void LoadMapLadderRopes(const char* WzPath, const char* MapPath, TArray<FMapLadderRopeItem>& OutLadderRopes);
 
 	static void LoadMapPortals(const char* WzPath, const char* MapPath, TArray<FMapPortalItem>& OutPortals);
 	static void LoadMapReactors(const char* WzPath, const char* MapPath, TArray<FMapReactorItem>& OutReactors);

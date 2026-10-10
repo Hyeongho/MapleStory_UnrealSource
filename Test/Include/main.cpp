@@ -1,6 +1,7 @@
 ﻿#include "EnginePCH.h"
 #include "Object/UObject.h"
 #include "Object/AActor.h"
+#include "Object/ACharacter.h"
 #include "Object/UActorComponent.h"
 #include "Object/USceneComponent.h"
 #include "Core/Memory/FMemory.h"
@@ -46,6 +47,8 @@
 #include "Physics/UCircleCollision.h"
 #include "Physics/URigidbody.h"
 #include "World/UWorld.h"
+#include "World/FMapScene.h"
+#include "Render/FCamera2D.h"
 #include "Animation/UAnimStateMachine.h"
 #include "Animation/UAnimNotify.h"
 
@@ -2617,13 +2620,114 @@ int main()
 	{
 		const int32 ClimbFailuresBefore = g_TestFailCount;
 		{
+			// 몸이 하단과 겹치면 발이 끝점 아래에 있어도 위 입력으로 잡는다.
+			UWorld World;
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			const bool bAddedFloor = World.GetPhysicsWorld().AddFoothold(FFoothold(90, FVector2D(-50, 70), FVector2D(50, 70)));
+			check(bAddedFloor);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 7, 46, 12, 24);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(100);
+			World.Tick(0.01f);
+			check(Body->IsGrounded());
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 0));
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36)); // 발은 70에서 60으로 이동, 하단으로 순간 이동하지 않음
+			Body->SetClimbInput(0);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36));
+			Body->SetClimbInput(-1);
+			World.Tick(0.2f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 16));
+		}
+		for (int32 TypeIndex = 0; TypeIndex < 2; TypeIndex++)
+		{
+			// 하단 아래에서 잡고 조금만 오른 뒤에도 아래 입력으로 바닥에 내려와야 한다.
+			UWorld World;
+			UClimbableComponent* Area = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Area->SetClimbableType(TypeIndex == 0 ? EClimbableType::Ladder : EClimbableType::Rope);
+			Area->SetBoxExtent(FVector2D(6, 50));
+			const bool bAddedFloor = World.GetPhysicsWorld().AddFoothold(FFoothold(94, FVector2D(-50, 70), FVector2D(50, 70)));
+			check(bAddedFloor);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 7, 46, 12, 24);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(100);
+			World.Tick(0.01f);
+			check(Body->IsGrounded());
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36)); // 발 60, 하단 50
+			Body->SetClimbInput(0);
+			World.Tick(0.05f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36));
+			Body->SetClimbInput(1);
+			World.Tick(0.01f);
+			check(!Body->IsClimbing() && !Body->IsGrounded());
+			check(Box->GetWorldCenter().m_Y > 36 && Box->GetWorldCenter().m_Y < 46); // 바닥으로 순간 이동하지 않음
+			Body->SetClimbInput(1);
+			World.Tick(0.2f);
+			check(!Body->IsClimbing() && Body->IsGrounded() && Body->GetCurrentFootholdId() == 94);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 46));
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 46));
+
+			// 발이 실제 하단 위까지 올라간 뒤에는 기존 하단 이탈과 낙하를 유지한다.
+			Body->SetClimbInput(-1);
+			World.Tick(0.3f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 16));
+			Body->SetClimbInput(1);
+			World.Tick(0.4f);
+			check(!Body->IsClimbing() && Body->IsGrounded() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 46));
+		}
+		{
+			// 발 위치와 같은 높이의 정적 바닥도 하단 아래에서 이탈할 수 있는 지지면이다.
+			UWorld World;
+			UClimbableComponent* Rope = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Rope->SetClimbableType(EClimbableType::Rope);
+			Rope->SetBoxExtent(FVector2D(6, 50));
+			AddPhysicsTestBox(World, 0, 75, 50, 5);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 46, 12, 24);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(0);
+			Body->SetClimbInput(-1);
+			World.Tick(0.01f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 46));
+			Body->SetClimbInput(1);
+			World.Tick(0.02f);
+			check(!Body->IsClimbing() && Body->IsGrounded() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 46));
+		}
+		{
+			// 아래에 바닥이 없는 경우에는 하단 아래에서 잡았어도 임의로 낙하시키지 않는다.
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			// 하단보다 아래라도 현재 발보다 위에 있는 발판은 착지 대상으로 쓰지 않는다.
+			const bool bAddedAbove = World.GetPhysicsWorld().AddFoothold(FFoothold(95, FVector2D(-50, 55), FVector2D(50, 55)));
+			const bool bAddedEndpoint = World.GetPhysicsWorld().AddFoothold(FFoothold(96, FVector2D(-50, 52), FVector2D(50, 52)));
+			check(bAddedAbove && bAddedEndpoint);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 46, 12, 24);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbSpeed(100);
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36));
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 36));
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+		}
+		{
 			UWorld World;
 			AActor* LadderActor = World.SpawnActor<AActor>();
 			UClimbableComponent* Ladder = LadderActor->AddComponent<UClimbableComponent>();
 			Ladder->SetBoxExtent(FVector2D(6, 50));
 			check(Ladder->GetClimbableType() == EClimbableType::Ladder);
 			check(Ladder->GetCollisionObjectType() == ECollisionChannel::Trigger);
-			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 7, 0, 5, 5);
 			URigidbody* Body = AddPhysicsTestBody(*Box);
 			TArray<FOverlapResult> Overlaps;
 			World.GetPhysicsWorld().FindOverlaps(Overlaps);
@@ -2632,6 +2736,7 @@ int main()
 			Body->SetClimbInput(-1);
 			World.Tick(0.2f);
 			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_X, 0)); // 진입 시 사다리 중심으로 정렬
 			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -20));
 			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, -100));
 			Body->SetClimbInput(0);
@@ -2643,14 +2748,21 @@ int main()
 			Body->StopClimbing();
 			World.Tick(0.1f);
 			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y > 0);
-			SetPhysicsTestPosition(*Box, 0, 45);
+			SetPhysicsTestPosition(*Box, 0, 40);
 			Body->SetClimbInput(1);
 			World.Tick(0.2f);
-			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y > 50); // 아래쪽 이탈 시 중력 복귀
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 45)); // 발이 하단 50에서 멈춤
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+			World.Tick(0.2f);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 45)); // 계속 눌러도 범위를 벗어나지 않음
 			SetPhysicsTestPosition(*Box, 0, -45);
 			Body->SetClimbInput(-1);
 			World.Tick(0.2f);
-			check(!Body->IsClimbing() && Box->GetWorldCenter().m_Y < -45); // 위쪽 이탈
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -55)); // 상단 발판이 없으면 멈춤
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -45)); // 끝에서 반대 방향 이동
 		}
 		{
 			UWorld World;
@@ -2708,7 +2820,495 @@ int main()
 			World.Tick(0.2f);
 			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -13));
 		}
+		{
+			UWorld World;
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			Ladder->SetCanExitAtTop(false);
+			const bool bAddedTop = World.GetPhysicsWorld().AddFoothold(FFoothold(31, FVector2D(-30, -52), FVector2D(30, -52)));
+			const bool bAddedBottom = World.GetPhysicsWorld().AddFoothold(FFoothold(32, FVector2D(-30, 52), FVector2D(30, 52)));
+			check(bAddedTop && bAddedBottom);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 4, 30, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(-1);
+			World.Tick(1.2f);
+			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -55)); // uf=0이면 상단 발판이 있어도 정지
+			Ladder->SetCanExitAtTop(true);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && Body->IsGrounded() && Body->GetCurrentFootholdId() == 31);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -57)); // WZ 끝점보다 2픽셀 위의 실제 발판에 착지
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, -57));
+			Body->SetClimbInput(1);
+			World.Tick(1.2f);
+			check(!Body->IsClimbing() && Body->IsGrounded() && Body->GetCurrentFootholdId() == 32);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 47)); // 내려오면 하단 발판으로 이탈
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 47));
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && Box->GetWorldCenter().m_Y < 47); // 하단에서는 위 입력으로 재진입
+		}
+		{
+			UWorld World;
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			AddPhysicsTestBox(World, 0, 55, 30, 3);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 30, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(1);
+			World.Tick(0.4f);
+			check(!Body->IsClimbing() && Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 47)); // 일반 정적 바닥에도 착지
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 47));
+		}
+		{
+			// 하단 점프 제한보다 먼 발판도 사다리에서 내려온 뒤의 낙하 착지면으로 사용할 수 있다.
+			UWorld World;
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			const bool bAdded = World.GetPhysicsWorld().AddFoothold(FFoothold(91, FVector2D(-50, 450), FVector2D(50, 450)));
+			check(bAdded);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 40, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(1);
+			World.Tick(0.04f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 44)); // 아직 하단에 도착하지 않았으면 유지
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && !Body->IsGrounded());
+			check(Box->GetWorldCenter().m_Y > 45 && Box->GetWorldCenter().m_Y < 445); // 바닥으로 순간 이동하지 않음
+			check(Body->GetVelocity().m_Y > 0 && Body->GetCurrentFootholdId() == INDEX_NONE);
+			Body->SetClimbInput(1);
+			World.Tick(0.02f);
+			check(!Body->IsClimbing()); // 아래 입력을 유지해도 떨어지는 중에 다시 매달리지 않음
+			World.Tick(1.0f);
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 91);
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 445));
+		}
+		{
+			// 로프 하단 아래의 일반 정적 Box 바닥에도 중력으로 낙하해 착지한다.
+			UWorld World;
+			UClimbableComponent* Rope = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Rope->SetClimbableType(EClimbableType::Rope);
+			Rope->SetBoxExtent(FVector2D(6, 50));
+			AddPhysicsTestBox(World, 0, 160, 30, 5);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 40, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && !Body->IsGrounded());
+			check(Box->GetWorldCenter().m_Y > 45 && Box->GetWorldCenter().m_Y < 150);
+			World.Tick(1.0f);
+			check(Body->IsGrounded() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 150));
+		}
+		{
+			// 옆 발판, 응답 마스크가 다른 발판, Trigger, 비활성 바닥은 낙하 허용 근거가 아니다.
+			UWorld World;
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetBoxExtent(FVector2D(6, 50));
+			const bool bAddedSide = World.GetPhysicsWorld().AddFoothold(FFoothold(92, FVector2D(30, 450), FVector2D(50, 450)));
+			FFoothold MaskedFloor(93, FVector2D(-50, 450), FVector2D(50, 450));
+			MaskedFloor.SetCollisionMask(CollisionChannelMask(ECollisionChannel::Enemy));
+			const bool bAddedMasked = World.GetPhysicsWorld().AddFoothold(MaskedFloor);
+			check(bAddedSide && bAddedMasked);
+			AddPhysicsTestBox(World, 0, 160, 30, 5)->SetCollisionObjectType(ECollisionChannel::Trigger);
+			AddPhysicsTestBox(World, 0, 250, 30, 5)->SetCollisionEnabled(false);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 40, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(1);
+			World.Tick(1.0f);
+			check(Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 45) && IsPhysicsTestNear(Body->GetVelocity().m_Y, 0));
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_Y, 35));
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UClimbableComponent* Ladder = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Ladder->SetRelativeTransform(FTransform2D(FVector2D(20, 0), 0.0f, FVector2D::One));
+			AddPhysicsTestBox(World, 16, 0, 1, 30);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 10, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_X, 10)); // 중심 정렬로 벽을 통과하지 않음
+		}
+		{
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			AActor* FirstActor = World.SpawnActor<AActor>();
+			FirstActor->AddComponent<UClimbableComponent>()->SetBoxExtent(FVector2D(6, 50));
+			UClimbableComponent* Second = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Second->SetBoxExtent(FVector2D(6, 50));
+			SetPhysicsTestPosition(*Second, 8, 0);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 2, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_X, 0));
+			World.DestroyActor(FirstActor);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing()); // 겹친 다른 사다리가 있어도 기존 영역 삭제 시 먼저 이탈
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(Body->IsClimbing() && IsPhysicsTestNear(Box->GetWorldCenter().m_X, 8));
+		}
+		for (int32 TypeIndex = 0; TypeIndex < 2; TypeIndex++)
+		{
+			// 양쪽 영역에서 점프 이탈, 수평 입력, 중력 복원, 공중 추가 점프 차단을 확인한다.
+			UWorld World;
+			const EClimbableType Type = TypeIndex == 0 ? EClimbableType::Ladder : EClimbableType::Rope;
+			UClimbableComponent* Area = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Area->SetClimbableType(Type);
+			Area->SetBoxExtent(FVector2D(6, 200));
+			ACharacter* Character = World.SpawnActor<ACharacter>();
+			Character->EnablePhysics(FVector2D(5, 5));
+			Character->AddMovementInput(FVector2D(0, -1));
+			World.Tick(0.01f);
+			URigidbody* Body = Character->GetComponent<URigidbody>();
+			check(Body->IsClimbing() && Body->GetClimbableType() == Type);
+			const bool bInvalidJump = Body->TryJump(0);
+			check(!bInvalidJump && Body->IsClimbing());
+
+			const float DirectionX = TypeIndex == 0 ? -1.0f : 1.0f;
+			const float StartY = Character->GetLocation().m_Y;
+			Character->AddMovementInput(FVector2D(DirectionX, -1));
+			Character->Jump();
+			check(!Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Body->GetVelocity().m_Y, -420));
+			const bool bExtraJump = Body->TryJump(420);
+			check(!bExtraJump); // 공중 추가 점프는 이번 작업에서 추가하지 않는다.
+			World.Tick(0.05f);
+			check(!Body->IsClimbing() && !Body->IsGrounded());
+			check(IsPhysicsTestNear(Character->GetLocation().m_X, DirectionX * 10));
+			check(IsPhysicsTestNear(Body->GetVelocity().m_X, DirectionX * 200));
+			check(Character->GetLocation().m_Y < StartY);
+			check(Body->GetVelocity().m_Y < 0 && Body->GetVelocity().m_Y > -420);
+		}
+		{
+			// 상하 입력을 계속 유지해도 바로 잡지 않고, 지연 후에는 다시 잡을 수 있다.
+			UWorld World;
+			World.GetPhysicsWorld().SetGravity(0);
+			UClimbableComponent* Rope = World.SpawnActor<AActor>()->AddComponent<UClimbableComponent>();
+			Rope->SetClimbableType(EClimbableType::Rope);
+			Rope->SetBoxExtent(FVector2D(6, 200));
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, 0, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetClimbReentryDelay(0.2f);
+			Body->SetClimbInput(-1);
+			World.Tick(0.01f);
+			check(Body->IsClimbing());
+			const bool bJumped = Body->TryJump(100);
+			check(bJumped);
+			Body->SetClimbInput(-1);
+			World.Tick(0.1f);
+			check(!Body->IsClimbing() && Box->Overlaps(*Rope));
+			Body->SetVelocity(FVector2D::Zero);
+			World.Tick(0.15f);
+			check(Body->IsClimbing() && Body->GetClimbableType() == EClimbableType::Rope);
+
+			// 시뮬레이션을 다시 켤 때는 이전 재진입 대기 시간을 남기지 않는다.
+			const bool bJumpedAgain = Body->TryJump(100);
+			check(bJumpedAgain);
+			Body->SetSimulatePhysics(false);
+			Body->SetSimulatePhysics(true);
+			Body->SetVelocity(FVector2D::Zero);
+			Body->SetClimbInput(-1);
+			World.Tick(0.01f);
+			check(Body->IsClimbing());
+		}
 		wprintf(L"[Physics] Climbable areas: %d failure(s)\n", g_TestFailCount - ClimbFailuresBefore);
+	}
+
+	// Phase 10 — 코요테 타임과 첫 점프 기회 소모
+	{
+		const int32 CoyoteFailuresBefore = g_TestFailCount;
+		for (int32 CaseIndex = 0; CaseIndex < 3; CaseIndex++)
+		{
+			// 허용 시간 안, 시간 만료, 기능 비활성 상태에서 실제 발판 끝을 벗어난다.
+			UWorld World;
+			const bool bAddedFloor = World.GetPhysicsWorld().AddFoothold(FFoothold(100, FVector2D(-20, 0), FVector2D(0, 0)));
+			check(bAddedFloor);
+			UBoxCollision* Box = AddPhysicsTestBox(World, -1, -5, 1, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			Body->SetCoyoteTime(CaseIndex == 2 ? 0.0f : 0.1f);
+			World.Tick(0.01f);
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 100);
+			Body->SetVelocity(FVector2D(100, 0));
+			World.Tick(0.02f);
+			check(Box->GetWorldCenter().m_X > 0 && !Body->IsGrounded());
+			check(Body->GetCurrentFootholdId() == INDEX_NONE);
+			Body->SetVelocity(FVector2D(0, Body->GetVelocity().m_Y));
+			World.Tick(CaseIndex == 1 ? 0.2f : 0.02f);
+			const bool bJumped = Body->TryJump(420);
+			check(bJumped == (CaseIndex == 0));
+			check(!Body->IsGrounded()); // 허용 시간 동안 접지 상태를 참으로 꾸미지 않는다.
+			if (bJumped)
+			{
+				check(IsPhysicsTestNear(Body->GetVelocity().m_Y, -420));
+				const bool bExtraJump = Body->TryJump(420);
+				check(!bExtraJump);
+				World.Tick(0.01f);
+				const bool bExtraJumpAfterTick = Body->TryJump(420);
+				check(!bExtraJumpAfterTick);
+
+				// 다시 착지하면 첫 점프를 허용하되 시뮬레이션 재시작에는 남기지 않는다.
+				SetPhysicsTestPosition(*Box, -1, -5);
+				Body->SetVelocity(FVector2D::Zero);
+				World.Tick(0.01f);
+				check(Body->IsGrounded());
+				const bool bGroundJump = Body->TryJump(420);
+				check(bGroundJump);
+				Body->SetSimulatePhysics(false);
+				Body->SetSimulatePhysics(true);
+				const bool bJumpAfterRestart = Body->TryJump(420);
+				check(!bJumpAfterRestart);
+			}
+		}
+		{
+			// 하단 점프는 의도적인 이탈이므로 코요테 타임으로 다시 점프할 수 없다.
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			bool bAddedFloor = Physics.AddFoothold(FFoothold(101, FVector2D(-20, 0), FVector2D(20, 0)));
+			check(bAddedFloor);
+			bAddedFloor = Physics.AddFoothold(FFoothold(102, FVector2D(-20, 100), FVector2D(20, 100)));
+			check(bAddedFloor);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, -5, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			World.Tick(0.02f);
+			check(Body->IsGrounded() && Body->GetCurrentFootholdId() == 101);
+			Body->RequestDropThroughFoothold();
+			World.Tick(0.01f);
+			check(!Body->IsGrounded() && Body->GetVelocity().m_Y > 0);
+			const bool bJumpAfterDrop = Body->TryJump(420);
+			check(!bJumpAfterDrop);
+		}
+		{
+			// 맵 발판을 제거한 뒤에는 이전 맵에서 얻은 허용 시간을 사용하지 않는다.
+			UWorld World;
+			FPhysicsWorld& Physics = World.GetPhysicsWorld();
+			const bool bAddedFloor = Physics.AddFoothold(FFoothold(103, FVector2D(-20, 0), FVector2D(20, 0)));
+			check(bAddedFloor);
+			UBoxCollision* Box = AddPhysicsTestBox(World, 0, -5, 5, 5);
+			URigidbody* Body = AddPhysicsTestBody(*Box);
+			World.Tick(0.02f);
+			check(Body->IsGrounded());
+			Physics.ClearFootholds();
+			const bool bJumpAfterClear = Body->TryJump(420);
+			check(!bJumpAfterClear && !Body->IsGrounded());
+		}
+		wprintf(L"[Physics] Coyote time: %d failure(s)\n", g_TestFailCount - CoyoteFailuresBefore);
+	}
+
+	// 액터 ID로 실제 로프·사다리 영역을 조회하고, 삭제 후에도 다른 액터와 혼동하지 않는다.
+	{
+		UWorld World;
+		AActor* pFirstActor = World.SpawnActor<AActor>();
+		pFirstActor->AddComponent<UBoxCollision>();
+		AActor* pClimbableActor = World.SpawnActor<AActor>();
+		UClimbableComponent* pArea = pClimbableActor->AddComponent<UClimbableComponent>();
+		const uint32 FirstId = pFirstActor->GetActorId();
+		const uint32 ClimbableId = pClimbableActor->GetActorId();
+		check(FirstId != 0 && ClimbableId != 0 && FirstId != ClimbableId);
+		check(World.FindActorById(0) == nullptr);
+		check(World.FindActorById(FirstId) == pFirstActor);
+		const AActor* pFoundActor = World.FindActorById(ClimbableId);
+		check(pFoundActor == pClimbableActor);
+		if (pFoundActor)
+		{
+			check(pFoundActor->GetComponent<UClimbableComponent>() == pArea);
+		}
+		World.DestroyActor(pFirstActor);
+		check(World.FindActorById(FirstId) == nullptr);
+		check(World.FindActorById(ClimbableId) == pClimbableActor);
+		AActor* pNewActor = World.SpawnActor<AActor>();
+		check(pNewActor->GetActorId() != 0 && pNewActor->GetActorId() != FirstId && pNewActor->GetActorId() != ClimbableId);
+		check(World.FindActorById(ClimbableId) == pClimbableActor);
+	}
+
+	// 로프·사다리에 매달린 캐릭터의 맵 레이어와 실제 렌더 큐 순서
+	{
+		const int32 LayerFailuresBefore = g_TestFailCount;
+		for (int32 TypeIndex = 0; TypeIndex < 2; TypeIndex++)
+		{
+			FTestTextureView CharacterTexture;
+			FTestTextureView ClimbableTexture;
+			FTestTextureView BackgroundObjectTexture;
+			FTestTextureView ForegroundObjectTexture;
+			{
+				UWorld World;
+				FMapScene& Scene = World.CreateMapScene();
+				TArray<FMapFootholdItem> Footholds;
+				FMapFootholdItem Floor;
+				Floor.m_Id = 120;
+				Floor.m_Layer = 1;
+				Floor.m_X1 = -50; Floor.m_X2 = 50;
+				Floor.m_Y1 = 80; Floor.m_Y2 = 80;
+				Footholds.Add(Floor);
+				Scene.SetFootholds(Footholds);
+
+				TArray<FMapLadderRopeItem> LadderRopes;
+				FMapLadderRopeItem Invalid;
+				Invalid.m_Index = 99;
+				Invalid.m_Page = 7;
+				LadderRopes.Add(Invalid); // 무효 배치를 생략해도 활성 영역과 원본 배치가 맞아야 한다.
+				FMapLadderRopeItem Area;
+				Area.m_Index = 7;
+				Area.m_L = TypeIndex == 0 ? 1 : 0;
+				Area.m_Y1 = -50; Area.m_Y2 = 50;
+				Area.m_Page = 3;
+				Area.m_Piece = 12345; // 발판 ID로 해석하면 레이어를 찾을 수 없는 값
+				LadderRopes.Add(Area);
+				FMapLadderRopeItem Other = Area;
+				Other.m_Index = 8;
+				Other.m_X = 4;
+				Other.m_Page = 6;
+				LadderRopes.Add(Other);
+				Scene.SetLadderRopes(LadderRopes);
+
+				ACharacter* pCharacter = World.SpawnActor<ACharacter>();
+				pCharacter->SetLocation(FVector2D(0, 80));
+				pCharacter->EnablePhysics(FVector2D(12, 24));
+				pCharacter->GetSpriteComponent()->SetTexture(&CharacterTexture);
+				URigidbody* pBody = pCharacter->GetComponent<URigidbody>();
+				World.Tick(0.01f);
+				check(pBody->IsGrounded() && pCharacter->GetMapLayer() == 1);
+				check(pBody->GetClimbableActorId() == 0);
+				pCharacter->AddMovementInput(FVector2D(0, -1));
+				World.Tick(0.1f);
+				check(pBody->IsClimbing() && pBody->GetCurrentFootholdId() == INDEX_NONE);
+				check(pCharacter->GetMapLayer() == 3); // 아래쪽 발판 레이어 1에서 로프·사다리 레이어 3으로 전환
+				const AActor* pActiveActor = World.FindActorById(pBody->GetClimbableActorId());
+				check(pActiveActor != nullptr);
+				if (pActiveActor)
+				{
+					const UClimbableComponent* pActiveArea = pActiveActor->GetComponent<UClimbableComponent>();
+					check(pActiveArea && pActiveArea->GetClimbableId() == 7); // 겹친 다른 영역의 page를 사용하지 않음
+				}
+
+				FRenderQueue Queue;
+				World.Render(Queue);
+				FRenderQueueEntry ClimbableDraw;
+				ClimbableDraw.m_pTexture = &ClimbableTexture;
+				ClimbableDraw.m_Layer = MakeMapObjLayer(3);
+				ClimbableDraw.m_Z0 = 100000; // 오브젝트 z가 커도 같은 레이어의 Life보다 먼저 그려야 함
+				Queue.Submit(ClimbableDraw);
+				FRenderQueueEntry BackgroundDraw;
+				BackgroundDraw.m_pTexture = &BackgroundObjectTexture;
+				BackgroundDraw.m_Layer = MakeMapObjLayer(1);
+				Queue.Submit(BackgroundDraw);
+				FRenderQueueEntry ForegroundDraw;
+				ForegroundDraw.m_pTexture = &ForegroundObjectTexture;
+				ForegroundDraw.m_Layer = MakeMapObjLayer(4);
+				ForegroundDraw.m_Z0 = -100000;
+				Queue.Submit(ForegroundDraw);
+				const TArray<FRenderQueueEntry>& Sorted = Queue.GetSortedEntries();
+				check(Sorted.Num() == 4);
+				if (Sorted.Num() == 4)
+				{
+					check(Sorted[0].m_pTexture == &BackgroundObjectTexture);
+					check(Sorted[1].m_pTexture == &ClimbableTexture);
+					check(Sorted[2].m_pTexture == &CharacterTexture && Sorted[2].m_Layer == MakeMapLifeLayer(3));
+					check(Sorted[3].m_pTexture == &ForegroundObjectTexture);
+				}
+
+				pCharacter->Jump();
+				World.Tick(0.01f);
+				check(!pBody->IsClimbing() && pBody->GetClimbableActorId() == 0);
+				check(pCharacter->GetMapLayer() == 3); // 점프 이탈 중에는 마지막 레이어 유지
+				World.Tick(1.0f);
+				check(pBody->IsGrounded() && pCharacter->GetMapLayer() == 1);
+				pCharacter->AddMovementInput(FVector2D(0, -1));
+				World.Tick(0.1f);
+				check(pBody->IsClimbing() && pCharacter->GetMapLayer() == 3);
+				pCharacter->AddMovementInput(FVector2D(0, 1));
+				World.Tick(0.4f);
+				check(!pBody->IsClimbing() && pBody->IsGrounded() && pCharacter->GetMapLayer() == 1);
+				Scene.Clear();
+				check(pCharacter->GetMapLayer() == INDEX_NONE);
+			}
+			check(CharacterTexture.m_Refs == 0);
+		}
+		wprintf(L"[Rendering] Climbing character layer: %d failure(s)\n", g_TestFailCount - LayerFailuresBefore);
+	}
+
+	// VR이 없는 맵의 경계 계산과 카메라 추적 제한
+	{
+		const int32 CameraFailuresBefore = g_TestFailCount;
+		{
+			UWorld World;
+			FMapScene& Scene = World.CreateMapScene();
+			FRect Bounds;
+			bool bHasBounds = Scene.CalculateCameraBounds(Bounds);
+			check(!bHasBounds);
+			TArray<FMapFootholdItem> Footholds;
+			FMapFootholdItem Slope;
+			Slope.m_Id = 110;
+			Slope.m_X1 = -100; Slope.m_Y1 = 0;
+			Slope.m_X2 = 200; Slope.m_Y2 = 100;
+			Footholds.Add(Slope);
+			FMapFootholdItem Vertical;
+			Vertical.m_Id = 111;
+			Vertical.m_X1 = 20; Vertical.m_Y1 = 300;
+			Vertical.m_X2 = 20; Vertical.m_Y2 = 50;
+			Footholds.Add(Vertical);
+			Scene.SetFootholds(Footholds);
+			bHasBounds = Scene.CalculateCameraBounds(Bounds);
+			check(bHasBounds && Bounds == FRect(-100, -250, 200, 500));
+
+			// 발판 밖의 로프 끝점까지 포함하고, 이전 맵 경계가 남지 않게 한다.
+			TArray<FMapLadderRopeItem> LadderRopes;
+			FMapLadderRopeItem Rope;
+			Rope.m_Index = 1;
+			Rope.m_X = 250; Rope.m_Y1 = -100; Rope.m_Y2 = -400;
+			LadderRopes.Add(Rope);
+			Scene.SetLadderRopes(LadderRopes);
+			bHasBounds = Scene.CalculateCameraBounds(Bounds);
+			check(bHasBounds && Bounds == FRect(-100, -400, 251, 500));
+
+			FCamera2D Camera;
+			Camera.SetViewportSize(100, 100);
+			const bool bAppliedBounds = Camera.SetWorldBounds(Bounds);
+			check(bAppliedBounds);
+			Camera.SetLocation(FVector2D(-5000, -5000));
+			check(Camera.GetLocation() == FVector2D(-50, -350));
+			Camera.SetLocation(FVector2D(5000, 5000));
+			check(Camera.GetLocation() == FVector2D(201, 450));
+			const FRect View = Camera.GetScaledClipRect();
+			check(Bounds.Contains(FVector2D(View.m_Left, View.m_Top))
+				&& Bounds.Contains(FVector2D(View.m_Right, View.m_Bottom)));
+			Camera.SetZoom(2);
+			Camera.SetLocation(FVector2D(5000, 5000));
+			check(Camera.GetLocation() == FVector2D(226, 475));
+			Camera.SetZoom(1);
+			Camera.SetViewportSize(1000, 1000);
+			check(Camera.GetLocation() == FVector2D(75.5f, 50)); // 맵보다 큰 화면은 맵 중앙 고정
+			Scene.Clear();
+			bHasBounds = Scene.CalculateCameraBounds(Bounds);
+			check(!bHasBounds);
+		}
+		{
+			// 발판이 없어도 실제 사다리 범위를 사용하며 원점 영역을 임의로 추가하지 않는다.
+			UWorld World;
+			FMapScene& Scene = World.CreateMapScene();
+			TArray<FMapLadderRopeItem> LadderRopes;
+			FMapLadderRopeItem Ladder;
+			Ladder.m_Index = 2; Ladder.m_L = 1;
+			Ladder.m_X = -200; Ladder.m_Y1 = 100; Ladder.m_Y2 = -100;
+			LadderRopes.Add(Ladder);
+			Scene.SetLadderRopes(LadderRopes);
+			FRect Bounds;
+			const bool bHasBounds = Scene.CalculateCameraBounds(Bounds);
+			check(bHasBounds && Bounds == FRect(-200, -100, -199, 100));
+		}
+		wprintf(L"[Camera] Map bounds fallback: %d failure(s)\n", g_TestFailCount - CameraFailuresBefore);
 	}
 
 	if (g_TestFailCount > 0)

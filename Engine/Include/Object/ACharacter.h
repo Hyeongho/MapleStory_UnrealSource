@@ -28,7 +28,7 @@ public:
 	// 이번 프레임의 이동 방향을 모은 뒤 Tick에서 강체 속도에 반영한다.
 	void AddMovementInput(const FVector2D& Direction);
 	void SetMoveSpeed(float Speed);
-	// 발판 또는 정적 지면에 닿았을 때만 점프한다. 속도는 게임에서 조절할 수 있다.
+	// 지상·코요테 타임 점프 또는 사다리·로프 점프 이탈. 속도는 게임에서 조절할 수 있다.
 	void SetJumpSpeed(float Speed);
 	void Jump();
 	// 현재 단방향 발판 위에서만 아래로 통과한다.

@@ -8,6 +8,7 @@
 #include "Object/ACharacter.h"
 #include "Physics/URigidbody.h"
 #include "Physics/PhysicsWorld.h"
+#include "Physics/UClimbableComponent.h"
 
 int32 FMapScene::GetBackTileMode(int32 Type)
 {
@@ -43,7 +44,7 @@ FMapScene::FMapScene(UWorld& World) : m_World(World)
 
 FMapScene::~FMapScene()
 {
-	// 맵 액터는 소유 월드가 Clear로 정리하며 소멸자는 씬 자원만 해제한다.
+	// 씬 자원과 로프·사다리를 해제한다. 나머지 맵 액터는 소유 월드가 Clear로 정리한다.
 	ReleaseResources();
 }
 
@@ -92,6 +93,7 @@ void FMapScene::UnregisterPhysicsFootholds()
 
 void FMapScene::ReleaseResources()
 {
+	UnregisterPhysicsLadderRopes();
 	// 이 맵이 등록한 발판만 해제해 월드의 다른 물리 발판은 유지한다.
 	UnregisterPhysicsFootholds();
 
@@ -109,6 +111,7 @@ void FMapScene::ReleaseResources()
 	m_Backs.Empty();
 	m_Tiles.Empty();
 	m_Footholds.Empty();
+	m_LadderRopes.Empty();
 	m_TimeMs = 0.0;
 }
 
@@ -127,6 +130,64 @@ void FMapScene::AddTile(int32 LayerIndex, const FMapTileItem& Item, FWzAnimation
 	Entry.m_Anim = MoveTemp(Anim);
 	Entry.m_LayerIndex = LayerIndex;
 	m_Tiles.Add(MoveTemp(Entry));
+}
+
+bool FMapScene::CalculateCameraBounds(FRect& OutBounds) const
+{
+	OutBounds = FRect();
+	bool bHasBounds = false;
+	for (int32 i = 0; i < m_Footholds.Num(); i++)
+	{
+		const FMapFootholdItem& Item = m_Footholds[i];
+		if (Item.m_X1 == Item.m_X2 && Item.m_Y1 == Item.m_Y2)
+		{
+			continue;
+		}
+		const FRect Bounds((float)FMath::Min(Item.m_X1, Item.m_X2), (float)FMath::Min(Item.m_Y1, Item.m_Y2),
+			(float)FMath::Max(Item.m_X1, Item.m_X2), (float)FMath::Max(Item.m_Y1, Item.m_Y2));
+		if (!bHasBounds)
+		{
+			OutBounds = Bounds;
+			bHasBounds = true;
+		}
+		else
+		{
+			OutBounds.m_Left = FMath::Min(OutBounds.m_Left, Bounds.m_Left);
+			OutBounds.m_Top = FMath::Min(OutBounds.m_Top, Bounds.m_Top);
+			OutBounds.m_Right = FMath::Max(OutBounds.m_Right, Bounds.m_Right);
+			OutBounds.m_Bottom = FMath::Max(OutBounds.m_Bottom, Bounds.m_Bottom);
+		}
+	}
+	if (bHasBounds)
+	{
+		// MapRender2의 MapData.CalcMapSize: 발판 위 250, 아래 200픽셀을 포함한다.
+		OutBounds.m_Top -= 250.0f;
+		OutBounds.m_Bottom += 200.0f;
+	}
+	for (int32 i = 0; i < m_LadderRopes.Num(); i++)
+	{
+		const FMapLadderRopeItem& Item = m_LadderRopes[i];
+		if (Item.m_Y1 == Item.m_Y2)
+		{
+			continue;
+		}
+		// 발판 범위 밖의 오르기 영역도 원본처럼 폭 1의 선분 영역으로 포함한다.
+		const FRect Bounds((float)Item.m_X, (float)FMath::Min(Item.m_Y1, Item.m_Y2),
+			(float)Item.m_X + 1.0f, (float)FMath::Max(Item.m_Y1, Item.m_Y2));
+		if (!bHasBounds)
+		{
+			OutBounds = Bounds;
+			bHasBounds = true;
+		}
+		else
+		{
+			OutBounds.m_Left = FMath::Min(OutBounds.m_Left, Bounds.m_Left);
+			OutBounds.m_Top = FMath::Min(OutBounds.m_Top, Bounds.m_Top);
+			OutBounds.m_Right = FMath::Max(OutBounds.m_Right, Bounds.m_Right);
+			OutBounds.m_Bottom = FMath::Max(OutBounds.m_Bottom, Bounds.m_Bottom);
+		}
+	}
+	return bHasBounds && OutBounds.Width() > 0.0f && OutBounds.Height() > 0.0f;
 }
 
 void FMapScene::SetFootholds(const TArray<FMapFootholdItem>& Footholds)
@@ -155,6 +216,56 @@ void FMapScene::SetFootholds(const TArray<FMapFootholdItem>& Footholds)
 			m_PhysicsFootholdIds.Add(Item.m_Id);
 		}
 	}
+}
+
+void FMapScene::UnregisterPhysicsLadderRopes()
+{
+	for (int32 i = 0; i < m_LadderRopeActorIds.Num(); i++)
+	{
+		if (AActor* Actor = m_World.FindActorById(m_LadderRopeActorIds[i]))
+		{
+			m_World.DestroyActor(Actor);
+		}
+	}
+	m_LadderRopeActorIds.Empty();
+}
+
+void FMapScene::SetLadderRopes(const TArray<FMapLadderRopeItem>& LadderRopes)
+{
+	// 재등록 시 기존 영역을 제거해 같은 맵을 두 번 읽어도 Trigger가 중복되지 않는다.
+	UnregisterPhysicsLadderRopes();
+	m_LadderRopes = LadderRopes;
+	for (int32 i = 0; i < m_LadderRopes.Num(); i++)
+	{
+		const FMapLadderRopeItem& Item = m_LadderRopes[i];
+		const float Top = (float)FMath::Min(Item.m_Y1, Item.m_Y2);
+		const float Bottom = (float)FMath::Max(Item.m_Y1, Item.m_Y2);
+		const float HalfHeight = (Bottom - Top) * 0.5f;
+		if (HalfHeight <= 0.0f || (Item.m_L != 0 && Item.m_L != 1))
+		{
+			UE_LOG(LogRenderer, Warning, L"[MapLadderRope] skipped invalid area: slot=%d l=%d y1=%d y2=%d",
+				Item.m_Index, Item.m_L, Item.m_Y1, Item.m_Y2);
+			continue;
+		}
+
+		AActor* Actor = m_World.SpawnActor<AActor>();
+		m_LadderRopeActorIds.Add(Actor->GetActorId());
+		UClimbableComponent* Climbable = Actor->AddComponent<UClimbableComponent>();
+		Climbable->SetClimbableType(Item.m_L == 1 ? EClimbableType::Ladder : EClimbableType::Rope);
+		Climbable->SetClimbableId(Item.m_Index);
+		Climbable->SetCanExitAtTop(Item.m_Uf != 0);
+		// 가로폭은 기존 진입 영역의 반폭 6을 유지하고 높이만 WZ 선분에서 계산한다.
+		Climbable->SetBoxExtent(FVector2D(Climbable->GetScaledBoxExtent().m_X, HalfHeight));
+		Climbable->SetRelativeTransform(FTransform2D(FVector2D((float)Item.m_X, Top + HalfHeight),
+			0.0f, FVector2D::One));
+	}
+	UE_LOG(LogRenderer, Log, L"[MapLadderRope] areas=%d placements=%d",
+		m_LadderRopeActorIds.Num(), m_LadderRopes.Num());
+}
+
+const TArray<FMapLadderRopeItem>& FMapScene::GetLadderRopes() const
+{
+	return m_LadderRopes;
 }
 
 bool FMapScene::SetCharacterFoothold(ACharacter& Character, int32 FootholdId) const
@@ -203,12 +314,33 @@ int32 FMapScene::FindFootholdBelow(const FVector2D& Position) const
 
 void FMapScene::UpdateCharacterLayer(ACharacter& Character) const
 {
-	const URigidbody* Body = Character.GetComponent<URigidbody>();
-	if (Body && Body->GetCurrentFootholdId() != INDEX_NONE)
+	const URigidbody* pBody = Character.GetComponent<URigidbody>();
+	if (pBody && pBody->IsClimbing()
+		&& m_LadderRopeActorIds.Find(pBody->GetClimbableActorId()) != INDEX_NONE)
 	{
-		SetCharacterFoothold(Character, Body->GetCurrentFootholdId());
+		// 매달릴 때는 발판 ID가 없으므로 실제로 잡은 로프·사다리의 맵 레이어를 사용한다.
+		// 같은 레이어의 오브젝트 뒤에 Life를 그리면 캐릭터가 로프·사다리 앞에 나온다.
+		const AActor* pActor = m_World.FindActorById(pBody->GetClimbableActorId());
+		const UClimbableComponent* pClimbable = pActor ? pActor->GetComponent<UClimbableComponent>() : nullptr;
+		if (pClimbable)
+		{
+			for (int32 i = 0; i < m_LadderRopes.Num(); i++)
+			{
+				const FMapLadderRopeItem& Item = m_LadderRopes[i];
+				if (Item.m_Index == pClimbable->GetClimbableId() && Item.m_Page >= 0 && Item.m_Page <= 7)
+				{
+					// page는 맵 레이어 번호다. piece는 발판 ID로 해석하지 않는다.
+					Character.SetMapLayer(Item.m_Page);
+					return;
+				}
+			}
+		}
 	}
-	// 점프 중에는 마지막 발판 레이어를 유지하여 앞뒤 관계가 갑자기 바뀌지 않게 한다.
+	if (pBody && pBody->GetCurrentFootholdId() != INDEX_NONE)
+	{
+		SetCharacterFoothold(Character, pBody->GetCurrentFootholdId());
+	}
+	// 점프·낙하 중에는 마지막 발판 또는 로프·사다리 레이어를 유지한다. 착지하면 발판으로 복원한다.
 }
 
 void FMapScene::Tick(float DeltaTime)

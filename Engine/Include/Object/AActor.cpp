@@ -8,7 +8,7 @@ namespace
     uint32 GNextActorId = 1;
 }
 
-AActor::AActor() 
+AActor::AActor() : m_ActorId(GNextActorId++)
 {
 
 }

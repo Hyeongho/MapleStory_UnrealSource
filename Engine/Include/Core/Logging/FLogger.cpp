@@ -75,6 +75,7 @@ const wchar_t* FLogger::VerbosityToString(ELogVerbosity Verbosity)
 static void WriteToOutputs(FILE* pFile, const wchar_t* FullBuf)
 {
     wprintf(L"%s", FullBuf);
+    fflush(stdout);
     OutputDebugStringW(FullBuf);
 
     if (pFile)

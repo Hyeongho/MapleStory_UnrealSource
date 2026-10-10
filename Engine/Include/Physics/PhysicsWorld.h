@@ -8,6 +8,10 @@ class AActor;
 class URigidbody;
 class UBoxCollision;
 class UClimbableComponent;
+#ifdef _DEBUG
+class FSpriteBatch;
+class FCamera2D;
+#endif
 
 class FPhysicsWorld
 {
@@ -40,6 +44,11 @@ public:
 	bool Raycast(const FVector2D& Start, const FVector2D& End, FHitResult& OutHit, uint32 ObjectMask = AllCollisionChannels, const AActor* IgnoreActor = nullptr) const;
 	void FindOverlaps(TArray<FOverlapResult>& OutOverlaps) const;
 
+#ifdef _DEBUG
+	// Debug 화면에 실제 충돌 도형과 접촉 상태를 그린다. 빨강은 접촉, 초록은 비접촉이다.
+	void DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera) const;
+#endif
+
 private:
 	// 차단 대상 필터링
 	static bool IsBlocker(const UBoxCollision& Box, const UPrimitiveComponent& Other);
@@ -57,12 +66,22 @@ private:
 	const FFoothold* FindDropLandingFoothold(const UBoxCollision& Box, int32 CurrentFootholdId, float MaxDropHeight) const;
 	void InvalidateFootholdSupport(int32 Id);
 
-	// 로프·사다리 Trigger와 강체의 겹침 판정
-	static const UClimbableComponent* FindClimbable(const UBoxCollision& Box, const TArray<UPrimitiveComponent*>& Primitives);
+	// 로프·사다리 진입 / 끝점 처리. WZ 끝점과 발판의 작은 좌표 차이를 허용한다.
+	static constexpr float CLIMB_ENDPOINT_TOLERANCE = 4.0f;
+	static const UClimbableComponent* FindClimbable(const UBoxCollision& Box, const URigidbody& Body, const TArray<UPrimitiveComponent*>& Primitives);
+	static bool CanTranslateBox(const UBoxCollision& Box, const FVector2D& Delta, const TArray<UPrimitiveComponent*>& Primitives);
+	// 하단 아래와 현재 발 위치에서 착지할 발판이나 정적 바닥이 있는지 확인한다.
+	bool HasClimbLandingBelow(const UBoxCollision& Box, float BottomY, const TArray<UPrimitiveComponent*>& Primitives) const;
+	bool TryExitClimbable(URigidbody& Body, UBoxCollision& Box, const UClimbableComponent& Climbable, const TArray<UPrimitiveComponent*>& Primitives);
 
 	// 도형 수집 / 개별 강체 시뮬레이션
 	void GatherPrimitives(TArray<UPrimitiveComponent*>& Out) const;
 	void SimulateBody(URigidbody& Body, UBoxCollision& Box, float DeltaTime, const TArray<UPrimitiveComponent*>& Primitives);
+
+#ifdef _DEBUG
+	// 실제 겹침의 진입·이탈만 기록한다. 입력과 오르기 상태에는 영향을 주지 않는다.
+	void UpdateDebugClimbOverlaps(const TArray<UPrimitiveComponent*>& Primitives);
+#endif
 
 	// 소유 월드 참조
 	UWorld& m_World;
@@ -83,4 +102,17 @@ private:
 	// 월드가 소유하는 정적 발판 데이터
 	TArray<FFoothold> m_Footholds;
 	TArray<FVerticalFoothold> m_VerticalFootholds;
+
+#ifdef _DEBUG
+	// 포인터 대신 액터 ID와 출력 값을 보관해 액터가 삭제돼도 안전하게 이탈을 기록한다.
+	struct FDebugClimbOverlap
+	{
+		uint32 m_BodyActorId = 0;
+		uint32 m_ClimbableActorId = 0;
+		int32 m_ClimbableId = INDEX_NONE;
+		bool m_bIsLadder = true;
+		bool m_bSeen = false;
+	};
+	TArray<FDebugClimbOverlap> m_DebugClimbOverlaps;
+#endif
 };

@@ -17,6 +17,15 @@ bool FSpriteBatch::Initialize(FDXDevice& Device)
 	m_pSpriteBatch = new DirectX::SpriteBatch(m_pContext);
 	m_pCommonStates = new DirectX::CommonStates(Device.GetDevice());
 
+#ifdef _DEBUG
+	m_pDebugLineTexture = CreateSolidColorTexture(Device, FColor::White);
+	if (!m_pDebugLineTexture)
+	{
+		Shutdown();
+		return false;
+	}
+#endif
+
 	return true;
 }
 
@@ -33,6 +42,14 @@ void FSpriteBatch::Shutdown()
 		delete m_pCommonStates;
 		m_pCommonStates = nullptr;
 	}
+
+#ifdef _DEBUG
+	if (m_pDebugLineTexture)
+	{
+		m_pDebugLineTexture->Release();
+		m_pDebugLineTexture = nullptr;
+	}
+#endif
 
 	m_pContext = nullptr;
 }
@@ -72,6 +89,22 @@ void FSpriteBatch::End()
 	m_pSpriteBatch->End();
 	m_bInBeginEnd = false;
 }
+
+#ifdef _DEBUG
+void FSpriteBatch::DrawDebugLine(const FVector2D& Start, const FVector2D& End, const FLinearColor& Tint, float Thickness)
+{
+	const FVector2D Delta = End - Start;
+	const float Length = Delta.Size();
+	if (!m_pDebugLineTexture || Length <= FMath::SMALL_NUMBER || Thickness <= 0.0f)
+	{
+		return;
+	}
+	// 선분 중심에 두께를 배분해 표시 위치가 충돌 경계와 일치하게 한다.
+	const FVector2D Normal(-Delta.m_Y / Length, Delta.m_X / Length);
+	DrawSprite(m_pDebugLineTexture, Start - Normal * (Thickness * 0.5f), FVector2D(Length, Thickness),
+		FMath::Atan2(Delta.m_Y, Delta.m_X), Tint);
+}
+#endif
 
 ID3D11ShaderResourceView* FSpriteBatch::CreateSolidColorTexture(FDXDevice& Device, FColor Color, uint32 Width, uint32 Height)
 {
