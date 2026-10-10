@@ -3,7 +3,7 @@
 #include "Render/WzTextureLoader.h"
 #include "Core/Math/FMath.h"
 
-// ── DLL 함수 포인터 (WzTest/WzNativeLib/WzExports.cs의 wz_map_read_* 4종과 동일한 시그니처) ──
+// ── DLL 함수 포인터 (WzTest/WzNativeLib/WzExports.cs의 wz_map_read_*와 동일한 시그니처) ──
 //
 // WzTextureLoader.cpp도 같은 이름("WzNativeLib.dll")으로 LoadLibraryA를
 // 부르는 독립된 lazy-init 싱글턴을 갖고 있다 — 이미 로드된 DLL을
@@ -22,6 +22,7 @@ namespace
 	using FnMapReadBack = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadLayer = int(*)(const char* WzPath, const char* MapPath, int LayerIndex, char* OutTs, int TsBufferSize, int* OutTsMag, const uint8_t** OutTiles, int* OutTileCount, const uint8_t** OutObjs, int* OutObjCount);
 	using FnMapReadFootholds = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
+	using FnMapReadLadderRopes = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadPortals = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 	using FnMapReadReactors = const uint8_t* (*)(const char* WzPath, const char* MapPath, int* OutCount);
 
@@ -39,6 +40,7 @@ namespace
 		FnMapReadBack MapReadBack = nullptr;
 		FnMapReadLayer MapReadLayer = nullptr;
 		FnMapReadFootholds MapReadFootholds = nullptr;
+		FnMapReadLadderRopes MapReadLadderRopes = nullptr;
 		FnMapReadPortals MapReadPortals = nullptr;
 		FnMapReadReactors MapReadReactors = nullptr;
 		FnAnimLoadBack AnimLoadBack = nullptr;
@@ -72,6 +74,7 @@ namespace
 		State.MapReadBack = (FnMapReadBack)GetProcAddress(State.hDll, "wz_map_read_back");
 		State.MapReadLayer = (FnMapReadLayer)GetProcAddress(State.hDll, "wz_map_read_layer");
 		State.MapReadFootholds = (FnMapReadFootholds)GetProcAddress(State.hDll, "wz_map_read_footholds");
+		State.MapReadLadderRopes = (FnMapReadLadderRopes)GetProcAddress(State.hDll, "wz_map_read_ladder_ropes");
 		State.MapReadPortals = (FnMapReadPortals)GetProcAddress(State.hDll, "wz_map_read_portals");
 		State.MapReadReactors = (FnMapReadReactors)GetProcAddress(State.hDll, "wz_map_read_reactors");
 		State.AnimLoadBack = (FnAnimLoadBack)GetProcAddress(State.hDll, "wz_anim_load_back");
@@ -81,8 +84,8 @@ namespace
 		State.AnimLoadReactor = (FnAnimLoadReactor)GetProcAddress(State.hDll, "wz_anim_load_reactor");
 		State.Free = (FnFree)GetProcAddress(State.hDll, "wz_free");
 
-		// 하나라도 못 찾으면 전부 비활성화한다 — DLL이 구버전이면 맵 로딩이
-		// 절반만 동작하는 것보다 통째로 실패하고 placeholder로 폴백하는 게 낫다.
+		// 기존 필수 API를 못 찾으면 맵 로딩을 비활성화한다.
+		// 로프·사다리 API는 선택적으로 조회해 구버전 DLL도 기존 맵을 표시할 수 있다.
 		if (!State.MapReadInfo || !State.MapReadBack || !State.MapReadLayer || !State.MapReadFootholds || !State.MapReadPortals || !State.MapReadReactors || !State.AnimLoadBack || !State.AnimLoadObj || !State.AnimLoadTile || !State.AnimLoadPortal || !State.AnimLoadReactor || !State.Free)
 		{
 			FreeLibrary(State.hDll);
@@ -375,6 +378,34 @@ void FWzMapLoader::LoadMapFootholds(const char* WzPath, const char* MapPath, TAr
 	}
 
 	DllState.Free((const char*)Pixels);
+}
+
+void FWzMapLoader::LoadMapLadderRopes(const char* WzPath, const char* MapPath, TArray<FMapLadderRopeItem>& OutLadderRopes)
+{
+	OutLadderRopes.Reset();
+
+	FWzMapDllState& DllState = GetDllState();
+	if (!DllState.MapReadLadderRopes)
+	{
+		UE_LOG(LogRenderer, Warning, L"[MapLadderRope] wz_map_read_ladder_ropes unavailable; update WzNativeLib.dll");
+		return;
+	}
+
+	int Count = 0;
+	const uint8_t* Raw = DllState.MapReadLadderRopes(WzPath, MapPath, &Count);
+	if (!Raw)
+	{
+		return;
+	}
+
+	const FMapLadderRopeItem* Items = reinterpret_cast<const FMapLadderRopeItem*>(Raw);
+	for (int i = 0; i < Count; i++)
+	{
+		OutLadderRopes.Add(Items[i]);
+	}
+
+	// 개수가 0인 비정상 응답에서도 반환된 버퍼는 반드시 해제한다.
+	DllState.Free((const char*)Raw);
 }
 
 void FWzMapLoader::LoadMapPortals(const char* WzPath, const char* MapPath, TArray<FMapPortalItem>& OutPortals)

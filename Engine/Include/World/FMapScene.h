@@ -5,10 +5,11 @@
 #include "Render/WzMapLoader.h"
 
 class FRenderQueue;
+class FRect;
 class UWorld;
 class ACharacter;
 
-// 배경(back)과 타일을 렌더 큐에 제출하고 발판을 물리 월드에 등록하는 맵 씬.
+// 배경(back)과 타일을 렌더 큐에 제출하고 발판·로프·사다리를 물리에 연결하는 맵 씬.
 //
 // 왜 액터가 아닌가: 레퍼런스(WzComparerR2.MapRender)도 맵은 씬 그래프를 매
 // 프레임 훑어 그리는 구조이고, 타일은 한 맵에 수천 개라 전부 액터로 만들면
@@ -39,6 +40,13 @@ public:
 	void AddBack(const FMapBackItem& Item, FWzAnimation&& Anim);
 	void AddTile(int32 LayerIndex, const FMapTileItem& Item, FWzAnimation&& Anim);
 	void SetFootholds(const TArray<FMapFootholdItem>& Footholds);
+
+	// VR 경계가 없을 때 발판·로프·사다리 배치로 카메라 제한 영역을 계산한다.
+	bool CalculateCameraBounds(FRect& OutBounds) const;
+
+	// 로프·사다리 원본을 보존하고 이 맵의 Trigger 액터를 생성한다.
+	void SetLadderRopes(const TArray<FMapLadderRopeItem>& LadderRopes);
+	const TArray<FMapLadderRopeItem>& GetLadderRopes() const;
 
 	// 캐릭터 그리기 순서 — 발판 ID에 해당하는 Life 컨테이너에 배치한다.
 	bool SetCharacterFoothold(ACharacter& Character, int32 FootholdId) const;
@@ -77,6 +85,9 @@ private:
 	// 등록한 발판만 물리 월드에서 해제한다.
 	void UnregisterPhysicsFootholds();
 
+	// 이 맵에서 생성한 로프·사다리 액터만 월드에서 제거한다.
+	void UnregisterPhysicsLadderRopes();
+
 	// 텍스처는 씬이, 추적한 액터의 실제 수명은 UWorld가 소유한다.
 	void ReleaseResources();
 
@@ -91,6 +102,9 @@ private:
 	TArray<int32> m_PhysicsFootholdIds;
 	TArray<int32> m_PhysicsVerticalFootholdIds;
 	TArray<uint32> m_ActorIds;
+
+	TArray<FMapLadderRopeItem> m_LadderRopes;
+	TArray<uint32> m_LadderRopeActorIds;
 
 	UWorld& m_World;
 

@@ -22,6 +22,7 @@ struct FLogCategoryBase
 #define DEFINE_LOG_CATEGORY(CategoryName) \
     FLogCategoryBase CategoryName(L ## #CategoryName)
 
+DECLARE_LOG_CATEGORY_EXTERN(Log);
 DECLARE_LOG_CATEGORY_EXTERN(LogCore);
 DECLARE_LOG_CATEGORY_EXTERN(LogRenderer);
 DECLARE_LOG_CATEGORY_EXTERN(LogPhysics);

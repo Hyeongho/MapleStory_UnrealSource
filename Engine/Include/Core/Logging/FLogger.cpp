@@ -4,6 +4,7 @@
 FILE* FLogger::m_pFile = nullptr;
 bool FLogger::m_bInitialized = false;
 
+DEFINE_LOG_CATEGORY(Log);
 DEFINE_LOG_CATEGORY(LogCore);
 DEFINE_LOG_CATEGORY(LogRenderer);
 DEFINE_LOG_CATEGORY(LogPhysics);
@@ -75,6 +76,9 @@ const wchar_t* FLogger::VerbosityToString(ELogVerbosity Verbosity)
 static void WriteToOutputs(FILE* pFile, const wchar_t* FullBuf)
 {
     wprintf(L"%s", FullBuf);
+
+    fflush(stdout);
+
     OutputDebugStringW(FullBuf);
 
     if (pFile)

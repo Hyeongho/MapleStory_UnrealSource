@@ -43,7 +43,7 @@ public:
 	// WzPath: Map.wz 파일 경로 또는 WZ 폴더 경로
 	// MapPath: WZ 루트 기준 맵 .img 경로 (예: "Map\\Map\\Map2\\240020210.img")
 	// World가 소유하는 맵 씬을 필요할 때 생성하고 배경·타일을 채운다.
-	// Camera에는 맵 info의 VR 경계를 적용한다.
+	// Camera에는 VR 경계를 우선 적용하고, 없으면 발판·로프·사다리 영역으로 보완한다.
 	// OutFootholds: 널이 아니면 수직 선분까지 포함한 원본 발판 그래프를 채운다.
 	static void LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>* OutFootholds = nullptr);
 

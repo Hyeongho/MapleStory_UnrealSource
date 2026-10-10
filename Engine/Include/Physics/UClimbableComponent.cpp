@@ -19,3 +19,23 @@ EClimbableType UClimbableComponent::GetClimbableType() const
 {
 	return m_Type;
 }
+
+void UClimbableComponent::SetClimbableId(int32 Id)
+{
+	m_ClimbableId = Id;
+}
+
+int32 UClimbableComponent::GetClimbableId() const
+{
+	return m_ClimbableId;
+}
+
+void UClimbableComponent::SetCanExitAtTop(bool bCanExit)
+{
+	m_bCanExitAtTop = bCanExit;
+}
+
+bool UClimbableComponent::CanExitAtTop() const
+{
+	return m_bCanExitAtTop;
+}

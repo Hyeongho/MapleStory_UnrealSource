@@ -79,17 +79,29 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 
 	FMapInfo MapInfo;
 
+	bool bHasCameraBounds = false;
+
 	if (FWzMapLoader::LoadMapInfo(WzPath, MapPath, MapInfo))
 	{
-		if (!Camera.SetWorldBounds(FRect((float)MapInfo.m_VRLeft, (float)MapInfo.m_VRTop, (float)MapInfo.m_VRRight, (float)MapInfo.m_VRBottom)))
+		bHasCameraBounds = Camera.SetWorldBounds(FRect((float)MapInfo.m_VRLeft, (float)MapInfo.m_VRTop, (float)MapInfo.m_VRRight, (float)MapInfo.m_VRBottom));
+		if (!bHasCameraBounds)
 		{
-			UE_LOG(LogRenderer, Warning, L"맵 VR 경계가 유효하지 않아 카메라 제한을 적용하지 않았습니다.");
+			UE_LOG(LogRenderer, Log, L"[MapCamera] invalid VR=(%d,%d,%d,%d); deriving bounds from map geometry",
+				MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom);
 		}
+
+#ifdef _DEBUG
+		else
+		{
+			// 성공한 경우도 실제 맵 경계와 화면 크기를 남겨 제한 범위를 확인한다.
+			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs bounds=(%d,%d,%d,%d) viewport=(%.0f,%.0f) zoom=%.2f", MapPath, MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom, Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
+		}
+#endif
 	}
 
 	else
 	{
-		UE_LOG(LogRenderer, Warning, L"맵 info를 읽지 못해 카메라 제한을 적용하지 않았습니다.");
+		UE_LOG(LogRenderer, Log, L"[MapCamera] info unavailable; deriving bounds from map geometry");
 	}
 
 	// ── back ──
@@ -181,6 +193,25 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 	TArray<FMapFootholdItem> Footholds;
 	FWzMapLoader::LoadMapFootholds(WzPath, MapPath, Footholds);
 	OutScene.SetFootholds(Footholds);
+
+	// 로프·사다리는 이미지를 추가하지 않고 기존 맵 이미지 위에 진입 영역만 만든다.
+	TArray<FMapLadderRopeItem> LadderRopes;
+	FWzMapLoader::LoadMapLadderRopes(WzPath, MapPath, LadderRopes);
+	OutScene.SetLadderRopes(LadderRopes);
+
+	if (!bHasCameraBounds)
+	{
+		FRect Bounds;
+		if (OutScene.CalculateCameraBounds(Bounds) && Camera.SetWorldBounds(Bounds))
+		{
+			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs derived bounds=(%.0f,%.0f,%.0f,%.0f) viewport=(%.0f,%.0f) zoom=%.2f", MapPath, Bounds.m_Left, Bounds.m_Top, Bounds.m_Right, Bounds.m_Bottom, Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
+		}
+
+		else
+		{
+			UE_LOG(LogRenderer, Warning, L"[MapCamera] map=%hs has no usable VR or geometry; camera bounds unavailable", MapPath);
+		}
+	}
 
 	// ── 리액터 ──
 	// 레퍼런스는 리액터를 "발판이 있는 첫 레이어"에 넣는다(MapData.cs:454-469).

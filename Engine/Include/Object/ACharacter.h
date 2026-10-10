@@ -29,7 +29,7 @@ public:
 	void AddMovementInput(const FVector2D& Direction);
 	void SetMoveSpeed(float Speed);
 
-	// 발판 또는 정적 지면에 닿았을 때만 점프한다. 속도는 게임에서 조절할 수 있다.
+	// 지상·코요테 타임 점프 또는 사다리·로프 점프 이탈. 속도는 게임에서 조절할 수 있다.
 	void SetJumpSpeed(float Speed);
 	void Jump();
 

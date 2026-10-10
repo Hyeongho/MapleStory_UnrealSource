@@ -3,32 +3,11 @@
 #include "Input/UPlayerInput.h"
 #include "Input/UInputComponent.h"
 #include "Object/ACharacter.h"
-#include "Animation/UAnimStateMachine.h"
 #include "Physics/URigidbody.h"
 
 AMaplePlayerController::AMaplePlayerController() = default;
 
 AMaplePlayerController::~AMaplePlayerController() = default;
-
-void AMaplePlayerController::ProcessPlayerInput(float DeltaTime)
-{
-	Super::ProcessPlayerInput(DeltaTime);
-	ACharacter* pCharacter = GetCharacter();
-	if (!pCharacter)
-	{
-		return;
-	}
-
-	UAnimStateMachine* pStateMachine = pCharacter->GetComponent<UAnimStateMachine>();
-
-	if (pStateMachine && pStateMachine->HasState(FName(L"Idle")) && pStateMachine->HasState(FName(L"Move")))
-	{
-		// 물리 캐릭터는 수평 이동이나 실제 사다리 이동 중에만 걷기 상태로 바꾼다.
-		const URigidbody* Body = pCharacter->GetComponent<URigidbody>();
-		const bool bMoving = Body ? m_MoveInput.m_X != 0.0f || Body->IsClimbing() : !m_MoveInput.IsNearlyZero();
-		pStateMachine->SetState(bMoving ? FName(L"Move") : FName(L"Idle"));
-	}
-}
 
 void AMaplePlayerController::SetupInputMappings()
 {
@@ -61,7 +40,9 @@ void AMaplePlayerController::OnJumpPressed()
 {
 	if (ACharacter* pCharacter = GetCharacter())
 	{
-		if (m_MoveInput.m_Y > 0.0f)
+		// 매달려 있을 때는 아래 입력도 점프 이탈로 처리하고, 지상에서만 하단 점프한다.
+		const URigidbody* pBody = pCharacter->GetComponent<URigidbody>();
+		if (m_MoveInput.m_Y > 0.0f && (!pBody || !pBody->IsClimbing()))
 		{
 			pCharacter->DropThroughFoothold();
 		}

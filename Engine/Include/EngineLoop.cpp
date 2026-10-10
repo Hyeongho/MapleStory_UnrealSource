@@ -27,6 +27,10 @@ bool FEngineLoop::Init(HINSTANCE hInstance, int32 ShowCommand, const FEngineInit
 	m_hInstance = hInstance;
 	m_ExitCode = 0;
 
+#ifdef _DEBUG
+	InitDebugConsole(Params.m_WindowTitle);
+#endif
+
 	if (!CreateAppWindow(Params))
 	{
 		Exit();
@@ -165,6 +169,7 @@ void FEngineLoop::Exit()
 #ifdef _DEBUG
 	// 프레임 루프가 멈추고 게임 및 엔진 소유 자원을 해제한 뒤 검사한다.
 	FMemoryTracker::ReportLeaks();
+	ShutdownDebugConsole();
 #endif
 }
 
@@ -309,3 +314,63 @@ LRESULT CALLBACK FEngineLoop::WindowProc(HWND hWnd, UINT Message, WPARAM wParam,
 	}
 	return DefWindowProcW(hWnd, Message, wParam, lParam);
 }
+
+#ifdef _DEBUG
+void FEngineLoop::InitDebugConsole(const wchar_t* WindowTitle)
+{
+	// 이미 연결된 콘솔은 재사용하고, 직접 만든 콘솔만 종료 시 해제한다.
+	if (!GetConsoleWindow())
+	{
+		if (!AllocConsole())
+		{
+			OutputDebugStringW(L"[DebugConsole] Failed to allocate console.\n");
+			return;
+		}
+
+		m_bOwnsDebugConsole = true;
+	}
+
+	FILE* pConsoleStream = nullptr;
+	if (_wfreopen_s(&pConsoleStream, L"CONOUT$", L"w+", stdout) == 0)
+	{
+		// 기존 wprintf/UE_LOG의 한글을 유니코드로 출력하고 즉시 표시한다.
+		_setmode(_fileno(stdout), _O_U16TEXT);
+		setvbuf(stdout, nullptr, _IONBF, 0);
+	}
+
+	else
+	{
+		OutputDebugStringW(L"[DebugConsole] Failed to redirect stdout.\n");
+	}
+
+	if (_wfreopen_s(&pConsoleStream, L"CONOUT$", L"w+", stderr) == 0)
+	{
+		setvbuf(stderr, nullptr, _IONBF, 0);
+	}
+
+	else
+	{
+		OutputDebugStringW(L"[DebugConsole] Failed to redirect stderr.\n");
+	}
+
+	if (m_bOwnsDebugConsole)
+	{
+		wchar_t ConsoleTitle[256] = {};
+		_snwprintf_s(ConsoleTitle, _countof(ConsoleTitle), _TRUNCATE, L"%s - Debug Console", WindowTitle);
+		SetConsoleTitleW(ConsoleTitle);
+	}
+}
+
+void FEngineLoop::ShutdownDebugConsole()
+{
+	if (!m_bOwnsDebugConsole)
+	{
+		return;
+	}
+
+	fflush(stdout);
+	fflush(stderr);
+	FreeConsole();
+	m_bOwnsDebugConsole = false;
+}
+#endif

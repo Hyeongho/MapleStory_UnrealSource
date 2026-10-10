@@ -32,6 +32,14 @@ private:
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 	static const wchar_t* WINDOW_CLASS_NAME;
 
+#ifdef _DEBUG
+	// 콘솔은 로거보다 먼저 열고, 엔진 종료 로그까지 출력한 뒤 정리한다.
+	void InitDebugConsole(const wchar_t* WindowTitle);
+	void ShutdownDebugConsole();
+#endif
+
+private:
+
 	HINSTANCE m_hInstance = nullptr;
 	HWND m_hWnd = nullptr;
 	UEngine* m_pEngine = nullptr;
@@ -42,4 +50,8 @@ private:
 	bool m_bRunning = false;
 	bool m_bWindowClassRegistered = false;
 	bool m_bNeedsShutdown = false;
+
+#ifdef _DEBUG
+	bool m_bOwnsDebugConsole = false;
+#endif
 };

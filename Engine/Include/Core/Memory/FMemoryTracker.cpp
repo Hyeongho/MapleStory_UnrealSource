@@ -36,11 +36,12 @@ void FMemoryTracker::ReportLeaks()
 
 	else
 	{
-		wprintf(L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
+		swprintf_s(buf, L"[MemoryTracker] No leaks detected (%lld alloc / %lld free)\n", m_AllocCount, m_FreeCount);
 	}
 
 	OutputDebugStringW(buf);
-	wprintf(buf);
+	wprintf(L"%s", buf);
+	fflush(stdout);
 }
 
 #endif

@@ -188,6 +188,22 @@ struct FWzAnimation
 	const FWzAnimFrame* GetFrameAtTime(double TimeMs, int32& OutAlpha) const;
 };
 
+// 로프·사다리 배치 원본. uf는 상단 이탈 여부, page는 매달린 캐릭터의 맵 레이어다.
+// piece는 원본 배치 정보로 보존하며 발판 ID로 사용하지 않는다.
+struct FMapLadderRopeItem
+{
+	int32 m_Index = 0;
+	int32 m_X = 0;
+	int32 m_Y1 = 0;
+	int32 m_Y2 = 0;
+	int32 m_L = 0; // 0은 로프, 1은 사다리
+	int32 m_Uf = 0;
+	int32 m_Page = 0;
+	int32 m_Piece = 0;
+};
+
+static_assert(sizeof(FMapLadderRopeItem) == 32, "FMapLadderRopeItem must match the DLL layout");
+
 class FWzMapLoader
 {
 public:
@@ -207,6 +223,9 @@ public:
 	// foothold\{0~7}\{group}\{id} 전체를 평탄화한 배열. 수직 선분 포함,
 	// 파싱 단계에서는 아무것도 거르지 않는다.
 	static void LoadMapFootholds(const char* WzPath, const char* MapPath, TArray<FMapFootholdItem>& OutFootholds);
+
+	// ladderRope 항목. 노드가 없으면 빈 배열, 구버전 DLL이면 경고 후 빈 배열을 반환한다.
+	static void LoadMapLadderRopes(const char* WzPath, const char* MapPath, TArray<FMapLadderRopeItem>& OutLadderRopes);
 
 	static void LoadMapPortals(const char* WzPath, const char* MapPath, TArray<FMapPortalItem>& OutPortals);
 	static void LoadMapReactors(const char* WzPath, const char* MapPath, TArray<FMapReactorItem>& OutReactors);

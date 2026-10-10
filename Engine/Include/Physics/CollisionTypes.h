@@ -18,6 +18,13 @@ enum class ECollisionShape : uint8
 	Circle
 };
 
+// 진입 영역과 강체의 오르기 상태에서 함께 사용하는 종류다.
+enum class EClimbableType : uint8
+{
+	Rope,
+	Ladder
+};
+
 constexpr uint32 CollisionChannelMask(ECollisionChannel Channel)
 {
 	return static_cast<uint8>(Channel) < static_cast<uint8>(ECollisionChannel::Count) ? (1u << static_cast<uint8>(Channel)) : 0u;
