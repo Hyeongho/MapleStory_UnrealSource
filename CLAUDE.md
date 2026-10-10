@@ -1,0 +1,1365 @@
+# CLAUDE.md - MapleStory DX11 2D 엔진 프로젝트
+
+## 프로젝트 개요
+
+DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따라 C++20 컴파일러
+설정에서 직접 구현한다(C++20 전용 문법을 의도적으로 쓰지는 않음 — 실제 값과
+경위는 아래 "컴파일러 설정" 참고).  
+목표 게임: MapleStory 스타일 2D 플랫포머 RPG  
+포트폴리오 목적: 넥슨 MapleStory 팀 등 대형 스튜디오 지원
+
+## 현재 진행 상태 (2026-10-10)
+
+현재는 **Phase 10 Physics / Collision**을 진행하고 있다. 이 문서는
+`codex/safety-debt-fixes`의 `CLAUDE.md`를 바탕으로 현재 작업 코드와 사용자 확인 내용을 반영했다.
+Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 입력·엔진 루프·맵 로더는 선행 구현했다.
+
+- 구현됨: 실제 Map.wz 발판 연동, 좌우 이동과 바라보는 방향, Alt 점프,
+  아래 방향키+Alt 하단 점프와 착지 가능 높이 검사, 낙하 상태 및 코요테 타임.
+- 구현됨: 로프·사다리 데이터 연동, 상하 이동, 끝점 처리, 점프 이탈 및 재진입 지연,
+  물리 상태에 따른 Idle/Move/Jump/Ladder/Rope 애니메이션.
+- 구현됨: 엔진 초기화·프레임 루프의 Engine 이관, UWorld의 선택적 FMapScene 소유,
+  캐릭터 추적 카메라와 맵 경계 제한, Game에서 지정하는 맵 오브젝트 제외 규칙.
+- 렌더링: 맵 컨테이너 정렬과 발판/매달린 배치의 Life 레이어를 유지한다.
+  사용자가 현재 출력이 올바르다고 확인했으므로 모든 로프·사다리를 강제로 뒤로 보내는 예외는 추가하지 않는다.
+- 남은 Phase 10 작업: **피격 후 무적 시간 → 넉백 → 낙사 구역(DeathZone)**.
+  이를 마친 뒤 Phase 11 Audio로 진행한다.
+
+체크 표시 `[x]`는 해당 구현이 있음을 뜻한다. 사용자 Game 동작 확인과 자동 테스트 통과는
+구분해서 기록한다. 최신 회귀 검사 코드는 `Test/Include/main.cpp`에 있으며, 빌드·실행은 사용자가 수행한다.
+
+---
+
+## 핵심 원칙
+
+- STL 사용 금지 — std::vector, std::string, std::unordered_map 전부 자체 구현으로 대체
+- 예외 없는 에러 전파 — 엔진 코어 로직은 check()/verify()/TResult<T,E> 기반.
+  단, 컴파일러 예외 자체가 꺼져있는 건 아님 — Game 프로젝트는 DirectXTK 연동
+  때문에 /EHsc(예외 활성)이고 Engine/Test도 명시적 비활성 설정이 없어 MSVC
+  기본값(활성)이다(2026-09 확인, 실제 값은 "컴파일러 설정" 참고) — "예외
+  금지"는 엔진 자체 코드가 예외를 던지지 않는다는 설계 원칙이지 컴파일러
+  플래그가 아님
+- RTTI 금지 — /GR- 컴파일 옵션(RuntimeTypeInfo: false), UClass 기반 Cast<T>() 직접 구현
+- 언리얼 네이밍 컨벤션 — TArray, TMap, FString, FName, UObject, AActor
+- 단위 테스트 필수 — 각 Phase 완료 시 사용자가 Test 프로젝트에서 검증 후 다음 단계 진행
+
+---
+
+## 솔루션 구조
+
+```
+MyEngine.sln
+├── Engine/          → 정적 라이브러리 (.lib)
+│   ├── Core/
+│   │   ├── Memory/          (Phase 1)
+│   │   ├── Templates/       (Phase 2)
+│   │   ├── Containers/      (Phase 3~4)
+│   │   ├── String/          (Phase 5)
+│   │   ├── Logging/         (Phase 5.5)
+│   │   ├── SmartPointer/    (Phase 6)
+│   │   └── Math/            (Phase 3.5)
+│   ├── Object/              (Phase 7)
+│   ├── Timer/               (Phase 7.5)
+│   ├── Ability/             (Phase 7.7)
+│   ├── Renderer/            (Phase 8)
+│   ├── Animation/           (Phase 9)
+│   ├── Physics/             (Phase 10)
+│   ├── Audio/               (Phase 11)
+│   ├── UI/                  (Phase 12)
+│   ├── Input/               (Phase 13)
+│   ├── Resource/            (Phase 14)
+│   ├── World/               (Phase 15)
+│   └── AI/                  (Phase 18)
+├── Game/            → 실행 파일 (.exe)  Engine 참조
+└── Tests/           → 단위 테스트 (.exe)  Engine 참조
+```
+
+---
+
+## 컴파일러 설정 (VS 프로젝트 속성)
+
+아래는 3개 vcxproj(Engine/Game/Test)의 x64 Debug/Release 공통 **실제 설정값**
+(2026-09 확인) — 예전엔 "이렇게 하기로 정했다"는 목표치를 적어뒀는데 실제
+vcxproj와 어긋나 있었다. C++ 표준·경고 수준은 실제 값을 그대로 유지하기로
+확정(vcxproj를 고치지 않음, 문서만 정정) — 아래가 최종 기준.
+
+```
+구성 형식:          정적 라이브러리 (.lib)  [Engine]
+                    응용 프로그램 (.exe)     [Game, Tests]
+C++ 표준:           /std:c++20  (처음부터 vcxproj가 C++20으로 생성돼 있었음
+                    — C++20 전용 문법을 의도적으로 쓰지는 않아서 굳이 17로
+                    낮출 필요가 없다고 판단, 그대로 둠)
+예외 처리:          Engine·Test는 명시 설정 없음(MSVC 기본값 = 활성),
+                    Game은 x64에서 명시적으로 /EHsc(활성) — DirectXTK
+                    헤더가 예외를 쓰므로 Phase 8에서 의도적으로 켰음.
+                    엔진 자체 코드는 여전히 check()/verify()만 쓰고 예외를
+                    던지지 않음(설계 원칙과 컴파일러 플래그는 별개)
+RTTI:               /GR-      (dynamic_cast 비활성화, RuntimeTypeInfo: false)
+경고 수준:          Level3  (프로젝트 초기엔 /W4를 목표로 적어뒀으나, 전체
+                    코드베이스를 W4로 올리면 새로 드러날 경고를 이번에 다
+                    해소할 필요는 없다고 판단해 Level3로 확정)
+추가 포함 디렉터리: $(SolutionDir)Engine/
+미리 컴파일된 헤더: EnginePCH.h 사용(Engine만 — Game/Test는 PCH 미설정)
+```
+
+---
+
+## EnginePCH.h (기본 타입 정의)
+
+```cpp
+#pragma once
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+#include <malloc.h>
+#include <new>
+#include <cassert>
+
+using int8   = int8_t;
+using int16  = int16_t;
+using int32  = int32_t;
+using int64  = int64_t;
+using uint8  = uint8_t;
+using uint16 = uint16_t;
+using uint32 = uint32_t;
+using uint64 = uint64_t;
+
+#define INDEX_NONE   -1
+#define check(expr)  assert(expr)   // Release(NDEBUG)에서 완전히 사라짐 — 부수효과 있는 식을 넣으면 안 됨
+
+#ifdef NDEBUG
+#define verify(expr) ((void)(expr)) // Release: 평가는 하지만 실패해도 그냥 무시
+#else
+#define verify(expr) assert(expr)   // Debug: 실패 시 assert
+#endif
+```
+
+---
+
+## 전체 구현 로드맵
+
+### [LAYER 1] Engine Core — Phase 0~7.5 (1~6주)
+
+---
+
+### Phase 0 — 프로젝트 세팅 (2~3일) ✅
+
+목표: 솔루션 빌드 성공 + 폴더 구조 확정
+
+- [x] VS 솔루션 생성 (Engine .lib / Game .exe / Tests .exe)
+- [x] 폴더 구조 생성
+- [x] EnginePCH.h 작성
+- [x] 컴파일러 옵션 설정 (/GR- /W4)
+- [x] 빈 main.cpp — "Engine Init" 출력 후 빌드 성공 확인
+- [x] Git 첫 커밋
+
+완료 기준: `>Engine Init` 출력 후 오류 없이 빌드됨
+
+---
+
+### Phase 1 — Memory 시스템 (3~4일) ✅
+
+파일 위치: `Engine/Core/Memory/`
+
+- [x] `IAllocator.h / .cpp` — 인터페이스 (Malloc / Realloc / Free)
+- [x] `FMallocAnsi.h / .cpp` — _aligned_malloc 래핑
+- [x] `FMemory.h / .cpp` — GMalloc 전역 포인터 + InitMemory() + MemoryOps
+- [x] `MemoryOverride.cpp` — operator new / delete 전역 오버라이드
+- [x] Pool Allocator (몬스터·파티클 대량 생성용) — FPoolAllocator
+- [x] Stack(Frame) Allocator (프레임 단위 임시 할당) — FStackAllocator
+- [x] 메모리 추적 / 릭 감지 (DEBUG 빌드 전용) — FMemoryTracker
+
+완료 기준: `new MyClass()` 호출 시 GMalloc 경유 로그 확인 ✅
+
+---
+
+### Phase 2 — TypeTraits / 유틸리티 (2~3일) ✅
+
+파일 위치: `Engine/Core/Templates/`
+
+- [x] `TypeTraits.h` — TIsPOD, TIsTriviallyCopyable, TEnableIf, TConditional, TDecay, TIsPointer, TIsEnum
+- [x] `Utility.h` — MoveTemp, Forward, Swap
+- [x] `AndOrNot.h` — TAnd, TOr, TNot
+
+완료 기준: `static_assert(TIsPOD<int>::Value == true)` 통과 ✅
+
+---
+
+### Phase 3 — TArray (4~5일) ✅
+
+파일 위치: `Engine/Core/Containers/`
+
+- [x] Reserve / Grow (x2 성장 전략)
+- [x] Add(const T&) / Add(T&&) / Emplace (placement new)
+- [x] RemoveAt(index) — O(n) 순서 유지
+- [x] RemoveAtSwap(index) — O(1) 순서 파괴
+- [x] Find / Contains
+- [x] Sort / StableSort
+- [x] FilterByPredicate / RemoveAll
+- [x] Reset (Capacity 유지) / Empty (메모리 해제)
+- [x] 복사 생성자 / 이동 생성자
+- [x] POD 분기 최적화 (if constexpr)
+- [x] TArrayView (비소유 슬라이스)
+- [x] begin / end (범위 기반 for)
+
+완료 기준: 비POD 타입 소멸자 호출 확인 + 메모리 릭 없음 ✅
+
+---
+
+### Phase 3.5 — 수학 라이브러리 (4~5일) ★추가 ✅
+
+파일 위치: `Engine/Core/Math/`
+
+- [x] `FMath.h / .cpp` — Lerp, Clamp, Abs, Min, Max, Sin, Cos, Atan2, Sqrt, Pow, FMod
+- [x] `FColor.h / .cpp` / `FLinearColor.h / .cpp` — 피격 깜빡임·스프라이트 틴트
+- [x] `FVector2D.h / .cpp` — x, y + 전체 연산자 (+,-,*,/), 내적, 정규화, 크기
+- [x] `FIntPoint.h / .cpp` / `FIntRect.h / .cpp` — 타일맵·NavGrid 정수 좌표
+- [x] `FRect.h / .cpp` — AABB 충돌 전용 (Left, Top, Right, Bottom)
+- [x] `FTransform2D.h / .cpp` — Location(FVector2D) + Rotation(float) + Scale(FVector2D)
+- [x] `FMatrix3x3.h / .cpp` / `FMatrix4x4.h / .cpp` — 렌더러 변환 행렬
+- [x] `FRandomStream.h / .cpp` — 시드 기반 난수 (드롭 확률·몬스터 스폰)
+
+완료 기준: FVector2D 사칙연산 + FMath::Lerp 단위 테스트 통과 ✅
+
+---
+
+### Phase 4 — TMap / TSet (4~5일) ✅
+
+파일 위치: `Engine/Core/Containers/`
+
+- [x] `HashFunctions.h` — GetTypeHash 특수화 (int32, uint32, int64, wchar_t*, FName)
+- [x] `TMap.h / .cpp` — Open Addressing + Rehash (Load Factor 0.75)
+- [x] `TSet.h / .cpp`
+- [ ] `TSparseArray.h / .cpp` — 언리얼 TMap 내부 구조 (Phase 7.5+ 최적화 시 적용)
+- [x] `TMultiMap.h / .cpp` — 한 키에 여러 값 (스킬 태그 시스템)
+
+완료 기준: TMap 1000개 삽입·검색·삭제 + Rehash 동작 확인 ✅
+
+---
+
+### Phase 5 — FString / FName / FText (3~4일) ✅
+
+파일 위치: `Engine/Core/String/`
+
+- [x] `FString.h / .cpp` — wchar_t 기반, TArray 활용, 전체 연산자 (+, ==, !=, +=, *)
+- [x] `FString::Printf` / `FString::Format` (데미지 숫자 포맷)
+- [x] `FString` 파싱 — Split, Contains, StartsWith, EndsWith, ToInt, ToFloat
+- [x] `FName.h / .cpp` — TArray<FString> 선형 탐색 + uint32 인덱스 O(1) 비교
+- [x] `FText.h / .cpp` — 다국어 지원 래퍼 (언리얼 3종 문자열 체계)
+
+완료 기준: FName 비교 속도가 FString 비교보다 빠름을 측정으로 확인 ✅
+
+---
+
+### Phase 5.5 — 로깅 / 에러처리 (2일) ★추가 ✅
+
+파일 위치: `Engine/Core/Logging/`
+
+- [x] `check(expr)` — 항상 터지는 하드 assert
+- [x] `verify(expr)` — 릴리즈에서도 평가, 실패 시 assert
+- [x] `ensure(expr)` — 한 번만 터지는 soft assert
+- [x] `UE_LOG(Category, Level, Format, ...)` 매크로  
+  레벨: Verbose / Log / Warning / Error / Fatal  
+  카테고리: LogCore / LogAI / LogUI / LogRenderer / LogPhysics
+- [x] 로그 파일 저장 (`logs/engine.log`)
+- [x] 예외 없는 에러 전파 전략 (`TResult<T,E>` 패턴) — `Engine/Core/Templates/TResult.h`
+
+완료 기준: `UE_LOG(LogCore, Warning, L"test %d", 42)` 콘솔 + 파일에 기록 ✅
+
+---
+
+### Phase 6 — TSharedPtr / TWeakPtr (3일) ✅
+
+파일 위치: `Engine/Core/SmartPointer/`
+
+- [x] `SharedPointerInternals.h` — FRefCountBlock (SharedCount + WeakCount)
+- [x] `TSharedPtr.h / .cpp` — 복사 / 이동 / 소멸
+- [x] `TSharedRef.h / .cpp` — null 불가 버전
+- [x] `TWeakPtr.h / .cpp` — IsValid() / Pin()
+- [x] `MakeShared<T>()` 헬퍼
+- [x] 순환 참조 테스트 케이스 (보스↔파츠 참조 구조)
+
+완료 기준: 순환 참조 상황에서 메모리 릭 없음 확인 ✅
+
+---
+
+### Phase 7 — UObject / Cast 시스템 (5~6일) ✅
+
+파일 위치: `Engine/Object/`
+
+- [x] `UClass.h / .cpp` — Name(FName) + SuperClass + IsChildOf() 체인
+- [x] `DECLARE_CLASS(TClass, TSuperClass)` 매크로 — StaticClass() + GetClass()
+- [x] `Cast<T>(obj)` — 실패 시 nullptr
+- [x] `CastChecked<T>(obj)` — 실패 시 check() assert
+- [x] `ExactCast<T>(obj)` — 정확히 그 타입만
+- [x] `TSubclassOf<T>` — 타입 안전 클래스 레퍼런스 (직업 등록용)
+- [x] `UObject.h / .cpp` — 베이스 클래스 (BeginPlay, Tick, EndPlay)
+- [x] `AActor.h / .cpp` — AddComponent<T>() / GetComponent<T>() 템플릿
+- [x] `UActorComponent.h / .cpp` / `USceneComponent.h / .cpp` (Transform 보유)
+- [x] UPROPERTY / UFUNCTION 매크로 기초 (stub)
+- [ ] CDO — Class Default Object (아이템·몬스터 기본값) ← Phase 7.5+ 예정
+- [ ] UObject 완전 GC (몬스터 사망 후 자동 해제) ← Phase 7.5+ 예정
+
+완료 기준: `Cast<USpriteComponent>(comp)` 정상 동작 확인 ✅
+
+---
+
+### Phase 7.5 — 타이머 시스템 (2~3일) ★추가 ✅
+
+파일 위치: `Engine/Timer/`
+
+- [x] `FTimerHandle.h / .cpp` — 개별 타이머 식별자
+- [x] `FTimerManager.h / .cpp` — SetTimer / ClearTimer / PauseTimer / ResumeTimer
+- [x] `SetTimerNextFrame` — 지연 실행 (사망 후 N초 뒤 리스폰)
+- [x] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근 (`FTimerManager.h/.cpp`에
+  `TickGlobalClock()`과 함께 자유 함수로 구현 — `FTimerManager` 클래스와는
+  무관한 파일 스코프 QueryPerformanceCounter 기반 클럭. 초기에는
+  `Game/Include/main.cpp` 루프에 연결했고, 현재는 `FEngineLoop::Tick()`이
+  `TickGlobalClock()`/`GetDeltaTime()`을 호출해 델타타임을 공급한다.
+  `UEngine::Tick()`이 같은 델타타임으로 타이머와 월드를 갱신한다)
+
+완료 기준: 3초 뒤 콜백 정확히 호출 확인 ✅, 매 프레임
+`TickGlobalClock()`/`GetDeltaTime()`로 델타타임 공급 확인 ✅.
+현재 프레임 루프는 `Engine/Include/EngineLoop.cpp`에서 실행한다.
+
+---
+
+### Phase 7.7 — Gameplay Ability System (6~7일) ★추가 ✅
+
+파일 위치: `Engine/Ability/`
+
+**설계 원리:** RTTI 없이 UClass + Cast<T> 기반으로 언리얼 GAS를 직접 구현.  
+MapleStory의 패시브·액티브 스킬, 독 도트, 힐, 쿨다운, 장비 스탯, 상태이상을 모두 커버.
+
+#### 핵심 타입 (`AbilityTypes.h`)
+
+```
+EGameplayEffectDurationType : Instant / Duration / Infinite
+EGameplayModifierOperation  : Add / Multiply / Override
+FGameplayEffectModifier     : AttributeName + Operation + Magnitude
+FActiveGameplayEffect       : pSpec + Duration + PeriodTimer + StackCount
+FGameplayAbilitySpec        : pAbility + Level + bIsActive
+```
+
+#### 구현 파일 목록
+
+- [x] `AbilityTypes.h` — 공통 열거형·구조체 (헤더 전용)
+- [x] `FGameplayTag.h / .cpp` — 계층 태그 (L"Skill.Attack.Slash", L"Status.Stun")
+  - `MatchesParent()` — "Skill.Attack"이 "Skill"의 자식인지 문자열 접두사로 판별
+- [x] `FGameplayTagContainer.h / .cpp` — 태그 묶음
+  - `HasTag()` / `HasParentTag()` / `HasAnyTag()` / `HasAllTags()`
+- [x] `FGameplayAttribute.h` — 단일 속성 (BaseValue + CurrentValue + Min/Max 클램프, 헤더 전용)
+- [x] `UAttributeSet.h / .cpp` — `TMap<FName, FGameplayAttribute>` 기반 속성 집합
+  - `InitAttribute(Name, Base, Min, Max)` / `GetAttribute()` / `GetCurrentValue()`
+- [x] `UGameplayEffect.h / .cpp` — 효과 정의
+  - Instant: 즉시 적용 후 소멸 (데미지, 회복)
+  - Duration: N초 유지 후 만료 (버프/디버프)
+  - Infinite: 명시 제거 전까지 유지 (패시브, 장비 스탯)
+  - `m_Period` — 0이면 없음, >0이면 N초마다 Modifier 재적용 (독 도트)
+  - `m_MaxStacks` — 중첩 버프 최대 스택 수 (기본 1)
+- [x] `UGameplayAbility.h / .cpp` — 스킬 정의
+  - `m_pCostEffect` — MP 소모 효과
+  - `m_pCooldownEffect` — 쿨다운 태그 부여 효과
+  - `m_ActivationBlockedTags` — 스턴 등 차단 조건
+  - `virtual CanActivate()` / `ActivateAbility()` / `EndAbility()`
+- [x] `UAbilitySystemComponent.h / .cpp` — 캐릭터에 붙는 메인 컴포넌트 (UActorComponent 상속)
+  - `SetAttributeSet()` / `GetAttributeCurrentValue()`
+  - `ApplyGameplayEffect()` — Instant 즉시 처리, Duration/Infinite 목록 추가
+  - `RemoveEffectsWithTag()` — 상태이상 해제 스킬에서 사용
+  - `GrantAbility()` / `TryActivateAbility()` / `TryActivateAbilityByTag()`
+  - `Tick(DeltaTime)` — Duration 차감, Period 도트 발동, 만료 효과 제거
+  - `AddLooseTag()` / `RemoveLooseTag()` — 직접 태그 조작
+
+#### MapleStory 패턴별 구현 방식
+
+| 패턴 | GAS 구현 |
+|------|---------|
+| 패시브 스킬 (ATK +20% 영구) | Infinite UGameplayEffect, 스킬 습득 시 적용 |
+| 독 디버프 (1초마다 HP -50) | Duration + Period UGameplayEffect |
+| 힐 포션 (HP 즉시 +500) | Instant UGameplayEffect |
+| 스킬 쿨다운 (3초) | Duration + L"Cooldown.Slash" 태그 부여 |
+| 상태이상 해제 | RemoveEffectsWithTag(L"Status") 호출 |
+| 장비 스탯 (활: ATK +200) | Infinite 효과, 장비 해제 시 제거 |
+| 크리티컬 충전 스택 | MaxStacks=5 Duration 효과 |
+
+완료 기준:
+- 독 도트 1초마다 HP 감소 확인 ✅
+- 쿨다운 중 재발동 차단 확인 ✅
+- 패시브 Infinite 효과 ATK 영구 증가 확인 ✅
+- 상태이상 차단 및 해제 확인 ✅
+- FMemoryTracker 릭 없음 확인 ✅
+
+---
+
+### Phase 7.5+ — Core 최적화 (LAYER 1 완료 후) ★예정
+
+LAYER 1 (Phase 0~7.5) 전체 검증 완료 후 언리얼 엔진 실제 구조에 맞게 일괄 최적화한다.
+
+**Phase 1 — FMallocBinned (소형 객체 Bin 할당자)** ✅
+
+- 현재: `_aligned_malloc` 래핑 (FMallocAnsi) — 모든 크기를 동일하게 처리
+- 목표: 크기 클래스 버킷 방식 — 16 / 32 / 64 / 128 / 256 / 512B 등 Bin 단위 풀링
+- 변경 파일: `Engine/Core/Memory/FMallocBinned.h / .cpp`
+- 효과: 소형 객체 외부 단편화 제거, 스레드 로컬 캐시로 O(1) 할당
+
+**Phase 3 — TInlineAllocator\<N\>** ✅
+
+- 현재: TArray가 항상 힙 할당
+- 목표: 첫 N개 원소를 스택(인스턴스 내부)에 저장 — 초과 시 힙으로 이관
+- 변경 파일: `Engine/Core/Containers/TArray.h` (Allocator 템플릿 파라미터 추가)
+- 효과: 소형 배열 힙 할당 완전 제거 (예: `TArray<FName, TInlineAllocator<4>>`)
+
+**Phase 4 — TMap / TSet → TSparseArray + 해시 버킷 분리** ✅
+
+- 현재: Open Addressing 선형 프로빙 — Deleted 슬롯 누적, Rehash 비용
+- 목표: TSparseArray(연속 메모리) + 해시 버킷 인덱스 체인 (언리얼 실제 구조)
+- 변경 파일: `Engine/Core/Containers/TSparseArray.h`, `TMap.h`, `TSet.h`
+- 효과: Deleted 슬롯 없음, 반복 캐시 효율 개선, 삭제 후 공간 재사용
+
+**Phase 5 — FNameEntry 인라인 저장 + FNamePool** ✅
+
+- 현재: `TArray<FString>` 선형 탐색 — FString은 별도 힙(`m_pData` 포인터) 보유
+- 목표:
+  - `FNameEntry { wchar_t Name[NAME_SIZE]; }` — 문자열을 구조체 내부에 인라인 저장
+  - `FNamePool`: `TMap<uint32, uint32>` (키 = 문자 내용 djb2 해시, 값 = 엔트리 인덱스)
+  - 포인터 기반 해시 문제 원천 제거 (MSVC Debug 버그 재발 불가)
+- 변경 파일: `Engine/Core/String/FName.h / .cpp`
+- 참고: `FName::ToString()`은 MSVC Debug 인라인 코드생성 버그 회피를 위해
+  `FName.cpp`에 `noinline`으로 out-of-line 정의됨 (헤더 전용 구현 금지 원칙과도 일치)
+
+**Phase 6 — TSharedPtr 원자적 참조 카운트** ✅
+
+- 현재: 단순 `int32` 증감 (단일 스레드 한정)
+- 목표: `FReferenceControllerBase` — SharedCount + WeakCount 원자적(Atomic) 연산
+- 변경 파일: `Engine/Core/SmartPointer/SharedPointerInternals.h`
+- 효과: 멀티스레드 안전 공유 소유권 (Phase 16+ 병렬 AI·렌더링 대비)
+
+완료 기준: LAYER 1 단위 테스트 전체 통과 후 최적화 브랜치 별도 생성 — Phase 1·3·4·5·6 ✅ 전부 완료 (Debug/Release 양쪽 전체 86개 테스트 PASSED 확인)
+
+---
+
+### [LAYER 2] Engine Systems — Phase 8~15 (7~14주)
+
+---
+
+### Phase 8 — Renderer (DX11) (1.5주)
+
+파일 위치: `Engine/Include/Render/` (로드맵 문서엔 `Renderer`로 적혀있지만
+실제 스캐폴딩된 폴더명은 `Render` — 기존 폴더를 그대로 사용)
+
+- [x] `DXDevice.h / .cpp` — ID3D11Device 초기화 (Debug 레이어 미설치 시
+  플래그 없이 재시도하는 폴백 포함)
+- [x] `DXSwapChain.h / .cpp` — SwapChain + Present (레거시
+  `DXGI_SWAP_CHAIN_DESC` 경로, 리사이즈는 다음 단계로 보류)
+- [x] `SpriteBatch.h / .cpp` — DirectXTK 연동 (`SpriteSortMode_Deferred`로
+  `FRenderQueue`가 CPU에서 정렬한 순서 그대로 그리도록 함) + 파일 없이
+  코드로 텍스처를 만드는 `CreateSolidColorTexture`/`CreateCheckerboardTexture`
+  플레이스홀더 헬퍼(Resource Manager/WZ 로딩 이전 임시)
+- [x] `RenderQueue.h / .cpp` — Z-Order 정렬 렌더링 (`TArray::StableSort`로
+  동일 ZOrder는 제출 순서 유지)
+- [x] `FCamera2D.h / .cpp` — 월드↔스크린 좌표 변환, `GetViewMatrix()`
+  (플레이어 추적 스크롤은 아직 미구현 — `SetLocation`만 있고 자동 추적
+  로직 없음)
+- [x] Parallax Scrolling — 배경 원근 스크롤링 (`FRenderQueueEntry::m_ParallaxFactor`
+  추가 — 기본 1.0은 카메라와 완전히 같이 움직이는 기존 동작 그대로,
+  1보다 작으면 `Flush()`가 `GCamera2D->GetLocation() * (1 - ParallaxFactor)`만큼만
+  덜 움직여서 더 멀리 있는 배경처럼 느리게 스크롤됨. 여러 렌더 패스
+  없이 기존 `Flush()` 안에서 위치만 보정하는 방식이라 배경 레이어를
+  여러 겹(하늘/먼 산/가까운 산 등) 깔아도 한 번에 그려짐)
+- [x] 레이어 렌더링 — 배경 / 오브젝트 / 이펙트 / UI (`RenderQueue.h`에
+  `ELayer` enum 추가, 정렬 키를 `(Layer, ZOrder)` 2단으로 변경.
+  `Flush()`는 월드 좌표 레이어(Background/Object/Effect)만, 신규
+  `FlushUI()`는 UI 레이어만 화면 좌표(항등 변환)로 그림 — `main.cpp`가
+  프레임마다 `Begin(카메라 행렬)/Flush/End` 다음에
+  `Begin()/FlushUI/End`를 추가로 호출)
+- [x] 스프라이트 틴트 / 피격 깜빡임 (틴트 파이프라인 자체는 이미
+  `SubmitSprite`→`FRenderQueueEntry::m_Tint`→`SpriteBatch::DrawSprite`
+  로 다 연결돼 있어서, 시간에 따라 틴트를 바꿔주는 `FHitFlash`
+  유틸리티만 추가. `Trigger(Duration, FlashColor)` 이후 매 프레임
+  `Update(DeltaTime)` → `GetTint()`가 `FlashColor`에서 `White`로
+  서서히 Lerp — DirectXTK 틴트가 곱연산이라 완전한 흰색 실루엣 플래시는
+  안 되고 색이 옅어지며 돌아오는 방식만 가능. 아직 게임 루프에 Actor가
+  없어서 `UActorComponent`가 아니라 독립 클래스로 만듦 — 나중에 몹
+  액터가 생기면 그 컴포넌트가 그대로 갖다 쓰면 됨)
+- [x] 데미지 숫자 팝업 렌더링 (`FDamagePopup` — `FHitFlash`와 같은 패턴의
+  독립 시간 기반 유틸리티. `Spawn()` 이후 `Update(DeltaTime)`을 거치면
+  `GetPosition()`이 위로 떠오르는 좌표를, `GetTint()`가 서서히 투명해지는
+  알파를 돌려줌. 여러 개 동시 표시용 풀링은 아직 아무도 안 써서 만들지
+  않음, 호출자(나중의 몹 액터) 책임)
+  — 실제 숫자 글리프는 `FDamageFont`(신규)가 담당: 처음엔 DirectXTK
+  SpriteFont(`.spritefont` 에셋 필요, Phase 14 `UFont.h/.cpp` 몫)로
+  미루려 했는데, 사용자가 실제 `Etc.wz/DamageSkin.img` XML을 확인해준
+  덕에 몹 프레임 로딩 때와 같은 `_outlink`/`_Canvas` 패턴임을 알게 돼
+  이미 검증된 `wz_read_canvas`로 진짜 데미지 숫자 이미지(스킨 0
+  기본 "NoRed0" 스타일 0~9)를 그대로 로드하는 쪽으로 바꿈 — 별도 폰트
+  에셋/도구 없이 완료. `WzTextureLoader::LoadCanvasTexture`에
+  optional Width/Height out 파라미터를 추가해 글리프 폭을 얻고,
+  `SubmitNumber()`가 정수를 자릿수로 쪼개 각 글리프의 `origin.y`로
+  베이스라인을, 전체 폭 절반만큼 밀어서 가운데 정렬을 맞춰 나란히
+  제출한다. 크리티컬 색 분기(`NoCri0` 등 다른 스타일)·다른 스킨 선택은
+  Phase 12(UI)에서 게임플레이 훅과 함께 다룰 예정)
+- [x] 화면 페이드인·아웃 (맵 이동 연출) (`FScreenFade` — `FadeOut()`/`FadeIn()`
+  이후 매 프레임 `Update(DeltaTime)`을 거치면 `GetAlpha()`가 서서히
+  변한다. `FHitFlash`/`FDamagePopup`과 달리 `IsActive()`(지금 변하는
+  중인지)와 `GetAlpha()`(현재 표시할 값, 페이드 끝나도 도착값 유지)를
+  분리 — 화면 페이드는 아웃이 끝나도 다음 인이 호출되기 전까지 계속
+  검게 덮여있어야 해서, 렌더링 여부는 `GetAlpha() > 0`으로 판단한다.
+  실제 렌더링은 `FSpriteBatch::CreateSolidColorTexture`로 만든 1x1
+  단색 텍스처를 화면 크기로 Scale해서 `ELayer::UI` +
+  `FScreenFade::SCREEN_FADE_ZORDER`(INT32_MAX로 예약)로 제출 — 다른
+  UI 요소가 몰라도 항상 최상단에 그려지도록 구조적으로 보장)
+
+Phase 8 렌더러 항목 전체 완료.
+
+★ WZ 병행 작업 (Phase 8 시작 시, 아직 미착수):
+- [x] Canvas → 픽셀 변환 (WzPng) 구현 — **C# DLL 브리지 확장 방식**으로 완료  
+  `wz_test.cpp`가 순수 C++ 파서가 아니라 C# Native AOT DLL(`WzNativeLib.dll`,
+  `WzComparerR2.WzLib` 재사용)을 `LoadLibraryA`로 부르는 얇은 래퍼임을
+  확인하고, 처음부터 C++로 새로 짜는 대신(zlib 벤더링 + BGRA4444/RGB565/
+  DXT3·DXT5·BC7 디코더 전부 재구현) 기존 `Wz_Png.ExtractPng()`를 감싸는
+  새 export `wz_read_canvas`를 추가하는 쪽을 택했다(WzComparerR2 저장소
+  `claude/dx11-2d-engine-fr8yv` 브랜치, `WzExports.cs`). BGRA8888 raw
+  픽셀을 네이티브로 넘기면, 엔진 쪽 `Engine/Include/Render/WzTextureLoader.h/.cpp`가
+  이를 `ID3D11ShaderResourceView`로 업로드한다(`DXGI_FORMAT_B8G8R8A8_UNORM`,
+  `DXDevice`가 이미 `D3D11_CREATE_DEVICE_BGRA_SUPPORT`로 생성돼 있어
+  채널 스왑 불필요). `main.cpp`는 실제 WZ Canvas 로드를 먼저 시도하고
+  실패하면 체커보드 placeholder로 폴백한다.  
+  참고: 이 방식은 CLAUDE.md 하단 "면접 어필 포인트"의 "WZ 파서 직접
+  C++ 이식" 항목과는 어긋난다(실제 디코딩은 C# 코드가 수행) — 필요하면
+  나중에 순수 C++ 구현(zlib 벤더링 + 포맷별 디코더 이식)으로 교체
+  가능하도록 `FWzTextureLoader`의 인터페이스는 그대로 두고 내부 구현만
+  바꾸면 되는 구조로 분리해뒀다.  
+  **로컬 빌드·배치 필요** (Claude Code가 대신할 수 없음):
+  1. `/home/user/WzComparerR2`에서 `WzTest/WzNativeLib` 프로젝트를
+     `dotnet publish -r win-x64 -p:NativeLib=Shared -c Release`로 빌드.
+  2. 결과물 `WzNativeLib.dll`(`bin/Release/net8.0/win-x64/publish/`)을
+     `Game/Bin/`(`MapleStory.exe`와 같은 폴더)에 복사.
+  3. `Game/Include/main.cpp`의 `TestWzPath`/`TestCanvasNodePath` 상수를
+     로컬에 있는 실제 WZ 파일 경로/Canvas 노드 경로로 수정.
+  4. 1차 검증은 엔진 빌드 전에 `wz_test.exe`로 먼저 해볼 수 있음 —
+     `wz_test.exe WzNativeLib.dll "<wz경로>" "" "" "<canvas 노드 경로>" canvas.bmp`
+     실행 후 생성된 `canvas.bmp`를 이미지 뷰어로 열어 디코딩 결과 확인.
+- [x] STL → 엔진 컨테이너 교체 (wz_test.cpp) — **조사 결과 해당 없음으로
+  판명, 실제 교체는 하지 않음.** `wz_test.cpp`(`WzComparerR2` 저장소
+  `WzTest/wz_test.cpp`)는 자기 자신의 CMake 타겟(`WzTest/CMakeLists.txt`)
+  으로만 빌드되는 독립 진단 실행 파일이라 `Engine.lib`/`Game.exe`(이
+  엔진의 "STL 금지" 정책이 적용되는 범위)에 전혀 링크되지 않는다.
+  실제 STL 사용도 `std::vector`/`std::unordered_map`/`std::unique_ptr`는
+  0건이고 `std::string`만 CLI 인자·파일 경로 처리용으로 소량 쓰인다 —
+  애초에 정책 적용 대상이 아니었다.
+
+완료 기준: 스프라이트 하나를 화면에 Z-Order 맞게 출력 — **Windows/Visual
+Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래 로컬 환경
+설정을 거쳐 정상 출력 확인됨)
+
+**DirectXTK 설치 방식**: NuGet 패키지(`directxtk_desktop_2019`,
+`directxtk_desktop_win10`)는 둘 다 deprecated 상태였고, vcpkg는 사용자
+환경에서 `vcpkg` 명령어가 PATH에 없어 막혔고, git 서브모듈 + 프로젝트
+참조 방식은 솔루션 구조가 복잡해진다는 이유로 보류했다. 최종적으로
+**DirectXTK를 솔루션 밖에서 별도로 빌드한 뒤, 그 결과물(.lib)과
+헤더만 파일로 가져다 놓는 방식**을 사용한다 — 별도 패키지 관리자도,
+서브모듈도, 추가 프로젝트도 없이 순수하게 "미리 빌드된 라이브러리
+링크"만 하면 된다. 벤더 폴더(`ThirdParty/DirectXTK/Inc/`,
+`ThirdParty/DirectXTK/Lib/`, 각 폴더의 `README.txt`)와
+`Engine.vcxproj`/`Game.vcxproj`의 `IncludePath`/`LibraryPath` 설정은
+이미 커밋되어 있음 — 아래 빌드·복사만 사용자가 직접 하면 됨.
+
+**DirectXTK.lib 배치 방식**: Debug/Release용 `.lib`를 하위 폴더로
+나누지 않고 `ThirdParty/DirectXTK/Lib/` 한 폴더에 파일명으로만
+구분해서 넣는다 — `EnginePCH.h`가 `Engine.lib`/`Engine_Debug.lib`로
+구분하는 것과 동일한 관례. `SpriteBatch.h`가
+`#ifdef _DEBUG`로 `DirectXTK_Debug.lib`/`DirectXTK.lib`를 갈라 링크한다.
+
+**로컬 환경 설정 필요** (Claude Code가 대신할 수 없음 — 실제 빌드는
+사용자의 Windows 머신에서만 가능):
+1. `https://github.com/microsoft/DirectXTK`를 아무 곳에나 clone(또는
+   release zip 다운로드) — 이 저장소 안에 넣을 필요 없음, 빌드 재료일
+   뿐.
+2. 그 폴더의 `DirectXTK_Desktop_2022.sln`을 Visual Studio로 열어
+   Debug|x64로 빌드 → 결과물 `DirectXTK.lib`의 이름을
+   **`DirectXTK_Debug.lib`로 바꿔서**
+   `ThirdParty/DirectXTK/Lib/DirectXTK_Debug.lib`로 복사.
+3. Release|x64로 다시 빌드 → 결과물 `DirectXTK.lib`는 **이름 그대로**
+   `ThirdParty/DirectXTK/Lib/DirectXTK.lib`로 복사.
+4. DirectXTK 저장소의 `Inc` 폴더 전체를
+   `ThirdParty/DirectXTK/Inc/`로 복사(빌드 없이 파일 복사만).
+5. Engine, Game 프로젝트의 예외 처리를 `/EHsc`(또는 `/EHa`)로 활성화
+   (DirectXTK 헤더가 예외를 쓰므로 필요 — 엔진 자체 코드는 여전히
+   `check()`/`verify()`만 사용)
+6. `MapleStory.sln`을 Engine → Game 순서로 빌드.
+7. d3d11.lib/dxgi.lib는 `DXDevice.h`의 `#pragma comment(lib, ...)`가
+   자동 링크하므로 수동 설정 불필요
+
+---
+
+### Phase 9 — Animation 시스템 (1주)
+
+파일 위치: `Engine/Include/Animation/` (다른 Phase와 동일하게 로드맵
+문서의 `Engine/Animation/`이 아니라 실제 스캐폴딩된 `Engine/Include/`
+하위 경로 사용)
+
+- [x] `UFlipbookComponent.h / .cpp` — 스프라이트 시트(정확히는 지금은
+  WZ 아바타 합성 텍스처 시퀀스) 프레임 재생. `UActorComponent` 상속,
+  `SetFrames(TArray<FFlipbookFrame>, bLoop)`로 프레임 목록을 받아
+  `Tick(DeltaTime)`이 경과 시간에 따라 프레임을 넘기면서 형제
+  `USpriteComponent`(`GetOwner()->GetComponent<USpriteComponent>()`로
+  `BeginPlay()`에서 캐싱)의 텍스처를 교체한다. `FFlipbookFrame`은
+  텍스처(`ID3D11ShaderResourceView*`)+원점+프레임당 표시 시간(초)
+  묶음 — 딜레이는 아직 호출자가 지정(아래 "WZ 애니메이션 프레임 딜레이
+  → UFlipbookComponent 연동" 참고, 이번엔 미착수).
+  **소유권 규칙**: `ID3D11ShaderResourceView`는 COM 레퍼런스 카운트
+  객체이고 `USpriteComponent::SetTexture()`는 넘겨받은 레퍼런스를
+  소유권째 가져가 다음 교체 시 `Release()`를 소비한다 — 같은 프레임을
+  루프마다 반복해서 넘겨야 하므로, `SetFrames()`는 각 텍스처를
+  `AddRef()`해서 컴포넌트 수명 동안 자체 보관하고, `Tick()`이 매번
+  프레임을 넘기기 직전에 그 프레임 텍스처를 한 번 더 `AddRef()`한다
+  (`AddRef` 없이 그대로 넘기면 두 번째 루프에서 이미 해제된 포인터를
+  다시 쓰는 use-after-free가 됨).
+  초기 `Game/Include/main.cpp` 데모(현재 로딩은 `UMapleGameInstance::InitPlayer()`로 이관): `pPlayerCharacter`에
+  `"walk1"` 액션의 프레임을 `FrameIndex` 0부터 실패(`nullptr`)할
+  때까지 순차 로드해(`LoadAvatarTexture`가 프레임 개수를 미리 알려주지
+  않아서 런타임 추론) `UFlipbookComponent`에 태우고 `Play()` — WZ에
+  `walk1` 데이터가 없으면 조용히 폴백(기존 `stand1` 정적 프레임 유지).
+- [x] `UAnimStateMachine.h / .cpp` — Idle→Move→Attack→Dead 상태 전환.
+  `UFlipbookComponent`의 형제 컴포넌트(`GetComponent<UFlipbookComponent>()`로
+  `BeginPlay()`에서 캐싱 — `UFlipbookComponent`가 `USpriteComponent`를
+  찾는 것과 동일한 패턴), `TMap<FName, FAnimStateData>`(프레임 배열+루프
+  여부)로 상태를 등록해두고 `SetState(FName)` 한 번으로 형제의
+  `SetFrames()`+`Play()`를 대신 호출해준다. 같은 상태로 다시
+  `SetState()`하면 no-op(매번 애니메이션 재시작 방지), 미등록 이름이면
+  `ensure()` 경고 후 무시.
+  **소유권 규칙**: `RegisterState()`가 넘겨받은 텍스처를 `AddRef()`해서
+  "지금 활성 상태인지와 무관하게, 등록된 모든 상태에 대해 동시에"
+  컴포넌트 수명 동안 보관한다 — `SetState()`는 이 보관본을 그대로
+  `UFlipbookComponent::SetFrames()`에 넘길 뿐이고, `SetFrames()`가 자기
+  예전 프레임을 알아서 `Release()`하므로 "떠나는 상태"를 위한 해제
+  로직이 따로 필요 없다.
+  **`AddComponent` 순서 주의**: `UFlipbookComponent`를 `UAnimStateMachine`보다
+  먼저 붙여야 한다 — 반대 순서면 `UAnimStateMachine::BeginPlay()`
+  시점에 형제가 아직 없어서 캐시가 영구히 `nullptr`로 굳는다(이전
+  라운드에 고친 "스폰 후 `AddComponent`는 즉시 `BeginPlay()` 호출"
+  버그와 맞물리는 지점 — 현재 `UMapleGameInstance::InitPlayer()`에서도 이 순서를 유지한다).
+  초기 `main.cpp` 데모에서는 `"Idle"`/`"Move"`를 타이머로 토글했다.
+  현재는 `UMapleGameInstance::Tick()`이 물리 갱신 이후의 Grounded, 속도,
+  오르기 상태와 로프/사다리 종류로 Idle/Move/Jump/Ladder/Rope를 선택한다.
+  같은 상태는 재시작하지 않으며, 매달려 정지하면 프레임 진행만 멈추고 이동하면 다시 재생한다.
+  WZ 액션이 없으면 등록된 Idle 또는 Move로 보완한다.
+- [x] `UAnimNotify.h / .cpp` — 특정 프레임에 이벤트 발생. 실제 언리얼과
+  동일하게 `UObject`를 상속해 `Notify(AActor*)`를 오버라이드하는
+  서브클래스 방식(이미 있는 `UClass`/`Cast<T>` 인프라 재사용, Phase 7.7의
+  `UGameplayEffect`/`UGameplayAbility`와 같은 선례) — 멀티캐스트 큐나
+  AnimInstance 개념 없이 가상 함수 하나뿐(소비할 전투/피격 판정
+  시스템이 아직 없어서 그 이상은 투기적 코드). `FFlipbookFrame`에
+  비소유 `UAnimNotify* m_pNotify` 필드 추가, `UFlipbookComponent::Tick()`이
+  프레임 전환 `while` 루프에서 새 프레임으로 넘어가는 시점(루프
+  랩어라운드 포함)마다 정확히 한 번 `Notify()`를 호출 — 같은 프레임에
+  머무르는 틱에서는 `while` 조건 자체가 거짓이라 재호출 없음. 이번
+  세션 데모에는 등록한 알림이 없음(콤보/공격 판정 등 실제 소비처가
+  생기면 그때 서브클래스를 만들어 씀) — 인프라만 갖춰둠.
+- [x] `USpriteComponent` 좌우 반전(FlipHorizontal) ★추가 — Phase 8/Renderer
+  소속이지만 "오른쪽으로 걸어갈 때 오른쪽을 봐야 하는데 지금은 항상
+  왼쪽만 보고 있다"는 질문으로 이번에 같이 처리. 조사 결과 WZ 아바타
+  데이터는 한쪽 방향만 원본으로 갖고 있고(`ActionFrame.Flip`은 좌우
+  방향 스위치가 아니라 같은 프레임 안 파츠 재사용용 저작 힌트 —
+  `AvatarCanvas`에 "반대 방향으로 그려줘" 스위치 자체가 없음, 조사
+  완료), 좌우 반전은 원래부터 렌더러 몫이라는 게 확정됐다.
+  `SpriteBatch::DrawSprite`가 DirectXTK `Draw()`를 항상 `Scale` 벡터를
+  그대로 흘려보내며 호출하고 있어서(`SpriteBatch.cpp`), 별도 배관 없이
+  `USpriteComponent`에 `bool m_bFlipHorizontal`+`SetFlipHorizontal(bool)`만
+  추가하면 됐다. 단, `Render()`가 DirectXTK 쪽 Origin을 항상 `(0,0)`으로
+  고정해서 피벗 보정을 Position 쪽에서 미리 하고 있었기 때문에(`Location - m_Origin`),
+  단순히 `Scale.X`만 `-1`로 뒤집으면 피벗이 어긋나 반전할 때마다 캐릭터가
+  옆으로 튀는 버그가 된다 — 반전 시엔 `Position.X = Location.X + Origin.X`
+  (빼기 대신 더하기)로 보정 방향도 같이 뒤집어야 피벗이 월드 좌표에
+  고정된다(`USpriteComponent.cpp` 주석에 유도 과정 기록). `ACharacter::SetFacingRight(bool)`가
+  이 위로 얇게 얹힘 — 현재 `ACharacter::Tick()`이 실제 좌우 입력에 따라
+  `SetFacingRight()`를 호출한다. 입력이 없으면 마지막 방향을 유지한다.
+- [x] 메모리/D3D11 릭 진단 장치 실제 연결 ★추가 — "메모리 릭 없는지
+  확인하세요" 조언이 실행 불가능한 조언이었다는 지적으로 발견.
+  `FMemoryTracker`(Phase 1)는 `operator new`/`delete`(`MemoryOverride.cpp`)에
+  이미 걸려있어 자동으로 집계는 되고 있었지만, `ReportLeaks()` 호출이
+  `Test/Include/main.cpp`에만 있고 `Game/Include/main.cpp`엔 없어서
+  실제 게임 실행 시 결과를 볼 방법이 없었다 — `wWinMain` 종료 직전,
+  다른 모든 엔진 싱글턴(`pWorld`~`pDevice`)이 이미 다 정리된 시점에
+  `#ifdef _DEBUG`로 감싼 `FMemoryTracker::ReportLeaks()` 호출을 추가.
+  `FMemoryTracker.cpp`의 "릭 없음" 분기가 `wprintf`만 부르고
+  `OutputDebugStringW`는 안 불러서, 콘솔 없는 `Game.exe`(WinMain)에선
+  "릭 없음" 결과가 아무 데도 안 찍히는 버그도 같이 발견돼 수정 —
+  이제 두 분기 다 `OutputDebugStringW` 호출.
+  **더 중요한 발견**: `FMemoryTracker`는 `FMemory`/`new`/`delete` 힙
+  할당만 세고, 이번 세션 내내 신경 써온 `ID3D11ShaderResourceView`의
+  COM `AddRef`/`Release`(텍스처 참조 카운트)는 전혀 못 잡는다 — 그래서
+  `FDXDevice::Shutdown()`에 D3D11 디버그 레이어 기반 진단을 별도로
+  추가했다: 컨텍스트 해제 후·디바이스 해제 전(다른 모든 D3D11 리소스가
+  이미 해제된 시점) `ID3D11Debug::ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL)`
+  호출. `DXDevice::Initialize()`가 디버그 레이어 없이(Graphics Tools 옵션
+  미설치) 폴백 생성됐으면 `QueryInterface`가 실패하므로 조용히
+  건너뜀. 두 진단 다 `OutputDebugStringW` 기반이라 **Visual Studio
+  출력(Output) 창에서 디버거로 실행(F5)해야** 보인다 — `Game.exe`를
+  그냥 더블클릭 실행하면 결과를 볼 수 없음.
+- [ ] 스프라이트 시트 JSON 파싱 (TexturePacker 포맷)
+- [ ] 애니메이션 블렌딩 (이동 중 공격 전환)
+- [ ] 역방향 재생 (Reverse)
+- [ ] 스킬 이펙트 애니메이션 클립
+
+★ WZ 병행 작업:
+- [ ] FrameAnimator (딜레이 기반 프레임 전환) — 지금은 `UFlipbookComponent`가
+  이 역할을 겸하고 있어서 별도 클래스는 미착수(아래 항목으로 충분히
+  커버됨).
+- [x] WZ 애니메이션 프레임 딜레이 → UFlipbookComponent 연동 —
+  `wz_read_avatar`(`WzTest/WzNativeLib/WzExports.cs`)에 `int* outDelayMs`
+  출력 파라미터를 추가했다. `AvatarCanvas.CreateFrame()`이 내부적으로
+  쓰는 `ActionFrame`(딜레이 포함)은 그 메서드 밖으로 안 나오므로,
+  별도로 `AvatarCanvas.GetActionFrames(actionName)`(`AvatarCanvas.cs:667`,
+  액션 전체 프레임을 다시 훑어서 각각의 WZ `"delay"` 프로퍼티를
+  `LoadActionFrameDesc`로 채워 돌려주는 기존 public 메서드 — 새로
+  만들 필요 없이 그대로 재사용)를 호출해 `[frameIndex].AbsoluteDelay`
+  (`ActionFrame.cs:22-26`, 음수 delay 값을 `Math.Abs`로 정규화한 것)를
+  꺼내 넘긴다. 프레임 인덱스가 범위를 벗어나면 WZ 쪽 기본 폴백과 동일한
+  120ms를 유지.
+  C++ 쪽 `FAvatarTexture`(`WzTextureLoader.h`)에 `int32 m_DelayMs = 120`
+  필드 추가, `main.cpp`의 walk1 로딩 루프가 하드코딩했던 `0.15f` 대신
+  `Frame.m_DelayMs / 1000.0f`를 그대로 `FFlipbookFrame::m_Duration`에
+  사용하도록 교체. `UFlipbookComponent::SetFrames()`에는 방어 코드
+  추가 — WZ 딜레이가 0 이하로 들어오면 `Tick()`의 프레임 전환
+  `while` 루프가 절대 안 끝나는 무한 루프가 되므로, 그런 경우만
+  화면에 안 티 나는 최소값(0.001초)으로 클램프.
+  **로컬 재빌드 필요**: DLL export 시그니처가 바뀌었으므로
+  `WzNativeLib.dll`을 다시 `dotnet publish`해서 `Game/Bin/`에
+  교체해야 함 — Phase 8에 적어둔 빌드 절차와 동일.
+
+완료 기준: 캐릭터 이동 시 Walk 애니메이션 자동 전환 — 최소 입력과 물리 상태를
+연결해 구현했다. 지상 이동·정지, 공중, 로프·사다리에 맞춰 상태를 전환한다.
+Attack/Dead 등 피격·전투 상태의 실제 게임 연결은 후속 작업이다.
+
+**버그 노트 — `AddComponent<T>()`가 스폰 후 추가된 컴포넌트에
+`BeginPlay()`를 안 부르던 문제**: 위 데모를 처음 붙였을 때 캐릭터가
+전혀 안 걸었다. 원인은 `AActor::AddComponent<T>()`(`Engine/Include/Object/AActor.h`)가
+컴포넌트를 만들기만 하고 `BeginPlay()`는 안 불러준다는 것 —
+`ACharacter` 생성자에서 붙는 `USpriteComponent`는 `SpawnActor`가
+액터 생성 직후 한 번 돌리는 `BeginPlay()` 일괄 전파(`AActor::BeginPlay()`)를
+받지만, `UFlipbookComponent`처럼 그 이후(스폰 뒤)에
+`AddComponent<T>()`로 추가된 컴포넌트는 그 일괄 전파를 받을 기회 자체가
+없어서 `BeginPlay()`가 영원히 안 불렸다 — `UFlipbookComponent::BeginPlay()`가
+캐싱해야 할 `m_pTargetSprite`가 계속 `nullptr`이라 `Tick()`이 내부
+프레임 인덱스는 넘기면서도 실제 `SetTexture()`는 절대 안 불렀던 것.
+`AActor`에 `bool m_bHasBegunPlay`를 추가해서, `AddComponent<T>()`가
+액터가 이미 `BeginPlay`를 마친 상태면 새 컴포넌트에 즉시
+`BeginPlay()`를 호출해주도록 수정(생성자 시점에 붙는 컴포넌트는
+기존 일괄 전파 경로 그대로라 이중 호출 없음). 스폰 이후에 컴포넌트를
+런타임으로 붙이는 모든 미래 호출 지점(Phase 10 피격 반응 컴포넌트,
+Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공용 API
+버그였어서 `main.cpp` 개별 호출 지점이 아니라 `AActor.h/.cpp`에서
+근본 수정.
+
+**버그 노트 — 아바타 파츠 레이어 순서(z/ZIndex)가 실제로는 항상 깨져서
+그려지고 있던 문제 (WzComparerR2 저장소)**: 무기가 팔 앞에 그려져야
+할지 뒤에 그려져야 할지가 스윙 계열 액션에서 항상 반대로 나온다는
+리포트로 발견. `WzTest/WzNativeLib/WzExports.cs`의
+`canvas.LoadZ(root.FindNodeByPath(@"Base\zmap.img"))` 호출이
+`extractImage` 인자를 안 넘겨서(기본값 `false`) `zmap.img`의 자식
+노드(z-순서 이름 목록)가 하나도 파싱 안 된 채로 넘어가고 있었다 —
+노드 자체는 `null`이 아니라서 `AvatarCanvas.LoadZ()`는 성공(`true`)을
+반환하지만, 실제로는 `this.ZMap`이 빈 리스트로 남는다.
+`AvatarCanvas.GenerateLayer()`가 각 파츠의 문자열 `Skin.Z` 값을
+`ZMap.IndexOf()`로 찾는데 `ZMap`이 비어있으면 전부 못 찾아서(`-1`)
+거의 모든 문자열 Z 레이어가 같은 `ZIndex`로 뭉개지고, 그 상태로
+정렬하면 사실상 원래 삽입 순서에 가깝게 무너진다 — 이게 파츠별
+레이어 순서가 깨지는 증상의 근본 원인이었다. 아바타 Body/Head/Face/Hair
+파츠 로딩에서 이미 한 번 겪었던 것과 정확히 같은 클래스의 버그
+(`FindNodeByPath`의 `extractImage` 기본값이 `false`라 `.img` 경계에서
+내부 트리가 안 열림)인데, 그때는 `zmap.img` 쪽을 놓쳤다.
+`root.FindNodeByPath(@"Base\zmap.img", true)`로 수정(WzComparerR2
+`claude/dx11-2d-engine-fr8yv` 브랜치, 커밋 `a7e356e`) — **역시 DLL
+재빌드 필요**.
+
+**후속 — 위 수정만으로는 부족했음, 근본 원인 최종 확정**: `extractImage`
+수정 후 재빌드해도 무기가 여전히 프레임에 상관없이 항상 같은 자리에
+그려진다는 재보고를 받아 진단 로그(`wz_avatar_debug.log`, 무기
+`Skin.Z`/`ZIndex`/`ZMap` 크기를 매 호출마다 기록)를 추가해서 원인을
+더 파봤다. 로그 결과 `ZMap.Count=0`이 여전히 100% 재현됐는데, 이번엔
+`"Base\zmap.img"`라는 **경로 자체**가 이 브리지 구조와 안 맞았을
+가능성을 의심했다 — 실제 WzComparerR2 GUI의
+`PluginManager.FindWz("Base\\...")`는 `"Base"`를 트리 안 폴더가
+아니라 개별 .wz 파일이 등록된 레지스트리 키로 취급하는데, 우리
+`PluginManagerShim`은 경로 전체를 `CurrentRoot` 하나의 트리 안 폴더
+경로로 취급하기 때문에, KMST 병합 WZ 구조에서는 안 맞을 수 있었다.
+`"Base\zmap.img"`가 실패하면 접두사 없이 `"zmap.img"`로 재시도하는
+폴백 + 정밀 진단 로그를 추가(커밋 `731a685`)한 뒤 사용자가 재빌드·
+재실행해서 받은 로그로 **최종 확정**: `triedPath=zmap.img (Base\
+접두사 실패 후 폴백) ... ZMap.Count=184`, `resolvedZMapIndex`가
+`swingT3` 프레임마다 실제로 다름(68/81/106). 즉 `"Base\zmap.img"`는
+이 사용자의 KMST 병합 WZ 구조(원본 파일명 폴더 계층 없이 `zmap.img`가
+루트에 바로 있는 형태)에서 **애초에 틀린 경로**였고, `extractImage`
+수정은 필요조건이었지만 그것만으로는 부족했다 — 접두사 없는 폴백이
+진짜 결정타. 화면에서도 스윙 프레임에 따라 무기가 팔 앞/뒤로 정상
+전환되는 것까지 사용자가 육안 확인 완료.
+
+---
+
+### Phase 10 — Physics / Collision (1주)
+
+파일 위치: `Engine/Include/Physics/`
+
+- [x] `UBoxCollision.h / .cpp` — 회전을 반영한 OBB 겹침/정적 차단
+- [x] `FOrientedBox2D.h / .cpp` — 분리축 접촉·평행 이동 Sweep·Raycast
+- [x] `UCircleCollision.h / .cpp` — Circle 겹침/쿼리(강체 차단은 후속)
+- [x] `PhysicsWorld.h / .cpp` — UWorld 소유 충돌 감지/시뮬레이션 루프
+- [x] `URigidbody.h / .cpp` — 중력, 속도, 최대 낙하 속도, Grounded
+- [x] Raycast — Box/Circle/Foothold 최근접 선분 쿼리
+- [x] 충돌 레이어 마스크 (플레이어/적/지형/투사체/트리거)
+- [x] 플랫폼 판정 — 정적 Box 땅·벽·천장, swept OBB, 단방향 선분 발판
+- [x] 경사면 처리 — 발밑 지지점 착지·높이 추종·끝점 연결 (회전 없는 기존 단계는 사용자 동작 확인)
+- [x] 실제 맵에서 방향키 이동·바라보는 방향 및 Alt 점프
+- [x] 아래 방향키+Alt 하단 점프 — 아래의 착지 가능 발판과 높이를 검사하며 맨 아래 발판에서는 거부
+- [x] 로프·사다리 충돌 영역 — WZ 배치 연동, Trigger 겹침, 상하 이동·중력 정지·끝점 처리
+- [x] 로프·사다리 점프 이탈과 재진입 지연
+- [x] 낙하 상태 판정 / 코요테 타임 — 지면 이탈 직후 0.1초 동안 첫 점프 허용(Game 설정)
+- [ ] 무적 프레임 (i-frame, 피격 후 무적)
+- [ ] 넉백 물리 (보스 스킬 피격)
+- [ ] 낙사 구역 (DeathZone)
+
+★ WZ 병행 작업:
+- [x] Map.wz Foothold 데이터 파싱 → PhysicsWorld 충돌 데이터 연동
+- [x] Map.wz ladderRope 데이터 파싱 → UClimbableComponent Trigger 연동
+
+완료 기준: 실제 맵의 발판·경사면 이동, 점프·낙하, 로프·사다리 이동을 확인하고,
+남은 피격 무적·넉백·낙사 구역을 구현·검증한다. Phase 10 전체를 완료한 상태는 아니다.
+
+#### 실제 맵 물리와 이동 (2026-10-10)
+
+`FMapScene`이 로드한 발판 그래프를 `FPhysicsWorld`에 등록하고 맵 정리 시 해제한다.
+단방향 착지, 경사면 높이 추종, 선분 연결과 Raycast를 지원한다. 수직 WZ 선분은
+모두 벽으로 취급하지 않고 연결 관계와 이동 방향을 반영한다.
+
+`ACharacter`는 발 기준 Box와 Rigidbody를 연결하고 입력을 물리 속도로 전달한다.
+Alt는 지상·코요테 타임 점프, 아래 방향키+Alt는 하단 점프이며, 매달린 상태의 Alt는 점프 이탈이다.
+하단 점프는 내려갈 수 있는 바닥과 높이를 검사한다. 코요테 타임은 공중 추가 점프가 아니며,
+점프·하단 점프·오르기 진입 등에서 남은 시간을 지운다. 플래시 점프·트리플 점프는 후속 스킬 범위다.
+
+#### 로프·사다리와 끝점 처리
+
+DLL의 `wz_map_read_ladder_ropes`로 Index/X/Y1/Y2/L/Uf/Page/Piece를 받는다.
+`L=0`은 로프, `L=1`은 사다리이며, `UClimbableComponent`는 통과 가능한 Trigger다.
+선택적 export이므로 구버전 DLL은 경고 후 이 배치만 생략한다.
+
+- 위·아래 입력으로 실제 OBB 겹침을 검사해 진입하고 X 중심을 맞춘다. 오르기 중 중력을 멈춘다.
+- 활성 영역의 액터 ID를 유지하므로 겹친 다른 로프·사다리로 임의 전환하지 않는다.
+- 상단은 `Uf`와 실제 착지 가능한 바닥을 확인해 이탈한다.
+- 하단이 공중에서 끝나면 아래의 착지 가능 바닥이 있을 때 놓고 자연 낙하한다.
+  아래에 바닥이 없으면 하단에 매달린 상태를 유지한다.
+- 하단 아래에서 일부만 겹쳐 매달린 직후에도 아래 입력으로 이탈할 수 있다.
+  현재 발보다 위에 있는 바닥으로 끌어올리거나 위쪽 바닥을 낙하 대상으로 선택하지 않는다.
+- Alt 점프 이탈 후 재진입 지연은 Game에서 0.2초로 설정한다.
+  영역 삭제·비활성화·충돌 마스크 변경 시에도 오르기를 종료한다.
+
+#### 출력과 진단
+
+`UWorld`의 물리 갱신 후 캐릭터의 현재 발판 레이어를 적용한다. 매달리면 활성 로프·사다리의
+`page`에 해당하는 Life 컨테이너를 사용하고, 점프·낙하 중에는 마지막 레이어를 유지하며 착지 시 갱신한다.
+맵의 일반 전경 오브젝트는 기존 컨테이너 순서를 따른다. 모든 상태의 캐릭터를 무조건 맨 앞에 그리는
+예외는 추가하지 않는다. 사용자가 현재 출력이 올바르다고 확인했다.
+
+`AActor` 생성자에서 고유 ID를 부여해 `FindActorById()`가 다른 액터를 반환하던 문제를 수정했다.
+Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출력의 UTF-16 스트림 설정을 적용했다.
+충돌 영역은 접촉 시 빨강·비접촉 시 초록으로 표시한다. 로프·사다리 겹침 Begin/End 로그에는
+종류(Ladder/Rope), 배치 번호, 강체 및 영역 액터 ID를 남긴다.
+
+#### 검증 상태와 제약
+
+- 첫 단계 검증(2026-09-19): Windows x64 Debug/Release 빌드 및 Test 통과 기록이 있다.
+  이 기록은 이후 추가된 기능 전체의 자동 테스트 통과를 뜻하지 않는다.
+- 사용자 Game 확인: 실제 발판 이동·점프·하단 점프, 로프·사다리 상하 이동,
+  낮은 위치에서 진입 후 하강, 현재 렌더링 동작이 정상이라고 확인했다.
+- 최신 회귀 검사 코드는 `Test/Include/main.cpp`에 통합했다. Codex는 이번 작업의 빌드·실행을 하지 않았다.
+- 동적 Box 대 정적 Box를 지원하며 Circle은 겹침/Raycast용이다. Circle 강체 차단은 후속 범위다.
+  GetWorldBounds는 외접 AABB 조회로 유지한다. 회전은 라디안이며 각속도·회전 도중 Sweep은 미지원이다.
+- 상세 구조와 사용자 확인 항목은 `MAP_RENDERING.md`를 참고한다.
+
+---
+
+### Phase 11 — Audio 시스템 (4~5일)
+
+파일 위치: `Engine/Audio/`
+
+- [ ] `FAudioManager.h / .cpp` — XAudio2 래핑
+- [ ] `UAudioComponent.h / .cpp`
+- [ ] BGM 루프 재생 + 페이드인·아웃
+- [ ] SFX 중첩 재생
+- [ ] 사운드 풀 (동시 재생 한도, 타격음 대량 발생 대응)
+- [ ] 볼륨 / 피치 실시간 제어
+- [ ] 거리 기반 감쇠 (2D 포지셔닝)
+
+완료 기준: 맵 이동 시 BGM 페이드 전환 확인
+
+---
+
+### Phase 12 — UI / HUD 시스템 (1.5주)
+
+파일 위치: `Engine/UI/`
+
+- [ ] `UWidget.h / .cpp` — UI 베이스
+- [ ] `UCanvas.h / .cpp` — HUD
+- [ ] `UTextBlock.h / .cpp` / `UImage.h / .cpp`
+- [ ] UI 앵커 / 레이아웃 시스템 (해상도 대응)
+- [ ] HP / MP 바 / 경험치 바
+- [ ] 퀵슬롯 (스킬바 F1~F8)
+- [ ] 인벤토리 창 (96칸 그리드) / 장비 창 / 스탯 창
+- [ ] 데미지 숫자 팝업 (크리티컬 노란색)
+- [ ] 버프 아이콘 목록 HUD / 미니맵
+- [ ] NPC 대화 말풍선 / 채팅 창 / 퀘스트 트래커
+- [ ] 이름표 / 레벨 표시 (캐릭터 머리 위)
+
+완료 기준: HP바 실시간 감소 확인
+
+---
+
+### Phase 13 — Input 시스템 (5일) ★수정
+
+파일 위치: `Engine/Include/Input/`, 컨트롤러는 `Engine/Include/Object/`
+
+#### 기본 구조
+- [x] `InputTypes.h` — FKey/EKeys, 축·액션 매핑, 눌림·해제 이벤트
+- [x] `UPlayerInput.h / .cpp` — 키 상태·프레임 전환 기록·이름 기반 축/액션 해석
+- [x] `UInputComponent.h / .cpp`, `InputDelegates.h` — 축/액션과 게임 함수의 바인딩
+- [x] `APlayerController.h / .cpp` — 입력 처리, 캐릭터 Possess/UnPossess, 카메라 추적
+- [x] `AMaplePlayerController.h / .cpp` — Game에서 방향키·Alt 설정 및 점프/하단 점프 선택
+- [ ] 마우스 입력과 Enhanced Input 방식의 액션·매핑 컨텍스트 확장
+- [ ] 키 리맵핑 설정 (설정 창 연동)
+- [ ] 입력 버퍼링 (스킬 선입력 처리)
+- [ ] 콤보 입력 감지 (↓↓ 스킬 등)
+
+최소 키보드 입력은 Phase 10 플레이 확인을 위해 선행 구현했다. `UPlayerInput`은 키를 해석하고,
+`UInputComponent`는 동작을 연결하며, Controller는 캐릭터와 카메라를 조작한다.
+Game 파생 Controller에서 키 매핑과 바인딩을 교체할 수 있다. 축은 액션보다 먼저 처리해
+같은 프레임의 아래 방향키+Alt를 구분한다. 카메라는 물리 갱신 후 캐릭터를 따라가며,
+캐릭터가 없으면 방향키로 카메라만 이동할 수 있다. Phase 13 전체 완료는 아니다.
+
+#### 수식 키 (Modifier Key) 처리
+
+**ALT (VK_MENU)**  
+ALT는 `WM_SYSKEYDOWN`으로 수신됨. Windows 기본 동작 차단 필요.
+
+```
+ALT 단독     → 메뉴바 활성화 (SC_KEYMENU) — 반드시 차단
+ALT + F4     → 창 종료 — 정책 결정 필요
+ALT + Enter  → DirectX 전체화면 전환 — 반드시 차단
+ALT + Tab    → 창 전환 — 포커스 로스트 처리로 대응
+ALT + Space  → 창 시스템 메뉴 — 차단 권장
+```
+
+- [x] `WM_SYSKEYDOWN` / `WM_SYSKEYUP` WndProc 처리 — 매핑된 키를 게임 입력으로 처리, Alt+F4는 기본 종료 유지
+- [ ] `SC_KEYMENU` ALT 단독 메뉴바 차단
+- [ ] ALT + Enter 전체화면 전환 차단
+- [ ] `VK_LMENU` / `VK_RMENU` 좌우 ALT 구분
+
+**CTRL (VK_CONTROL)**
+- [ ] `VK_LCONTROL` / `VK_RCONTROL` 좌우 구분
+- [ ] 채팅 창 활성 상태일 때 CTRL 조합 선택적 허용
+
+**SHIFT (VK_SHIFT)**
+- [ ] `VK_LSHIFT` / `VK_RSHIFT` 좌우 구분
+- [ ] `GetKeyState()` 폴링과 메시지 방식 병행 사용
+
+**포커스 로스트 대응**
+- [x] `WM_KILLFOCUS` → 전체 키 상태 초기화
+- [x] `WM_SETFOCUS` → 입력 수신 재개
+- [x] 창 이동/시스템 메뉴 진입 시 입력 초기화 — 키 해제를 놓쳤을 때 이동이 남지 않도록 처리
+- [ ] 포커스 복귀 시 `GetKeyState` 폴링 재동기화
+
+```cpp
+struct FModifierKeyState {
+    bool bLeftAlt = false;  bool bRightAlt = false;
+    bool bLeftCtrl = false; bool bRightCtrl = false;
+    bool bLeftShift = false; bool bRightShift = false;
+    bool IsAltDown()   const { return bLeftAlt   || bRightAlt;   }
+    bool IsCtrlDown()  const { return bLeftCtrl  || bRightCtrl;  }
+    bool IsShiftDown() const { return bLeftShift || bRightShift; }
+};
+```
+
+완료 기준: ALT 점프 입력 시 메뉴바 활성화 없이 정상 동작, ALT+Tab 후 복귀 시 키 상태 정상 초기화
+
+---
+
+### Phase 14 — Resource Manager (4일)
+
+파일 위치: `Engine/Resource/`
+
+- [ ] `FResourceManager.h / .cpp` — 경로 기반 로드 + 캐싱
+- [ ] `UTexture.h / .cpp` — DDS / PNG 지원
+- [ ] `UFont.h / .cpp` — 비트맵 폰트·한글 지원
+- [ ] `USoundWave.h / .cpp`
+- [ ] 참조 카운트 자동 해제 / 비동기 로드 / 리소스 패키지 (pak)
+
+★ WZ 병행:
+- [ ] `FWzResourceProvider.h / .cpp` — WZ를 Resource Manager 소스로 등록
+
+완료 기준: 같은 텍스처 두 번 로드 시 캐시 히트 확인
+
+---
+
+### Phase 15 — World / Level / GameMode (5일)
+
+파일 위치: `Engine/Include/World/`, 엔진 수명 클래스는 `Engine/Include/`
+
+- [x] `UWorld.h / .cpp` — 액터 수명·Tick/Render, PhysicsWorld, 선택적 FMapScene 소유
+- [x] `UEngine` / `FEngineLoop` — 창·시스템 초기화, 메시지 처리, 프레임 루프, 종료를 Engine에서 관리
+- [x] `UGameInstance.h / .cpp` — Init/Shutdown/PreTick/Tick 및 Game별 Controller 생성 훅
+- [x] `FMapLoader` / `FMapScene` — 실제 WZ 맵 표시, 발판·로프·사다리 등록과 맵 자원 정리
+- [x] Game의 `FMapLoadOptions` — oS/l0/l1/l2 경로 접두사 및 선택적 레이어/배치 번호로 오브젝트 제외
+- [x] 캐릭터 추적 카메라·맵 경계 제한 — 유효한 VR을 우선하고 없으면 발판·로프·사다리 범위로 보완
+- [ ] `ULevel.h / .cpp` / `UGameMode.h / .cpp` — 멀티 레벨 관리와 게임 규칙
+- [ ] 포털 이동 / 데이터 기반 스폰 포인트 / 낙사 구역
+- [ ] Game 전용 플레이어 클래스와 맵 구성 분리 — 현재 UMapleGameInstance의 생성·설정 역할을 필요에 따라 이관
+
+★ WZ 병행:
+- [x] DLL의 Map.wz 구조·이미지 추출 → FMapLoader/FMapScene 연결
+- [ ] ULevel 기반 로딩·맵 전환으로 확장
+
+`UWorld::SpawnActor<T>()`는 Malloc+placement-new 방식으로 생성하고 BeginPlay를 전파한다.
+`FindActorById()`는 맵 액터 정리와 현재 매달린 영역 조회에 실제로 사용한다. 액터 ID는 생성 시 고유하게 부여한다.
+맵이 필요한 World만 FMapScene을 생성하며, 맵이 없는 World·물리 검사에서도 사용할 수 있다.
+
+DLL은 WZ 구조 데이터와 프레임 픽셀을 추출하고 C++ 엔진이 렌더링한다.
+MapRender2의 후면 배경 → 레이어별 Obj/Reactor/Tile/Life → Portal/Sky → 전면 배경 → Effect 순서를 따르며,
+각 컨테이너 내부에서 ContainerOrder와 Z0/Z1을 정렬한다. 프레임 원점·반전·알파·블렌딩과
+배경 반복/스크롤 규칙을 반영한다. 포털·리액터는 현재 배치·이미지 표시 범위이며 실제 동작은 후속이다.
+
+`UGameInstance`는 엔진 수명 훅이며 전역 싱글톤이나 Subsystem 프레임워크를 구현한 것은 아니다.
+Game의 `UMapleGameInstance`가 맵 선택·제외 규칙·플레이어 생성·애니메이션 설정을 맡는다.
+향후 Game 전용 플레이어/월드 구성 클래스로 나눌 수 있지만 그 분리는 아직 구현하지 않았다.
+
+선행 구현은 현재 플레이에 필요한 최소 범위다. Phase 15 완료 기준은 실제 WZ 맵의
+레벨 수명·맵 전환·스폰 처리를 구현하고 검증하는 것으로 갱신한다.
+
+---
+
+### 게임 루프 프레임워크(UWorld) + 게임 오브젝트 그릇(ACharacter/USpriteComponent) ★선행 완료
+
+Phase 8(렌더러)에서 만든 것들(`SpriteBatch`/`RenderQueue`/`WzTextureLoader`/
+아바타 합성)이 전부 `main.cpp`가 전역 변수로 직접 호출하는 테스트
+코드였고, Phase 7에서 만들어둔 `AActor`/`UActorComponent`/`USceneComponent`
+프레임워크는 실제로 쓰이지 않고 있었다. Phase 16(캐릭터) 본 작업(스탯/
+스킬/인벤토리)을 통째로 앞당기는 대신, 지금 있는 렌더링을 담을 최소한의
+"그릇"만 먼저 만들었다:
+
+- `USpriteComponent`(`Engine/Include/Render/`) — `USceneComponent` 상속,
+  텍스처 하나(`ID3D11ShaderResourceView*`, 소유)+Origin/ZOrder/Layer/Tint/
+  ParallaxFactor를 들고 있다가 `Render(FRenderQueue&)`가
+  `GetWorldTransform().m_Location - Origin`으로 발밑 정렬해서 제출한다.
+  `Cast<USpriteComponent>(comp)`(Phase 7 완료 기준에서 이미 예시로 든
+  이름)로 실제 존재하는 클래스가 됨.
+- `ACharacter`(`Engine/Include/Object/`) — `AActor` 상속, 생성자에서
+  `AddComponent<USpriteComponent>()`. `LoadAvatar(...)`가
+  `FWzTextureLoader::LoadAvatarTexture(...)` 결과를 그 컴포넌트에 싣는다.
+- `UActorComponent`/`AActor`에 `virtual void Render(FRenderQueue&)` 가상
+  함수 추가 — `Tick()`과 같은 전파 패턴(`AActor::Render`가 `m_Components`를
+  순회). `Object/` 폴더가 `Render/` 폴더(d3d11.h 등)를 몰라도 되도록
+  `class FRenderQueue;` 전방 선언만 사용.
+- 현재 `Game/Include/main.cpp`는 실행 설정, `UMapleGameInstance` 생성,
+  `FEngineLoop::Init()`/`Run()` 호출만 맡는다. 플레이어 생성은
+  `UMapleGameInstance::InitPlayer()`에, 월드 Tick/Render는 Engine에 있다.
+- 프레임 순서: 입력 메시지 수집 → Controller 입력 처리 → GameInstance PreTick →
+  엔진 타이머·월드(액터/물리/맵/캐릭터 레이어) 갱신 → Controller 카메라 갱신 →
+  GameInstance Tick(애니메이션 선택) → 렌더링.
+- 종료 순서: GameInstance Shutdown → Engine/World 자원 해제 → 창 정리 →
+  Debug 메모리 추적 보고. 메모리 추적 로그의 `bytes total`은 누적 할당량이며
+  남아 있는 할당의 정확한 바이트 합계를 뜻하지 않는다.
+
+**`ACharacter`는 플레이어/몬스터/NPC 공통 베이스로 설계됐다** — 언리얼도
+`ACharacter` 자체는 "누가 조종하든 상관없는" 범용 캐릭터 껍데기이고,
+플레이어냐 몬스터냐는 어떤 `AController`(`APlayerController`/
+`AAIController`)가 빙의(Possess)하는지로 갈린다(조종 주체와 물리적
+실체를 별개 클래스 축으로 분리). 현재 `APlayerController`와 Game 파생
+`AMaplePlayerController`를 구현해 입력과 조작을 분리했다.
+Game 전용 플레이어 클래스와 몬스터 클래스는 아직 없으며 현재는 `ACharacter`를 직접 사용한다.
+체력·피격·스킬 등 게임 규칙을 연결할 때 Game의 플레이어 클래스로 설정과 상태를 나누고,
+Engine의 `ACharacter`에는 공통 캐릭터 기능을 유지하는 방향이다.
+`AActor`→`APawn`→`ACharacter` 3단 구조 중 `APawn` 계층(Controller가
+빙의할 수 있다는 개념)도 지금은 `ACharacter`가 겸하고 있고, Controller
+지원 대상을 일반화할 필요가 생기면 `AActor`와 `ACharacter` 사이에 추가한다.
+현재 `Possess()`는 `ACharacter`를 대상으로 하며 APawn/AAIController는 아직 구현하지 않았다.
+
+---
+
+### [LAYER 3] Gameplay Framework — Phase 16~22 (15~22주)
+
+Phase 16 캐릭터, Phase 17 스킬, Phase 18 몬스터/AI, Phase 19 인벤토리,  
+Phase 20 퀘스트/NPC, Phase 21 Save/Load, Phase 22 디자인 패턴
+
+(캐릭터 렌더링·입력·이동·맵 물리 연결은 선행 구현했다.
+실제 Game 플레이어의 스탯/스킬/인벤토리 등 Phase 16 본 작업은 아직 미착수다.)
+
+---
+
+### [LAYER 4] 이펙트·마무리 — Phase 23~24
+
+Phase 23 파티클/이펙트, Phase 24 소셜/마무리
+
+★ 최종 목표: 메이플 기본 플레이 루프 완성 (포트폴리오 완성)
+
+---
+
+## WZ 파서 통합 계획
+
+초기 C++ 파서 이식 계획은 `claude/convert-wz-parser-cpp-cdJ2V`의
+`WzTest/wz_test.cpp`를 기준으로 했다. 현재 클라이언트가 사용하는 경로는
+**WzNativeLib DLL에서 WZ를 해석하고 C++ 엔진에서 화면을 출력하는 구조**다.
+DLL 작업 저장소는 `D:/WzComparerR2_cpp/WzComparerR2`이며, 주요 소스는
+`WzTest/WzNativeLib/WzExports.cs`와 `MapAnimationLoader.cs`다.
+
+### 현재 완료 상태
+- 초기 파서: WZ 헤더·디렉토리 트리 및 IMG 노드 파싱 구현 기록이 있다.
+- 현재 연동: 아바타 이미지와 액션별 프레임을 C++ 텍스처·애니메이션으로 로드한다.
+- 맵 배치: info/back/layer/foothold/ladderRope/portal/reactor를 구조체 배열로 전달한다.
+- 맵 이미지: `wz_anim_load_*`가 프레임 메타데이터와 BGRA 픽셀을 전달하며,
+  C++은 GPU 텍스처 업로드 후 DLL이 할당한 메타데이터·픽셀 포인터를 각각 `wz_free()`로 해제한다.
+- DLL 소스는 `repeat` 누락 시 기본 반복과 `info/link` 배치 해석을 반영한다.
+  DLL 소스 수정과 실행 파일의 DLL 교체는 별개이며 실제 배포·빌드는 사용자가 수행한다.
+- 실제 Map.wz 발판과 로프·사다리를 PhysicsWorld에 연결했다.
+  Spine·NPC/몬스터 맵 로딩·포털/리액터 상태 전환 등 전체 MapRender2 기능은 아직 지원하지 않는다.
+
+### WZ 작업 병행 타임라인
+
+| 엔진 Phase | WZ 작업 |
+|-----------|---------|
+| Phase 7.5 완료 후 | STL → 엔진 컨테이너 일괄 교체 |
+| Phase 8 Renderer | Canvas → 픽셀 변환 (WzPng), DirectXTex 연동 |
+| Phase 9 Animation | FrameAnimator → UFlipbookComponent 연동 |
+| Phase 10 Physics | Foothold·ladderRope → PhysicsWorld 연동 구현, 남은 피격·낙사 처리 |
+| Phase 14 Resource | WzNode → 엔진 타입 변환, FWzResourceProvider 통합 |
+| Phase 15 World | FMapLoader/FMapScene 선행 구현 → ULevel·맵 전환·스폰으로 확장 |
+
+---
+
+## 주차별 계획
+
+| 주차 | Phase | 작업 내용 |
+|------|-------|----------|
+| 1주 | 0 | VS 솔루션 생성, 폴더 구조, EnginePCH.h, 첫 커밋 |
+| 1~2주 | 1·2 | Memory + TypeTraits |
+| 2~3주 | 3 | TArray 완성 + 단위 테스트 |
+| 3~4주 | 3.5 | 수학 라이브러리 |
+| 4~5주 | 4·5 | TMap·TSet + FString·FName |
+| 5~6주 | 5.5·6·7 | 로그 + SmartPtr + UObject |
+| 6~7주 | 7.5·7.7 | Timer + Gameplay Ability System |
+| 7~8주 | 8·9 | Renderer + Animation (WZ Canvas 변환 병행) |
+| 8~9주 | 10·11 | Physics + Audio (WZ Foothold 병행) |
+| 10~12주 | 12~15 | UI + Input + Resource + World (WZ 통합) |
+| 13~15주 | 16·17 | 캐릭터 + 스킬 |
+| 15~18주 | 18~24 | 몬스터·인벤·퀘스트·세이브·이펙트 |
+
+---
+
+## 알려진 기술 부채 (외부 코드 리뷰 검증 결과, 2026-08-22)
+
+사용자가 다른 AI 도구("Codex")로 전체 코드베이스 리뷰를 받아왔고, Claude Code가
+각 항목을 Explore 에이전트 7개로 병렬 검증해 검증 결과만 먼저 기록해뒀다.
+그 직후 Idle/Move 애니메이션 데모에서 D3D11 텍스처 크래시(Heisenbug)를
+디버깅하던 중, 진단 코드를 바꿨더니 크래시가 재현되지 않는 일이 있었다 —
+애니메이션 refcounting 로직 자체는 내부적으로 일관성이 확인됐으므로, 엔진
+어딘가의 진짜 UB(가장 유력한 후보였던 `FTimerManager::Tick()` 댕글링
+레퍼런스)가 메모리 레이아웃에 민감하게 반응한 결과라는 신호로 보고,
+"버그 먼저 수정하자"는 결정에 따라 아래 "수정 완료" 5개를 이 세션에서
+바로 고쳤다(나머지는 정확성에 직접 영향이 적어 다음 라운드로 보류).
+
+### 반박됨 — Codex가 틀렸던 항목
+
+- **파생 Actor/Component 소멸자가 안 불린다는 주장** — 틀림. `UObject`부터
+  `ACharacter`/`UFlipbookComponent`/`UAnimStateMachine` 등 전 계층이 이미
+  `virtual ~X() override`로 선언돼 있어서, `Actor->~AActor()`처럼 명시적으로
+  베이스 소멸자를 호출하는 문법도 `delete`와 똑같이 vtable을 타고 파생
+  소멸자부터 정상 실행된다("명시적 소멸자 호출은 가상 디스패치를 우회한다"는
+  건 소멸자가 non-virtual일 때만 해당하는 흔한 오해).
+- **전역 `operator new`가 정적 초기화 순서에 취약하다는 주장** — 틀림.
+  `FMemory::Malloc/Realloc/Free`가 이미 `if (!GMalloc) InitMemory();`로
+  lazy-init하고, `InitMemory()` 내부도 함수 지역 `static` 싱글턴(C++11부터
+  스레드 안전 초기화 보장)이라 정적 초기화 순서 문제 자체가 없음.
+
+### 수정 완료 (2026-09-07) — 핵심 정확성 버그 5개
+
+아래 5개는 "버그 먼저 수정하자" 결정 이후 이 세션에서 바로 고쳤다. 모두
+소유권 규칙·공개 API 시그니처는 그대로 두고 내부 구현만 수정 —
+`Test/Include/main.cpp`에 각각 회귀 테스트를 추가해뒀다(사용자의 로컬
+Visual Studio Debug/Release 빌드로 검증 필요, 이 세션은 Linux라 직접
+컴파일 불가).
+
+- **`FTimerManager::Tick()` 콜백 재진입 시 dangling reference** — ✅ 수정.
+  `Tick()`이 `Execute()` 호출 이후에는 예전에 잡아둔 `FTimerData&`를 더
+  쓰지 않고 `m_Timers[i]`를 다시 인덱싱해서 읽도록 변경(`FTimerManager.cpp`).
+  `SetTimer()`도 `bLoop=true`이면서 `Rate<=0`이면 `0.001f`로 클램프(1회성
+  타이머는 그대로 둠). 회귀 테스트: `Test/Include/main.cpp` Phase 7.5-8
+  (콜백 안에서 `SetTimer()` 64회 재진입시켜 재할당 유발), 7.5-9(Rate<=0
+  루프 타이머).
+- **`TWeakPtr::Pin()` 멀티스레드 레이스(TOCTOU)** — ✅ 수정.
+  `FRefCountBlock`에 `ConditionallyAddShared()`(compare-exchange 기반
+  "0이 아닐 때만 증가")를 추가하고, `TWeakPtr::Pin()`이 기존
+  `IsValid()`+무조건 `AddShared()` 두 단계를 이 단일 원자적 연산으로
+  교체(`SharedPointerInternals.h`, `TWeakPtr.h`). `FSmartPtrAtomics`에
+  `CompareExchange`(MSVC `_InterlockedCompareExchange` / 그 외
+  `__atomic_compare_exchange_n`)를 새로 추가. 기존 Phase 6-2 `TWeakPtr`
+  테스트가 단일 스레드 시나리오(살아있을 때 Pin 성공 / 파괴 후 Pin 무효)를
+  그대로 커버.
+- **GAS periodic effect가 큰 DeltaTime에서 틱을 누락함** — ✅ 수정.
+  `TickActiveEffects()`의 Infinite/Duration 두 분기 모두 `if`를 `while`로
+  교체해 `UFlipbookComponent::Tick()`과 같은 캐치업 패턴 적용
+  (`UAbilitySystemComponent.cpp`). 회귀 테스트: Phase 7.7-7b(Period 1초
+  효과에 DeltaTime 3.5초를 한 번에 줘서 3번 발동하는지 확인).
+- **Gameplay Tag가 참조 카운트 없는 단순 배열이라 중복 소유권을 못 다룸**
+  — ✅ 수정. `FGameplayTagContainer`에 `m_Tags`와 인덱스 정렬된
+  `TArray<int32> m_TagCounts`를 추가해 `AddTag`/`RemoveTag`를 참조
+  카운트 방식으로 변경 — 카운트가 0이 됐을 때만 실제로 제거
+  (`FGameplayTagContainer.h/.cpp`). `HasTag`/`GetTags()` 등 조회 API는
+  기존과 동일. 회귀 테스트: Phase 7.7-2b(같은 태그를 두 소스가 부여한 뒤
+  하나만 제거해도 남아있는지 확인).
+- **`MakeShared<T>()`가 실제로는 2번 할당함** — ✅ 수정. 객체를 컨트롤
+  블록 안에 인라인으로 저장하는 `FInlineRefCountBlock<T>`를 추가해
+  `FMemory::Malloc()` 1회로 통합(`TSharedPtr.h`) — 전용 `InlineDeleter`는
+  소멸자만 호출하고 메모리는 해제하지 않으며, 실제 해제는
+  `ReleaseShared()`가 WeakCount 0일 때 `FMemory::Free(this)`로 통합
+  블록 전체를 한 번에 수행. 이 델타를 재는 `FMemoryTracker::GetLiveAllocCount()`
+  getter를 새로 추가하고, Phase 6-1b 회귀 테스트로 `MakeShared` 호출
+  전후 살아있는 할당 개수가 정확히 1만 늘고 주는지 확인.
+
+### 수정 완료 (2026-09-07, 3차 라운드) — 남은 기술 부채 중 3개
+
+1·2차 라운드(핵심 정확성 버그 5개 + `FMemoryTracker` 추적 지점 이동)를
+사용자가 로컬 Debug/Release 빌드로 전부 통과 확인한 뒤 이어서 처리.
+C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위 "컴파일러
+설정" 참고), `FMallocBinned` 스레드 안전화는 이번에도 보류(아래 참고).
+
+- **Release 빌드 테스트가 사실상 아무것도 검증 안 함** — ✅ 수정.
+  `check()`의 전역 정의(`EnginePCH.h`)는 엔진 코드 전반의 진짜 불변조건
+  검증에 쓰이므로 그대로 두고, `Test/Include/main.cpp`의 `main()` 시작
+  직전에서만 `check()`를 지역 재정의 — Debug는 기존과 동일하게 실패 시
+  `assert()`로 즉시 중단, Release는 이제 실패를 `g_TestFailCount`에
+  집계하고 위치(`__FILE__:__LINE__`)를 출력한다. `main()` 끝에서
+  `g_TestFailCount > 0`이면 실패 개수를 출력하고 `return 1`, 아니면
+  `"ALL CHECKS PASSED"`를 출력하고 `return 0` — Release에서도 실제로
+  검증이 이뤄지고 실패 시 프로세스 종료 코드로도 드러난다. 각 블록의
+  개별 `"...PASSED"` 출력 351곳은 그대로 뒀음(기존처럼 "이 블록까지
+  크래시 없이 도달했다"는 의미) — 실제 성패 판정은 이 최종 요약이 담당.
+- **문서(C++17/`/W4`/예외 비활성) vs 실제 vcxproj 설정 불일치** — ✅ 정정.
+  "핵심 원칙"·"컴파일러 설정"·`EnginePCH.h` 코드 블록을 실제 값(C++20,
+  Level3, Game만 명시적 예외 활성)으로 갱신 — 코드 변경 없음, 문서만.
+- **Over-aligned `new`(`alignas(32)` 이상) 미지원** — ✅ 수정.
+  `MemoryOverride.cpp`에 `operator new`/`new[]`/`delete`/`delete[]`/
+  sized-delete의 `std::align_val_t` 버전 6개를 추가로 구현 — 전부
+  `FMemory::Malloc(size, alignment)`/`Free()`에 그대로 위임하므로
+  `GMalloc`/`FMallocBinned`/`FMemoryTracker`를 우회하지 않는다.
+  `Test/Include/main.cpp`에 `alignas(32)` 타입으로 정렬 확인 회귀 테스트
+  추가.
+
+### 확인됨 — 실제 문제, 아직 미수정 (다음 라운드로 보류)
+
+- **`FMallocBinned` 멀티스레드 미지원** — `Core/Memory/` 전체에 mutex/
+  atomic/critical section이 전혀 없음. free-list head, 페이지 목록
+  (`m_pAllPages`) 갱신이 전부 무보호 read-modify-write라 두 스레드가
+  동시에 `Malloc()`/`Free()`하면 free-list 손상·이중 할당 가능. 3차
+  라운드 조사 중 "엔진 어디서도 스레드가 생성되지 않는다"던 이전 기록이
+  부정확했음을 발견 — `Test/Include/main.cpp`(Phase 7.5+ (4))가 실제로
+  `CreateThread` 4개로 `TSharedPtr` 원자적 참조카운트 스트레스 테스트를
+  돌린다(이전 Explore 에이전트의 grep이 폴더명을 `Tests`로 잘못 짚어
+  `Test/`를 놓쳤던 것). 다만 그 테스트는 `TSharedPtr` 복사/해제(이미
+  원자적으로 보호됨)만 반복할 뿐 `FMemory::Malloc()`/`Free()`(`GMalloc`/
+  `FMallocBinned`)를 여러 스레드에서 동시에 부르지는 않으므로,
+  `FMallocBinned` 자체의 동시성 문제는 여전히 실제로 재현되지 않는다 —
+  사실상 메인 스레드 전용 할당자인 채로 보류(이번 라운드에도 사용자가
+  "지금은 보류"로 확정 — Phase 16+ 실제 병렬 작업이 생길 때 처리).
+
+### 배포 운영 규칙 — GameEngine은 기술 부채에서 제외
+
+- `Engine/`만 원본으로 수정한다. `GameEngine/`은 소비자용 SDK/배포 미러이며 직접 수정하지 않는다.
+- Engine 빌드 후 `Copy.bat`이 공개 헤더(.h/.inl/.hpp)를 `GameEngine/Include`에,
+  빌드 결과물을 `Game/Bin`, `GameEngine/Bin`, `Test/Bin`에 배포한다.
+- 개발 브랜치의 빌드 전 차이는 허용한다. main 반영 전 Engine을 다시 빌드하고
+  최종 공개 헤더 동기화를 확인한다. 미러 삭제나 중복 소스 제거 대상이 아니다.
+- 추적된 산출물은 배포 목적을 확인해서 관리하며 일괄 삭제하지 않는다.
+
+### 안전성 보강 (2026-09-19)
+
+- **애니메이션 null 텍스처 계약**: `SetFrames`와 `RegisterState`에서 전체 입력을
+  먼저 검사한다. null 텍스처가 하나라도 있으면 `UE_LOG` 경고 후 전체 요청을 거부하며
+  기존 프레임, 재생 상태, COM 참조를 유지한다. 빈 배열은 허용한다.
+  Release에서도 동일하게 검사한다. 프레임을 걸러내지 않으므로 인덱스와 Notify 배치가 바뀌지 않는다.
+- **TSharedPtr 교차 타입 생성자**: 언리얼식 `TPointerIsConvertibleFromTo`와 `TEnableIf`로
+  암시적 포인터 변환이 가능한 타입만 허용한다. 업캐스트와 const 추가는 허용하고,
+  다운캐스트, const 제거, 무관한 타입, private/모호한 베이스 변환은 컴파일 단계에서 차단한다.
+  const 뷰도 원래 컨트롤 블록의 deleter를 공유한다.
+- `Test/Include/main.cpp`에 컴파일 제약 검사와 COM 참조 수명/잘못된 입력 회귀 테스트를 추가했다.
+- 검증: Windows x64 Debug/Release 전체 솔루션 빌드 및 Test 실행 성공(종료 코드 0).
+  `Copy.bat`으로 배포 미러 갱신 후 수정한 공개 헤더의 해시 일치를 확인했다.
+  DirectXTK PDB 누락 링크 경고는 남아 있으며 Game 화면의 수동 플레이 검증은 별도다.
+
+### 다음 개발 순서
+
+현재 Phase 10의 Map.wz 발판·로프·사다리 연결과 기본 이동은 구현했다.
+다음은 **피격 후 무적 시간 → 넉백 → 낙사 구역** 순서로 진행한다.
+
+1. 피격 후 무적 시간: 일정 시간 동안 중복 피해를 거부하고 무적 상태를 표시한다.
+2. 넉백: 피격 방향으로 속도를 적용하고 반응 시간 동안 이동 입력을 제어한다.
+   체력·피격 규칙은 Game 캐릭터 쪽에서 관리하고 공통 이동·충돌은 Engine 기능을 사용한다.
+3. 낙사 구역: 추락을 감지하고 Game이 지정한 시작점 복귀 정책과 연결한다.
+4. 사용자 검증 후 Phase 10을 정리하고 **Phase 11 Audio → Phase 12 UI →
+   Phase 13 Input 확장 → Phase 14 Resource → Phase 15 World 확장**으로 진행한다.
+
+최소 Input/Controller, UGameInstance/World 및 맵 렌더링은 선행 구현 범위이며,
+Phase 13·15 전체 완료로 처리하지 않는다. 현재 올바르게 출력되는 로프·사다리 렌더링 규칙은 유지한다.
+`FMallocBinned`의 멀티스레드 지원은 실제 병렬 시스템 도입 전까지 보류한다.
+
+---
+
+## Claude Code 작업 지침
+
+### 검증 실행 규칙 (사용자 요청, 2026-09-19)
+- 빌드와 테스트 실행은 사용자가 직접 수행한다. Codex는 별도로 요청받지 않는 한 빌드·테스트를 실행하지 않는다.
+- Codex는 코드·문서 수정에 집중하고, 완료 보고에서 구현 범위와 사용자 확인 항목만 간단히 전달한다.
+
+### Git 운영 규칙
+
+- **Codex는 다음 작업부터 코드·문서 수정 전에 작업별 `codex/<작업명>` 브랜치를 생성하고 그 브랜치에서 작업한다.**
+- 시작할 때 현재 브랜치와 미커밋 변경을 확인하고 기존 변경을 보존한다. 다른 작업의 변경을 임의로 커밋하거나 섞지 않는다.
+- main 브랜치에 직접 수정·커밋·머지하지 않는다. 커밋·머지·푸시는 사용자의 요청 범위에 따라 수행한다.
+- **main 브랜치 커밋·머지는 사용자가 직접 수행**
+- Claude는 작업 브랜치(`claude/dx11-2d-engine-fr8yv`)에만 커밋·푸시
+- 사용자가 main에 푸시 후 알리면 → `git fetch origin main && git merge origin/main` 으로 작업 브랜치 최신화
+
+### 코딩 규칙
+- 클래스 선언은 생성/소멸, 인터페이스 재정의, 설정/조회, 처리 로직, 멤버 상태를 역할별 한글 주석과 빈 줄로 구분한다. 긴 public 선언 목록을 한 덩어리로 나열하지 않는다.
+- 접근 지정자는 외부 API는 public, 파생 클래스 확장에 필요한 상태는 protected, 소유권 관리·불변조건·내부 구현은 private으로 구분한다. 모든 멤버를 일괄 protected로 바꾸지 않는다.
+- **코드 디자인은 main 브랜치의 해당 모듈과 인접 클래스 구현을 기준으로 맞춘다.** 기존 네이밍과 헤더/소스 구성, 중괄호 줄바꿈, 들여쓰기 형식을 우선한다.
+- 함수 본문과 if/for 제어문을 한 줄로 축약하지 않고 중괄호와 줄바꿈으로 명확히 작성한다.
+- 클래스 내부에서만 쓰는 보조 로직은 private 함수로 구성할 수 있는지 먼저 검토한다. 불필요한 별도 namespace나 람다 구조를 늘리지 않는다.
+- 새로 작성하거나 수정하는 주석은 한글로 작성한다. 타입명과 API 이름은 그대로 표기한다.
+- **클래스는 헤더(.h)와 소스(.cpp)를 반드시 함께 생성** — 헤더 전용 구현 금지
+- **멤버 변수에 `m_` 접두사 필수** (예: `m_Size`, `m_pData`)
+
+### 파일 생성 요청 방식
+```
+"Engine/Core/Memory/IAllocator.h 작성해줘.
+STL 사용 금지, C++20, /GR- 기준. 엔진 자체 코드는 예외를 던지지 않음(Game x64는 /EHsc).
+EnginePCH.h가 PCH로 포함되어 있어."
+```
+
+### Phase 완료 체크 방식
+각 Phase 완료 시 사용자가 `Test` 프로젝트의 Debug/Release 검사와 실제 Game 동작을 확인한다.
+Codex는 회귀 검사 소스와 사용자 확인 항목을 작성하고, 별도 요청 없이 빌드·테스트를 실행하지 않는다.
+구현됨, 사용자 수동 확인됨, 전체 자동 테스트 통과를 서로 구분해서 기록한다.
+빌드 오류 발생 시 오류 메시지 전체를 Claude Code에 붙여넣기.
+
+### 설계 이슈 발생 시
+구조 결정·리뷰·누락 확인은 claude.ai 채팅에서 상담 후 진행.  
+Claude Code는 파일 생성·빌드 오류 수정·리팩터링 전담.
+
+---
+
+## 면접 어필 포인트
+
+- placement new 활용한 TArray
+- 커스텀 얼로케이터 (GMalloc → IAllocator 교체 가능 구조)
+- POD 분기 최적화 (if constexpr + TIsPOD)
+- FName O(1) 비교 (uint32 인덱스)
+- UClass 기반 Cast<T>() — RTTI 없이 동작
+- Gameplay Ability System 직접 구현 — 태그·속성·효과·스킬 계층 (언리얼 GAS 패턴)
+- WZ 파서 직접 C++ 이식 (AES 복호화, 분할 파일 merge)
