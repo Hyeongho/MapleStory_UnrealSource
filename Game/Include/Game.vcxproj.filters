@@ -13,24 +13,39 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="GameInstance">
+      <UniqueIdentifier>{c778f1f9-2530-4a16-bf45-714e5affbaaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Character">
+      <UniqueIdentifier>{bcda643b-70f5-485e-8495-cccfc5e995cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Controller">
+      <UniqueIdentifier>{5573c624-9bad-431b-afe0-db82eb2fc4e1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UMapleGameInstance.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Character\AMapleCharacter.cpp">
+      <Filter>Character</Filter>
     </ClCompile>
-    <ClCompile Include="AMaplePlayerController.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="GameInstance\UMapleGameInstance.cpp">
+      <Filter>GameInstance</Filter>
+    </ClCompile>
+    <ClCompile Include="Controller\AMaplePlayerController.cpp">
+      <Filter>Controller</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UMapleGameInstance.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Character\AMapleCharacter.h">
+      <Filter>Character</Filter>
     </ClInclude>
-    <ClInclude Include="AMaplePlayerController.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="GameInstance\UMapleGameInstance.h">
+      <Filter>GameInstance</Filter>
+    </ClInclude>
+    <ClInclude Include="Controller\AMaplePlayerController.h">
+      <Filter>Controller</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

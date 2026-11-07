@@ -18,5 +18,11 @@ protected:
     virtual void SetupInputComponent() override;
 
     void OnJumpPressed();
+
+#ifdef _DEBUG
+    // 실제 클라이언트에서 피격·무적 시간을 확인하는 입력이다.
+    void OnDebugDamagePressed();
+    void OnDebugResetHealthPressed();
+#endif
 };
 

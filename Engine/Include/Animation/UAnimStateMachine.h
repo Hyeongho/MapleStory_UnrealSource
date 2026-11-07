@@ -13,14 +13,7 @@ public:
 	UAnimStateMachine();
 	virtual ~UAnimStateMachine() override;
 
-	// StateName으로 재생할 프레임 목록을 등록(또는 갱신)한다.
-	// 소유권 계약(UFlipbookComponent::SetFrames()와 같은 패턴을 한 단계 위에서
-	// 반복): Frames의 각 텍스처를 AddRef해서 이 컴포넌트가 "수명 동안, 등록된
-	// 모든 상태에 대해 동시에" 별도 보관한다 — 지금 활성 상태인지 여부와
-	// 무관하다. 호출자가 넘긴 원본 배열의 레퍼런스는 호출 후 자기 몫을
-	// Release()해도 안전. 이미 같은 이름으로 등록된 상태가 있으면 기존에
-	// 보관 중이던 텍스처를 먼저 전부 Release()한 뒤 새 목록으로 통째로
-	// 교체한다.
+	// 공유 에셋을 상태에 등록한다. 빈 포인터는 거부하고 기존 상태를 유지한다.
 	bool RegisterState(FName StateName, const TSharedPtr<UFlipbook>& Flipbook, bool bLoop = true);
 
 	// StateName으로 전환한다. 이미 그 상태면 아무 것도 안 함(no-op) — 매

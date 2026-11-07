@@ -64,9 +64,19 @@ public:
 		m_Tint = Tint;
 	}
 
+	const FLinearColor& GetTint() const
+	{
+		return m_Tint;
+	}
+
 	void SetAlpha(int32 Alpha)
 	{
 		m_Alpha = FMath::Clamp(Alpha, 0, 255);
+	}
+
+	int32 GetAlpha() const
+	{
+		return m_Alpha;
 	}
 
 	void SetFlipHorizontal(bool bFlip)
@@ -78,9 +88,6 @@ public:
 	{
 		return m_bFlipHorizontal;
 	}
-
-private:
-	void ApplyCurrentFrame();
 
 private:
 	TSharedPtr<UFlipbook> m_Flipbook;

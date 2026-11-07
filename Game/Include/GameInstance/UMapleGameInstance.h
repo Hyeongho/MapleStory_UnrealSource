@@ -20,7 +20,6 @@ public:
 
 	// 게임 수명 / 프레임 갱신
 	virtual bool Init(UEngine& Engine) override;
-	virtual void Shutdown() override;
 	
 	// 물리 갱신이 끝난 실제 이동 상태로 플레이어 애니메이션을 선택한다.
 	virtual void Tick(float DeltaTime) override;
@@ -32,8 +31,5 @@ protected:
 protected:
 	// 게임 구현을 확장할 때 사용하는 캐릭터 및 애니메이션 준비 단계
 	void InitPlayer();
-	bool RegisterAvatarState(FName StateName, const char* ActionName);
-	ACharacter* m_pPlayerCharacter = nullptr; // 실제 소유자는 엔진의 UWorld다.
-	UAnimStateMachine* m_pAnimStateMachine = nullptr;
 };
 

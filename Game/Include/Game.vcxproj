@@ -153,13 +153,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AMaplePlayerController.cpp" />
+    <ClCompile Include="Character\AMapleCharacter.cpp" />
+    <ClCompile Include="Controller\AMaplePlayerController.cpp" />
+    <ClCompile Include="GameInstance\UMapleGameInstance.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="UMapleGameInstance.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AMaplePlayerController.h" />
-    <ClInclude Include="UMapleGameInstance.h" />
+    <ClInclude Include="Character\AMapleCharacter.h" />
+    <ClInclude Include="Controller\AMaplePlayerController.h" />
+    <ClInclude Include="GameInstance\UMapleGameInstance.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
