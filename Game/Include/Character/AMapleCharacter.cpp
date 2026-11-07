@@ -55,6 +55,8 @@ void AMapleCharacter::EndPlay()
 
 bool AMapleCharacter::InitializeAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec)
 {
+    m_bAttacking = false;
+
     LoadAvatar(Device, WzPath, LoadoutSpec, "stand1", 0);
 
     const bool bHasMove = RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Move"), "walk1");
@@ -63,6 +65,7 @@ bool AMapleCharacter::InitializeAvatar(FDXDevice& Device, const char* WzPath, co
     RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Jump"), "jump");
     RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Ladder"), "ladder");
     RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Rope"), "rope");
+    RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Attack"), "swingT1", false);
 
     if (bHasIdle || bHasMove)
     {
@@ -79,9 +82,20 @@ void AMapleCharacter::UpdateAnimation()
 
     const URigidbody* pBody = GetComponent<URigidbody>();
 
-    if (!pStateMachine || !pFlipbook || !pBody)
+    if (!pStateMachine || !pFlipbook)
     {
+        m_bAttacking = false;
         return;
+    }
+
+    if (m_bAttacking)
+    {
+        if (!IsDead() && (!pBody || !pBody->IsClimbing()) && pStateMachine->GetCurrentState() == FName(L"Attack") && pFlipbook->IsPlaying())
+        {
+            return;
+        }
+
+        m_bAttacking = false;
     }
 
     FName StateName(L"Idle");
@@ -256,8 +270,33 @@ float AMapleCharacter::GetInvulnerabilityTimeRemaining() const
     return (float)m_InvulnerabilityRemaining;
 }
 
-bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, FName StateName, const char* ActionName)
+void AMapleCharacter::Attack()
 {
+    UAnimStateMachine* pStateMachine = GetComponent<UAnimStateMachine>();
+    UFlipbookComponent* pFlipbook = GetFlipbookComponent();
+
+    const URigidbody* pBody = GetComponent<URigidbody>();
+
+    pStateMachine->SetState(FName(L"Attack"));
+    
+    pFlipbook->PlayFromStart();
+
+    m_bAttacking = true;
+}
+
+bool AMapleCharacter::IsAttacking() const
+{
+    return m_bAttacking;
+}
+
+bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, FName StateName, const char* ActionName, bool bLoop)
+{
+    if (!ActionName || !*ActionName)
+    {
+        UE_LOG(LogRenderer, Warning, L"[PlayerAnimation] avatar action name is empty");
+        return false;
+    }
+
     TArray<FFlipbookFrame> Frames;
 
     for (int32 i = 0; ; i++)
@@ -281,7 +320,7 @@ bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath,
     TSharedPtr<UFlipbook> Flipbook = UFlipbook::Create(Frames);
     UAnimStateMachine* pStateMachine = GetComponent<UAnimStateMachine>();
 
-    const bool bRegistered = Flipbook && pStateMachine && pStateMachine->RegisterState(StateName, Flipbook, true);
+    const bool bRegistered = Flipbook && pStateMachine && pStateMachine->RegisterState(StateName, Flipbook, bLoop);
     for (int32 i = 0; i < Frames.Num(); i++)
     {
         Frames[i].m_pTexture->Release();

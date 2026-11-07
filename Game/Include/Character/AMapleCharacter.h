@@ -38,9 +38,13 @@ public:
 	bool IsInvulnerable() const;
 	float GetInvulnerabilityTimeRemaining() const;
 
+public:
+	void Attack();
+	bool IsAttacking() const;
+
 protected:
 	// 게임 캐릭터를 확장할 때 아바타 액션을 추가로 등록할 수 있다.
-	bool RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, FName StateName, const char* ActionName);
+	bool RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, FName StateName, const char* ActionName, bool bLoop = true);
 
 private:
 	void ClearInvulnerability();
@@ -57,5 +61,7 @@ private:
 	double m_DamageFlashTime = 0.0;
 
 	FLinearColor m_TintBeforeDamage = FLinearColor::White;
+
+	bool m_bAttacking = false;
 };
 

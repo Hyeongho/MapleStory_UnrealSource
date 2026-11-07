@@ -43,6 +43,7 @@ public:
 	inline static const FKey Left = FKey(VK_LEFT);
 	inline static const FKey Right = FKey(VK_RIGHT);
 	inline static const FKey Alt = FKey(VK_MENU);
+	inline static const FKey Ctrl = FKey(VK_CONTROL);
 	inline static const FKey SpaceBar = FKey(VK_SPACE);
 	inline static const FKey Escape = FKey(VK_ESCAPE);
 };
