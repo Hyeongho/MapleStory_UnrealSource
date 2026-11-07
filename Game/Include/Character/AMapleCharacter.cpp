@@ -66,7 +66,8 @@ float AMapleCharacter::TakeDamage(float DamageAmount, const AActor* pDamageCause
 	}
 	const float HealthBefore = GetHealth();
 	UGameplayEffect Damage;
-	Damage.AddModifier(FName(L"Health"), EGameplayModifierOperation::Add, -FMath::Min(DamageAmount, HealthBefore));
+	// 피해는 기본 체력에 적용한다. 현재 체력으로 미리 제한하면 감소 보정 중 큰 피해를 받아도 살아남을 수 있다.
+	Damage.AddModifier(FName(L"Health"), EGameplayModifierOperation::Add, -DamageAmount);
 	pAbilitySystem->ApplyGameplayEffect(&Damage); // 즉시 효과는 활성 효과 목록에 보관되지 않는다.
 	const float AppliedDamage = FMath::Max(0.0f, HealthBefore - GetHealth());
 	if (AppliedDamage > 0.0f && !IsDead() && m_InvulnerabilityDuration > 0.0f)
@@ -85,9 +86,17 @@ float AMapleCharacter::TakeDamage(float DamageAmount, const AActor* pDamageCause
 void AMapleCharacter::ResetHealth()
 {
 	ClearInvulnerability();
-	FGameplayAttribute* pHealth = m_Attributes.GetAttribute(FName(L"Health"));
-	pHealth->SetBaseValue(m_MaxHealth);
-	pHealth->SetCurrentValue(m_MaxHealth);
+	if (UAbilitySystemComponent* pAbilitySystem = GetAbilitySystemComponent())
+	{
+		pAbilitySystem->SetAttributeBaseValue(FName(L"Health"), m_MaxHealth);
+	}
+	else
+	{
+		// Ability System을 제거한 캐릭터는 활성 효과 없이 자체 속성만 초기화한다.
+		FGameplayAttribute* pHealth = m_Attributes.GetAttribute(FName(L"Health"));
+		pHealth->SetBaseValue(m_MaxHealth);
+		pHealth->SetCurrentValue(m_MaxHealth);
+	}
 	UE_LOG(LogCore, Log, L"[Damage] health reset: actor=%u hp=%.0f/%.0f", GetActorId(), GetHealth(), m_MaxHealth);
 }
 
@@ -117,9 +126,14 @@ void AMapleCharacter::SetMaxHealth(float MaxHealth)
 	{
 		return;
 	}
-	const float Health = FMath::Min(GetHealth(), MaxHealth);
+	// 보정된 현재값을 새 기본값으로 쓰면 활성 효과가 두 번 적용되므로 기존 기본값을 유지한다.
+	const float BaseHealth = FMath::Min(m_Attributes.GetBaseValue(FName(L"Health")), MaxHealth);
 	m_MaxHealth = MaxHealth;
-	m_Attributes.InitAttribute(FName(L"Health"), Health, 0.0f, m_MaxHealth);
+	m_Attributes.InitAttribute(FName(L"Health"), BaseHealth, 0.0f, m_MaxHealth);
+	if (UAbilitySystemComponent* pAbilitySystem = GetAbilitySystemComponent())
+	{
+		pAbilitySystem->SetAttributeBaseValue(FName(L"Health"), BaseHealth);
+	}
 }
 
 void AMapleCharacter::SetInvulnerabilityDuration(float Duration)

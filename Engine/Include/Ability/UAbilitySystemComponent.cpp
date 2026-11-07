@@ -43,6 +43,24 @@ float UAbilitySystemComponent::GetAttributeBaseValue(const FName& Name) const
     return m_pAttributeSet->GetBaseValue(Name);
 }
 
+bool UAbilitySystemComponent::SetAttributeBaseValue(const FName& Name, float Value)
+{
+    if (!m_pAttributeSet || !_finite(Value))
+    {
+        return false;
+    }
+
+    FGameplayAttribute* pAttribute = m_pAttributeSet->GetAttribute(Name);
+    if (!pAttribute)
+    {
+        return false;
+    }
+
+    pAttribute->SetBaseValue(Value);
+    RecalculateAttributes();
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // 태그
 // ---------------------------------------------------------------------------
@@ -81,6 +99,8 @@ bool UAbilitySystemComponent::ApplyGameplayEffect(UGameplayEffect* pEffect)
     if (pEffect->m_DurationType == EGameplayEffectDurationType::Instant)
     {
         ApplyModifiersToBase(pEffect->m_Modifiers, 1);
+        // 기본값이 바뀌어도 활성 보정 효과가 현재값에 계속 반영되도록 재계산한다.
+        RecalculateAttributes();
         return true;
     }
 
@@ -410,6 +430,6 @@ void UAbilitySystemComponent::ApplyModifiersToBase(const TArray<FGameplayEffectM
         {
             Attr->SetBaseValue(Mod.m_Magnitude);
         }
-        Attr->SetCurrentValue(Attr->GetBaseValue());
+        // 현재값은 즉시 효과 적용 후 또는 주기 효과의 Tick 종료 시 일괄 재계산한다.
     }
 }

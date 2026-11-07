@@ -21,6 +21,8 @@ public:
     UAttributeSet* GetAttributeSet() const;
     float GetAttributeCurrentValue(const FName& Name) const;
     float GetAttributeBaseValue(const FName& Name) const;
+    // 기본값을 변경하고 활성 보정 효과를 반영한 현재값을 계산한다.
+    bool SetAttributeBaseValue(const FName& Name, float Value);
 
     bool HasTag(const FGameplayTag& Tag) const;
     bool HasParentTag(const FGameplayTag& Tag) const;

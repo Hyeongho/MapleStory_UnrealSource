@@ -25,7 +25,9 @@ public:
 	void UpdateAnimation();
 
 	// 피해 적용. 실제 감소한 체력을 반환하며 무적·사망 상태에서는 0을 반환한다.
+	// 기본 Health에 피해를 적용한 뒤 활성 보정 효과로 현재 체력을 계산한다.
 	virtual float TakeDamage(float DamageAmount, const AActor* pDamageCauser = nullptr);
+	// 기본 체력을 최대값으로 초기화한다. 활성 체력 보정 효과는 유지한다.
 	void ResetHealth();
 	float GetHealth() const;
 	float GetMaxHealth() const;
