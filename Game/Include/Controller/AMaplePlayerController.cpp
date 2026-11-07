@@ -16,15 +16,18 @@ void AMaplePlayerController::SetupInputMappings()
 	const FName HorizontalAxis(L"MoveHorizontal");
 	const FName VerticalAxis(L"MoveVertical");
 	const FName JumpAction(L"Jump");
+	const FName AttackAction(L"Attack");
 	PlayerInput.RemoveAxisMappings(HorizontalAxis);
 	PlayerInput.RemoveAxisMappings(VerticalAxis);
 	PlayerInput.RemoveActionMappings(JumpAction);
+	PlayerInput.RemoveActionMappings(AttackAction);
 	// 방향키와 점프 키는 여기서 교체할 수 있다. 월드의 Y는 아래쪽이 양수다.
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(HorizontalAxis, EKeys::Left, -1.0f));
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(HorizontalAxis, EKeys::Right, 1.0f));
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(VerticalAxis, EKeys::Up, -1.0f));
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(VerticalAxis, EKeys::Down, 1.0f));
 	PlayerInput.AddActionMapping(FInputActionKeyMapping(JumpAction, EKeys::Alt));
+	PlayerInput.AddActionMapping(FInputActionKeyMapping(AttackAction, FKey(VK_CONTROL)));
 #ifdef _DEBUG
 	const FName DamageAction(L"DebugDamage");
 	const FName ResetAction(L"DebugResetHealth");
@@ -37,9 +40,10 @@ void AMaplePlayerController::SetupInputMappings()
 
 void AMaplePlayerController::SetupInputComponent()
 {
-	// 기본 축 바인딩을 유지하고 점프는 누른 순간에만 실행한다.
+	// 기본 축 바인딩을 유지하고 점프와 공격은 누른 순간에만 실행한다.
 	Super::SetupInputComponent();
 	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnJumpPressed>(FName(L"Jump"), EInputEvent::Pressed, this);
+	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnAttackPressed>(FName(L"Attack"), EInputEvent::Pressed, this);
 #ifdef _DEBUG
 	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnDebugDamagePressed>(FName(L"DebugDamage"), EInputEvent::Pressed, this);
 	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnDebugResetHealthPressed>(FName(L"DebugResetHealth"), EInputEvent::Pressed, this);
@@ -61,6 +65,14 @@ void AMaplePlayerController::OnJumpPressed()
 		{
 			pCharacter->Jump();
 		}
+	}
+}
+
+void AMaplePlayerController::OnAttackPressed()
+{
+	if (AMapleCharacter* pCharacter = Cast<AMapleCharacter>(GetCharacter()))
+	{
+		pCharacter->Attack();
 	}
 }
 

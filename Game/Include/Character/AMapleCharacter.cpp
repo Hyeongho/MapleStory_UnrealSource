@@ -43,6 +43,7 @@ void AMapleCharacter::Tick(float DeltaTime)
 
 void AMapleCharacter::EndPlay()
 {
+	m_bAttacking = false;
 	ClearInvulnerability();
 	Super::EndPlay();
 }
@@ -185,14 +186,17 @@ void AMapleCharacter::UpdateDamageFlash()
 	}
 }
 
-bool AMapleCharacter::InitializeAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec)
+bool AMapleCharacter::InitializeAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec,
+	const char* AttackActionName)
 {
+	m_bAttacking = false;
 	LoadAvatar(Device, WzPath, LoadoutSpec, "stand1", 0);
 	const bool bHasMove = RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Move"), "walk1");
 	const bool bHasIdle = RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Idle"), "stand1");
 	RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Jump"), "jump");
 	RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Ladder"), "ladder");
 	RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Rope"), "rope");
+	RegisterAvatarState(Device, WzPath, LoadoutSpec, FName(L"Attack"), AttackActionName, false);
 	if (bHasIdle || bHasMove)
 	{
 		GetComponent<UAnimStateMachine>()->SetState(FName(bHasIdle ? L"Idle" : L"Move"));
@@ -201,8 +205,13 @@ bool AMapleCharacter::InitializeAvatar(FDXDevice& Device, const char* WzPath, co
 }
 
 bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec,
-	FName StateName, const char* ActionName)
+	FName StateName, const char* ActionName, bool bLoop)
 {
+	if (!ActionName || !*ActionName)
+	{
+		UE_LOG(LogRenderer, Warning, L"[PlayerAnimation] avatar action name is empty");
+		return false;
+	}
 	TArray<FFlipbookFrame> Frames;
 	for (int32 i = 0; ; i++)
 	{
@@ -220,7 +229,7 @@ bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath,
 	}
 	TSharedPtr<UFlipbook> Flipbook = UFlipbook::Create(Frames);
 	UAnimStateMachine* pStateMachine = GetComponent<UAnimStateMachine>();
-	const bool bRegistered = Flipbook && pStateMachine && pStateMachine->RegisterState(StateName, Flipbook, true);
+	const bool bRegistered = Flipbook && pStateMachine && pStateMachine->RegisterState(StateName, Flipbook, bLoop);
 	for (int32 i = 0; i < Frames.Num(); i++)
 	{
 		Frames[i].m_pTexture->Release();
@@ -228,21 +237,59 @@ bool AMapleCharacter::RegisterAvatarState(FDXDevice& Device, const char* WzPath,
 	return bRegistered;
 }
 
+bool AMapleCharacter::Attack()
+{
+	UAnimStateMachine* pStateMachine = GetComponent<UAnimStateMachine>();
+	UFlipbookComponent* pFlipbook = GetFlipbookComponent();
+	const URigidbody* pBody = GetComponent<URigidbody>();
+	if (IsDead() || m_bAttacking || !pStateMachine || !pFlipbook || (pBody && pBody->IsClimbing()))
+	{
+		return false;
+	}
+	if (!pStateMachine->HasState(FName(L"Attack")))
+	{
+		UE_LOG(LogRenderer, Warning, L"[PlayerAnimation] attack animation is unavailable");
+		return false;
+	}
+	pStateMachine->SetState(FName(L"Attack"));
+	// 입력 시에만 재생 위치를 되돌리고 이후 프레임 진행은 컴포넌트 Tick에 맡긴다.
+	pFlipbook->PlayFromStart();
+	m_bAttacking = true;
+	return true;
+}
+
+bool AMapleCharacter::IsAttacking() const
+{
+	return m_bAttacking;
+}
+
 void AMapleCharacter::UpdateAnimation()
 {
 	UAnimStateMachine* pStateMachine = GetComponent<UAnimStateMachine>();
 	UFlipbookComponent* pFlipbook = GetFlipbookComponent();
 	const URigidbody* pBody = GetComponent<URigidbody>();
-	if (!pStateMachine || !pFlipbook || !pBody)
+	if (!pStateMachine || !pFlipbook)
 	{
+		m_bAttacking = false;
 		return;
 	}
+	if (m_bAttacking)
+	{
+		// 공격 완료 전에는 Idle/Move/Jump 선택과 Play 호출로 재생을 덮어쓰지 않는다.
+		// 매달림·사망 또는 외부 상태 변경은 공격을 중단하고 현재 이동 상태로 복귀한다.
+		if (!IsDead() && (!pBody || !pBody->IsClimbing())
+			&& pStateMachine->GetCurrentState() == FName(L"Attack") && pFlipbook->IsPlaying())
+		{
+			return;
+		}
+		m_bAttacking = false;
+	}
 	FName StateName(L"Idle");
-	if (pBody->IsClimbing())
+	if (pBody && pBody->IsClimbing())
 	{
 		StateName = pBody->GetClimbableType() == EClimbableType::Ladder ? FName(L"Ladder") : FName(L"Rope");
 	}
-	else if (!pBody->IsGrounded())
+	else if (pBody && !pBody->IsGrounded())
 	{
 		StateName = FName(L"Jump");
 	}
@@ -257,7 +304,7 @@ void AMapleCharacter::UpdateAnimation()
 	if (pStateMachine->HasState(StateName))
 	{
 		pStateMachine->SetState(StateName);
-		if (pBody->IsClimbing() && FMath::Abs(pBody->GetVelocity().m_Y) <= FMath::KINDA_SMALL_NUMBER)
+		if (pBody && pBody->IsClimbing() && FMath::Abs(pBody->GetVelocity().m_Y) <= FMath::KINDA_SMALL_NUMBER)
 		{
 			pFlipbook->Stop();
 		}

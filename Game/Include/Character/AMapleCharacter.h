@@ -21,8 +21,14 @@ public:
 	virtual void EndPlay() override;
 
 	// 아바타 준비와 물리 갱신 이후의 애니메이션 선택
-	bool InitializeAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec);
+	// 공격 액션 이름은 Game에서 WZ 리소스에 맞게 지정한다.
+	bool InitializeAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec,
+		const char* AttackActionName = "swingO1");
 	void UpdateAnimation();
+
+	// 공격 모션은 한 번만 재생한다. 사망·공격 중·매달린 상태에서는 시작하지 않는다.
+	bool Attack();
+	bool IsAttacking() const;
 
 	// 피해 적용. 실제 감소한 체력을 반환하며 무적·사망 상태에서는 0을 반환한다.
 	// 기본 Health에 피해를 적용한 뒤 활성 보정 효과로 현재 체력을 계산한다.
@@ -45,7 +51,7 @@ public:
 protected:
 	// 게임 캐릭터를 확장할 때 아바타 액션을 추가로 등록할 수 있다.
 	bool RegisterAvatarState(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec,
-		FName StateName, const char* ActionName);
+		FName StateName, const char* ActionName, bool bLoop = true);
 
 private:
 	void ClearInvulnerability();
@@ -59,4 +65,5 @@ private:
 	float m_DamageBlinkInterval = 0.1f;
 	double m_DamageFlashTime = 0.0;
 	FLinearColor m_TintBeforeDamage = FLinearColor::White;
+	bool m_bAttacking = false;
 };
