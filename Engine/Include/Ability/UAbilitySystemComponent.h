@@ -22,6 +22,8 @@ public:
     float GetAttributeCurrentValue(const FName& Name) const;
     float GetAttributeBaseValue(const FName& Name) const;
 
+    bool SetAttributeBaseValue(const FName& Name, float Value);
+
     bool HasTag(const FGameplayTag& Tag) const;
     bool HasParentTag(const FGameplayTag& Tag) const;
     void AddLooseTag(const FGameplayTag& Tag);
