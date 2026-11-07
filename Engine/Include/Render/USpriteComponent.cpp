@@ -31,8 +31,17 @@ void USpriteComponent::SetTexture(ID3D11ShaderResourceView* Texture, const FVect
 	}
 
 	m_pTexture = Texture;
-
 	m_Origin = Origin;
+}
+
+ID3D11ShaderResourceView* USpriteComponent::GetTexture() const
+{
+	return m_pTexture;
+}
+
+const FVector2D& USpriteComponent::GetOrigin() const
+{
+	return m_Origin;
 }
 
 void USpriteComponent::Render(FRenderQueue& Queue)

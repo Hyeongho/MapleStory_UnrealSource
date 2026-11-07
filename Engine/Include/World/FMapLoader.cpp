@@ -2,10 +2,15 @@
 #include "World/FMapLoader.h"
 #include "World/FMapScene.h"
 #include "World/UWorld.h"
+
 #include "Object/AActor.h"
+
 #include "Render/USpriteComponent.h"
 #include "Render/FCamera2D.h"
+
 #include "Animation/UFlipbookComponent.h"
+#include "Animation/USpineComponent.h"
+
 #include "Core/Containers/TArray.h"
 #include "Physics/UBoxCollision.h"
 
@@ -18,15 +23,24 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 
 	AActor* Actor = World.SpawnActor<AActor>();
 	Scene.TrackActor(Actor->GetActorId());
-	USpriteComponent* SpriteComp = Actor->AddComponent<USpriteComponent>();
-	SpriteComp->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
-	SpriteComp->SetFlipHorizontal(bFlip);
-	SpriteComp->SetLayer(Layer);
-	SpriteComp->SetZ0(Z0);
-	SpriteComp->SetZ1(Z1);
+	if (Anim.m_Spine)
+	{
+		USpineComponent* Spine = Actor->AddComponent<USpineComponent>();
+		Spine->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
+		Spine->SetAnimation(Anim.m_Spine);
+		Spine->SetMapOrder(Layer, Z0, Z1);
+		Spine->SetFlipHorizontal(bFlip);
+		return;
+	}
 
 	if (Anim.m_Frames.Num() == 1 && Anim.m_Frames[0].m_A0 == Anim.m_Frames[0].m_A1)
 	{
+		USpriteComponent* SpriteComp = Actor->AddComponent<USpriteComponent>();
+		SpriteComp->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
+		SpriteComp->SetFlipHorizontal(bFlip);
+		SpriteComp->SetLayer(Layer);
+		SpriteComp->SetZ0(Z0);
+		SpriteComp->SetZ1(Z1);
 		// 단일 프레임 — 텍스처 소유권을 스프라이트로 넘긴다. 넘긴 뒤에는
 		// 이 참조를 다시 Release하면 안 된다(SetTexture가 AddRef하지 않음).
 		const FWzAnimFrame& Frame = Anim.m_Frames[0];
@@ -37,10 +51,7 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 		return;
 	}
 
-	// 여러 프레임 — 플립북에 맡긴다. SetFrames가 각 텍스처를 스스로 AddRef하고,
-	// Tick이 매 프레임 스프라이트의 텍스처/알파/블렌드를 갱신한다.
-	// AddComponent 순서 주의: 플립북은 반드시 스프라이트보다 나중에 붙여야
-	// BeginPlay 시점의 형제 캐싱이 성공한다(CLAUDE.md 버그 노트).
+	// 애니메이션 에셋이 프레임을 보관하고 Flipbook 컴포넌트가 직접 그린다.
 	TArray<FFlipbookFrame> Frames;
 	for (int32 i = 0; i < Anim.m_Frames.Num(); i++)
 	{
@@ -57,12 +68,16 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
 		Frames.Add(Frame);
 	}
 
-	// 맵 애니메이션은 기본적으로 반복이다 — 레퍼런스의 FrameAnimator도 전체
-	// 길이로 나눈 나머지 위치를 재생해서 그냥 계속 돈다. WZ의 repeat 노드는
-	// RepeatableFrameAnimator의 추가 동작(구간 반복)을 위한 것이라 여기선 쓰지 않는다.
+	// DLL이 해석한 repeat를 그대로 적용한다. 0은 마지막 프레임의 A1에서 정지한다.
 	UFlipbookComponent* FlipbookComp = Actor->AddComponent<UFlipbookComponent>();
+	FlipbookComp->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
+	FlipbookComp->SetFlipHorizontal(bFlip);
+	FlipbookComp->SetLayer(Layer);
+	FlipbookComp->SetZ0(Z0);
+	FlipbookComp->SetZ1(Z1);
 	FlipbookComp->SetUseFrameZ(bUseFrameZ);
-	FlipbookComp->SetFrames(Frames, Anim.m_bRepeat);
+	FlipbookComp->SetFlipbook(UFlipbook::Create(Frames));
+	FlipbookComp->SetLooping(Anim.m_bRepeat);
 	FlipbookComp->Play();
 }
 
@@ -74,27 +89,33 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, const char* WzPath, const char* MapPath, const FMapLoadOptions& Options, TArray<FMapFootholdItem>* OutFootholds)
 {
 	FMapScene& OutScene = World.CreateMapScene();
+
 	OutScene.Clear();
 	Camera.ClearWorldBounds();
 
 	FMapInfo MapInfo;
-
 	bool bHasCameraBounds = false;
 
 	if (FWzMapLoader::LoadMapInfo(WzPath, MapPath, MapInfo))
 	{
 		bHasCameraBounds = Camera.SetWorldBounds(FRect((float)MapInfo.m_VRLeft, (float)MapInfo.m_VRTop, (float)MapInfo.m_VRRight, (float)MapInfo.m_VRBottom));
-		if (!bHasCameraBounds)
+
+		if (bHasCameraBounds)
 		{
-			UE_LOG(LogRenderer, Log, L"[MapCamera] invalid VR=(%d,%d,%d,%d); deriving bounds from map geometry",
-				MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom);
+			OutScene.SetWorldBounds(FRect((float)MapInfo.m_VRLeft, (float)MapInfo.m_VRTop, (float)MapInfo.m_VRRight, (float)MapInfo.m_VRBottom));
 		}
 
+		if (!bHasCameraBounds)
+		{
+			UE_LOG(LogRenderer, Log, L"[MapCamera] invalid VR=(%d,%d,%d,%d); deriving bounds from map geometry", MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom);
+		}
 #ifdef _DEBUG
 		else
 		{
 			// 성공한 경우도 실제 맵 경계와 화면 크기를 남겨 제한 범위를 확인한다.
-			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs bounds=(%d,%d,%d,%d) viewport=(%.0f,%.0f) zoom=%.2f", MapPath, MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom, Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
+			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs bounds=(%d,%d,%d,%d) viewport=(%.0f,%.0f) zoom=%.2f",
+				MapPath, MapInfo.m_VRLeft, MapInfo.m_VRTop, MapInfo.m_VRRight, MapInfo.m_VRBottom,
+				Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
 		}
 #endif
 	}
@@ -112,11 +133,13 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 	{
 		const FMapBackItem& Item = BackItems[i];
 		FWzAnimation Anim;
-		if (!FWzMapLoader::LoadBackAnim(Device, WzPath, Item, Anim))
+
+		const bool bLoaded = Item.m_Ani == 2 ? FWzMapLoader::LoadSpinePlacement(Device, WzPath, MapPath, INDEX_NONE, Item.m_Index, Anim) : FWzMapLoader::LoadBackAnim(Device, WzPath, Item, Anim);
+
+		if (!bLoaded)
 		{
 			// 로딩 실패를 Spine 미지원으로 오인하지 않도록 항목과 결과를 남긴다.
 			UE_LOG(LogRenderer, Warning, L"[MapBack] load failed: slot=%d resource=%hs/%d ani=%d spine=%d", Item.m_Index, Item.m_Bs, Item.m_No, Item.m_Ani, (int32)Anim.m_bIsSpine);
-
 			continue;
 		}
 
@@ -155,7 +178,12 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 			FWzAnimation Anim;
 			if (!FWzMapLoader::LoadObjAnim(Device, WzPath, Item, Anim))
 			{
-				continue;
+				// spine 속성으로 묶인 디렉터리와 직접 skeleton/atlas를 지정한 리소스를 함께 처리한다.
+				if (!FWzMapLoader::LoadSpinePlacement(Device, WzPath, MapPath, LayerIndex, Item.m_Index, Anim))
+				{
+					UE_LOG(LogRenderer, Warning, L"[MapObj] load failed: layer=%d slot=%d resource=%hs/%hs/%hs/%hs", LayerIndex, Item.m_Index, Item.m_Os, Item.m_L0, Item.m_L1, Item.m_L2);
+					continue;
+				}
 			}
 
 			// 오브젝트의 정렬 1차 키는 프레임이 아니라 WZ obj 노드의 z다
@@ -204,7 +232,10 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 		FRect Bounds;
 		if (OutScene.CalculateCameraBounds(Bounds) && Camera.SetWorldBounds(Bounds))
 		{
-			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs derived bounds=(%.0f,%.0f,%.0f,%.0f) viewport=(%.0f,%.0f) zoom=%.2f", MapPath, Bounds.m_Left, Bounds.m_Top, Bounds.m_Right, Bounds.m_Bottom, Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
+			OutScene.SetWorldBounds(Bounds);
+			UE_LOG(LogRenderer, Log, L"[MapCamera] map=%hs derived bounds=(%.0f,%.0f,%.0f,%.0f) viewport=(%.0f,%.0f) zoom=%.2f",
+				MapPath, Bounds.m_Left, Bounds.m_Top, Bounds.m_Right, Bounds.m_Bottom,
+				Camera.GetViewportWidth(), Camera.GetViewportHeight(), Camera.GetZoom());
 		}
 
 		else
@@ -219,7 +250,6 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
 	for (int32 Layer = 0; Layer <= 7; Layer++)
 	{
 		bool bFound = false;
-
 		for (int32 i = 0; i < Footholds.Num(); i++)
 		{
 			if (Footholds[i].m_Layer == Layer)

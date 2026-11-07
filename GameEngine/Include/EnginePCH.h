@@ -39,6 +39,9 @@
 #include <DirectXMath.h>
 #include <SpriteBatch.h>
 #include <CommonStates.h>
+#include <Effects.h>
+#include <PrimitiveBatch.h>
+#include <VertexTypes.h>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)

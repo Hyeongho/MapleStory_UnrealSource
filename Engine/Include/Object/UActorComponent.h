@@ -28,5 +28,5 @@ public:
     virtual void Render(FRenderQueue& Queue);
 
 private:
-    AActor* m_pOwner;
+    AActor* m_pOwner = nullptr;
 };

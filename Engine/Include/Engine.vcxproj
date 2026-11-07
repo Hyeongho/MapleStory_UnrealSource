@@ -177,7 +177,9 @@
     <ClInclude Include="Ability\UGameplayEffect.h" />
     <ClInclude Include="Animation\UAnimNotify.h" />
     <ClInclude Include="Animation\UAnimStateMachine.h" />
+    <ClInclude Include="Animation\UFlipbook.h" />
     <ClInclude Include="Animation\UFlipbookComponent.h" />
+    <ClInclude Include="Animation\USpineComponent.h" />
     <ClInclude Include="Core\Containers\HashFunctions.h" />
     <ClInclude Include="Core\Containers\TArray.h" />
     <ClInclude Include="Core\Containers\TArrayView.h" />
@@ -254,6 +256,7 @@
     <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Render\USpriteComponent.h" />
     <ClInclude Include="Render\WzMapLoader.h" />
+    <ClInclude Include="Render\WzSpineAnimation.h" />
     <ClInclude Include="Render\WzTextureLoader.h" />
     <ClInclude Include="Timer\FTimerDelegate.h" />
     <ClInclude Include="Timer\FTimerHandle.h" />
@@ -272,7 +275,9 @@
     <ClCompile Include="Ability\UGameplayEffect.cpp" />
     <ClCompile Include="Animation\UAnimNotify.cpp" />
     <ClCompile Include="Animation\UAnimStateMachine.cpp" />
+    <ClCompile Include="Animation\UFlipbook.cpp" />
     <ClCompile Include="Animation\UFlipbookComponent.cpp" />
+    <ClCompile Include="Animation\USpineComponent.cpp" />
     <ClCompile Include="Core\Logging\FLogger.cpp" />
     <ClCompile Include="Core\Math\FColor.cpp" />
     <ClCompile Include="Core\Math\FIntPoint.cpp" />
@@ -330,6 +335,7 @@
     <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Render\USpriteComponent.cpp" />
     <ClCompile Include="Render\WzMapLoader.cpp" />
+    <ClCompile Include="Render\WzSpineAnimation.cpp" />
     <ClCompile Include="Render\WzTextureLoader.cpp" />
     <ClCompile Include="Timer\FTimerManager.cpp" />
     <ClCompile Include="UGameInstance.cpp" />

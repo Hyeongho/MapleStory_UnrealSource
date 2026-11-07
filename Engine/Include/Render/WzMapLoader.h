@@ -3,6 +3,7 @@
 #include "EnginePCH.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Math/FVector2D.h"
+#include "Render/WzSpineAnimation.h"
 
 class FDXDevice;
 
@@ -33,17 +34,28 @@ struct FMapBackItem
 	char m_Bs[32] = {};
 	int32 m_Index = 0;
 	int32 m_No = 0;
-	int32 m_Ani = 0; // 0=정적("back"), 1=애니메이션("ani"), 2=spine(미지원)
+	int32 m_Ani = 0; // 0=정적, 1=프레임 애니메이션, 2=Spine
 	int32 m_SpineNo = 0;
 	int32 m_Front = 0; // 0=맵 레이어보다 뒤, 1=맵 레이어보다 앞
 	int32 m_F = 0;     // 좌우 반전
-	int32 m_X = 0, m_Y = 0;
-	int32 m_Rx = 0, m_Ry = 0; // 카메라 이동 비율 — 0=화면 고정, -100=월드 고정
+
+	int32 m_X = 0;
+	int32 m_Y = 0;
+
+	int32 m_Rx = 0;
+	int32 m_Ry = 0; // 카메라 이동 비율 — 0=화면 고정, -100=월드 고정
+
 	int32 m_Type = 0;         // TileMode: 1=가로,2=세로,3=둘다,4=가로스크롤,5=세로스크롤…
-	int32 m_Cx = 0, m_Cy = 0; // 타일링 셀 크기(0이면 프레임 Bounds 크기로 대체)
+
+	int32 m_Cx = 0;
+	int32 m_Cy = 0; // 타일링 셀 크기(0이면 프레임 Bounds 크기로 대체)
+
 	int32 m_A = 255;          // 알파
 	int32 m_W = 0;            // 0이 아니면 Wx/Wy를 스크롤 거리로 사용
-	int32 m_Wx = 0, m_Wy = 0; // 스크롤 거리(W가 0이거나 값이 0이면 기본 100)
+
+	int32 m_Wx = 0;
+	int32 m_Wy = 0; // 스크롤 거리(W가 0이거나 값이 0이면 기본 100)
+
 	int32 m_ScreenMode = 0;
 };
 
@@ -78,7 +90,10 @@ struct FMapPortalItem
 	char m_Tn[32] = {};
 	int32 m_Index = 0;
 	int32 m_Pt = 0; // 포털 종류(브리지의 PortalTypes 인덱스)
-	int32 m_X = 0, m_Y = 0;
+
+	int32 m_X = 0;
+	int32 m_Y = 0;
+
 	int32 m_ToMap = 999999999; // 999999999 = 대상 없음
 	int32 m_Image = 0;
 };
@@ -165,7 +180,10 @@ struct FWzAnimation
 {
 	TArray<FWzAnimFrame> m_Frames;
 	bool m_bRepeat = true;
-	bool m_bIsSpine = false; // true면 이번 범위 밖 — 호출자가 건너뛴다
+	bool m_bIsSpine = false;
+
+	TSharedPtr<FWzSpineAnimation> m_Spine;
+
 	bool m_bHasFlowX = false;
 	bool m_bHasFlowY = false;
 	int32 m_FlowX = 0;
@@ -178,7 +196,7 @@ struct FWzAnimation
 
 	bool IsValid() const
 	{
-		return m_Frames.Num() > 0;
+		return m_Frames.Num() > 0 || (bool)m_Spine;
 	}
 
 	// 보유한 모든 프레임 텍스처를 Release한다. 소유자가 수명이 끝날 때 호출.
@@ -229,6 +247,9 @@ public:
 
 	static void LoadMapPortals(const char* WzPath, const char* MapPath, TArray<FMapPortalItem>& OutPortals);
 	static void LoadMapReactors(const char* WzPath, const char* MapPath, TArray<FMapReactorItem>& OutReactors);
+
+	// 기존 프레임 API와 분리해 Spine 배치의 본 계산 인스턴스를 만든다.
+	static bool LoadSpinePlacement(FDXDevice& Device, const char* WzPath, const char* MapPath, int32 LayerIndex, int32 PlacementIndex, FWzAnimation& OutAnim);
 
 	// ── 애니메이션 로딩 ──
 	// 경로 조립 규칙은 전부 브리지(C#) 쪽에 있다 — MapRender의

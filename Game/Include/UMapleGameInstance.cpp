@@ -15,7 +15,7 @@
 #include "Physics/URigidbody.h"
 
 static const char* MAPLE_WZ_PATH = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
-static const char* MAPLE_MAP_PATH = R"(Map\Map\Map1\100000000.img)";
+static const char* MAPLE_MAP_PATH = R"(Map\Map\Map4\410017300.img)";
 static const char* MAPLE_LOADOUT_SPEC = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
 
 // 실제 클라이언트에서 확인할 ladderRope 배치 번호. INDEX_NONE이면 기본 시작점을 쓴다.
@@ -98,7 +98,7 @@ void UMapleGameInstance::Tick(float DeltaTime)
 		StateName = FName(L"Jump");
 	}
 
-	else if (FMath::Abs(pBody->GetVelocity().m_X) > FMath::KINDA_SMALL_NUMBER)
+	else if (FMath::Abs(pCharacter->GetLastMovementInputVector().m_X) > FMath::KINDA_SMALL_NUMBER)
 	{
 		StateName = FName(L"Move");
 	}
@@ -135,7 +135,7 @@ void UMapleGameInstance::InitPlayer()
 	UEngine& Engine = GetEngine();
 	m_pPlayerCharacter = Engine.GetWorld().SpawnActor<ACharacter>();
 	m_pPlayerCharacter->LoadAvatar(Engine.GetDevice(), MAPLE_WZ_PATH, MAPLE_LOADOUT_SPEC, "stand1", 0);
-	m_pPlayerCharacter->SetLocation(FVector2D(698.0f, 257.0f));
+	m_pPlayerCharacter->SetLocation(FVector2D(-2.0f, -23.0f));
 
 	// 시작점 아래의 실제 맵 발판에 발을 놓고, 같은 발판의 렌더링 레이어를 쓴다.
 	if (FMapScene* pMapScene = Engine.GetWorld().GetMapScene())
@@ -185,7 +185,6 @@ void UMapleGameInstance::InitPlayer()
 		pBody->SetCoyoteTime(MAPLE_COYOTE_TIME);
 	}
 
-	m_pPlayerCharacter->AddComponent<UFlipbookComponent>();
 	m_pAnimStateMachine = m_pPlayerCharacter->AddComponent<UAnimStateMachine>();
 
 	const bool bHasMove = RegisterAvatarState(FName(L"Move"), "walk1");
@@ -233,13 +232,14 @@ bool UMapleGameInstance::RegisterAvatarState(FName StateName, const char* Action
 		return false;
 	}
 
-	m_pAnimStateMachine->RegisterState(StateName, Frames, true);
+	TSharedPtr<UFlipbook> Flipbook = UFlipbook::Create(Frames);
+	const bool bRegistered = Flipbook && m_pAnimStateMachine->RegisterState(StateName, Flipbook, true);
 
-	// 상태 머신이 AddRef한 뒤에는 로딩 과정에서 보유하던 참조를 즉시 반납한다.
+	// 에셋이 확보한 참조만 남기고 로딩 과정의 참조를 반납한다.
 	for (int32 i = 0; i < Frames.Num(); i++)
 	{
 		Frames[i].m_pTexture->Release();
 	}
 
-	return true;
+	return bRegistered;
 }

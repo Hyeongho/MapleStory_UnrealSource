@@ -348,6 +348,15 @@
     <ClInclude Include="Object\APlayerController.h">
       <Filter>02. Object</Filter>
     </ClInclude>
+    <ClInclude Include="Animation\USpineComponent.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\WzSpineAnimation.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UFlipbook.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -556,6 +565,15 @@
     </ClCompile>
     <ClCompile Include="Object\APlayerController.cpp">
       <Filter>02. Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\USpineComponent.cpp">
+      <Filter>07. Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\WzSpineAnimation.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UFlipbook.cpp">
+      <Filter>07. Animation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

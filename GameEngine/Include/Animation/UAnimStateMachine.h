@@ -3,7 +3,7 @@
 #include "Object/UActorComponent.h"
 #include "Core/Containers/TMap.h"
 #include "Core/String/FName.h"
-#include "Animation/UFlipbookComponent.h"
+#include "Animation/UFlipbook.h"
 
 class UAnimStateMachine :
     public UActorComponent
@@ -21,7 +21,7 @@ public:
 	// Release()해도 안전. 이미 같은 이름으로 등록된 상태가 있으면 기존에
 	// 보관 중이던 텍스처를 먼저 전부 Release()한 뒤 새 목록으로 통째로
 	// 교체한다.
-	void RegisterState(FName StateName, const TArray<FFlipbookFrame>& Frames, bool bLoop = true);
+	bool RegisterState(FName StateName, const TSharedPtr<UFlipbook>& Flipbook, bool bLoop = true);
 
 	// StateName으로 전환한다. 이미 그 상태면 아무 것도 안 함(no-op) — 매
 	// 호출마다 같은 애니메이션을 처음부터 재시작하지 않기 위함. 등록 안 된
@@ -35,14 +35,17 @@ public:
 	virtual void BeginPlay() override;
 
 private:
+	void ApplyCurrentState();
+
+private:
 	struct FAnimStateData
 	{
-		TArray<FFlipbookFrame> m_Frames; // 소유 — 각 텍스처 AddRef된 채 보관
+		TSharedPtr<UFlipbook> m_Flipbook;
 		bool m_bLoop = true;
 	};
 
 	TMap<FName, FAnimStateData> m_States;
-	UFlipbookComponent* m_pFlipbook = nullptr; // 캐시, 비소유
+
 	FName m_CurrentState; // 기본 생성 시 IsNone() — SetState() 호출 전
 };
 

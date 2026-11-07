@@ -191,6 +191,8 @@ namespace
 
 void FWzAnimation::ReleaseFrames()
 {
+	m_Spine.Reset();
+
 	for (int32 i = 0; i < m_Frames.Num(); i++)
 	{
 		if (m_Frames[i].m_pTexture)
@@ -199,6 +201,7 @@ void FWzAnimation::ReleaseFrames()
 			m_Frames[i].m_pTexture = nullptr;
 		}
 	}
+
 	m_Frames.Reset();
 }
 
@@ -460,9 +463,36 @@ void FWzMapLoader::LoadMapReactors(const char* WzPath, const char* MapPath, TArr
 	DllState.Free((const char*)Raw);
 }
 
+bool FWzMapLoader::LoadSpinePlacement(FDXDevice& Device, const char* WzPath, const char* MapPath, int32 LayerIndex, int32 PlacementIndex, FWzAnimation& OutAnim)
+{
+	OutAnim.ReleaseFrames();
+	OutAnim.m_bIsSpine = true;
+	OutAnim.m_Spine = FWzSpineAnimation::LoadPlacement(Device, WzPath, MapPath, LayerIndex, PlacementIndex);
+
+	if (!OutAnim.m_Spine)
+	{
+		return false;
+	}
+
+	const FNativeSpineMeta& Meta = OutAnim.m_Spine->GetMeta();
+
+	OutAnim.m_bRepeat = OutAnim.m_Spine->IsLooping();
+	OutAnim.m_BoundsX = Meta.m_BoundsX;
+	OutAnim.m_BoundsY = Meta.m_BoundsY;
+	OutAnim.m_BoundsW = Meta.m_BoundsW;
+	OutAnim.m_BoundsH = Meta.m_BoundsH;
+	OutAnim.m_bHasFlowX = Meta.m_HasFlowX != 0;
+	OutAnim.m_bHasFlowY = Meta.m_HasFlowY != 0;
+	OutAnim.m_FlowX = Meta.m_FlowX;
+	OutAnim.m_FlowY = Meta.m_FlowY;
+
+	return true;
+}
+
 bool FWzMapLoader::LoadBackAnim(FDXDevice& Device, const char* WzPath, const FMapBackItem& Item, FWzAnimation& OutAnim)
 {
 	FWzMapDllState& DllState = GetDllState();
+
 	if (!DllState.AnimLoadBack)
 	{
 		return false;
@@ -478,6 +508,7 @@ bool FWzMapLoader::LoadBackAnim(FDXDevice& Device, const char* WzPath, const FMa
 bool FWzMapLoader::LoadObjAnim(FDXDevice& Device, const char* WzPath, const FMapObjItem& Item, FWzAnimation& OutAnim)
 {
 	FWzMapDllState& DllState = GetDllState();
+
 	if (!DllState.AnimLoadObj)
 	{
 		return false;

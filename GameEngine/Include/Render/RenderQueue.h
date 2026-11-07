@@ -7,6 +7,7 @@
 #include "Render/SpriteBatch.h"
 
 class FSpriteBatch;
+class FWzSpineAnimation;
 
 // 그리는 순서는 MapRender의 씬 컨테이너 순서를 그대로 따른다
 // (MapScene.cs:11-25 → Back → Layers 0~7 → Fly → Front → Effect).
@@ -59,8 +60,11 @@ inline ELayer MakeMapLifeLayer(int32 LayerIndex)
 struct FRenderQueueEntry
 {
 	ID3D11ShaderResourceView* m_pTexture = nullptr; // 비소유
+	FWzSpineAnimation* m_pSpine = nullptr; // 비소유, 제출한 씬/컴포넌트가 프레임 동안 소유한다.
+
 	FVector2D m_Position;
 	FVector2D m_Scale = FVector2D(1.0f, 1.0f);
+
 	float m_RotationRadians = 0.0f;
 	FLinearColor m_Tint = FLinearColor::White;
 

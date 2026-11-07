@@ -1,10 +1,15 @@
 #include "EnginePCH.h"
+
 #include "Physics/PhysicsWorld.h"
 #include "Physics/UBoxCollision.h"
 #include "Physics/UCircleCollision.h"
 #include "Physics/UClimbableComponent.h"
 #include "Physics/URigidbody.h"
+
 #include "World/UWorld.h"
+#include "World/FMapScene.h"
+	
+#include "Object/ACharacter.h"
 
 #ifdef _DEBUG
 #include "Render/SpriteBatch.h"
@@ -633,7 +638,84 @@ void FPhysicsWorld::Tick(float DeltaTime)
 			}
 
 			SimulateBody(*Body, *Box, StepTime, Primitives);
+
+			if (ACharacter* Character = Cast<ACharacter>(Actors[i]))
+			{
+				const FMapScene* Scene = m_World.GetMapScene();
+
+				if (Scene && Scene->GetWorldBounds())
+				{
+					ConstrainCharacterToBounds(*Character, *Scene->GetWorldBounds());
+				}
+			}
 		}
+	}
+}
+
+void FPhysicsWorld::ConstrainCharacterToBounds(ACharacter& Character, const FRect& Bounds)
+{
+	if (!_finite(Bounds.m_Left) || !_finite(Bounds.m_Right) || !_finite(Bounds.m_Top) || !_finite(Bounds.m_Bottom) || Bounds.Width() <= 0.0f || Bounds.Height() <= 0.0f)
+	{
+		return;
+	}
+
+	const FVector2D Location = Character.GetLocation();
+	const UBoxCollision* Box = Character.GetComponent<UBoxCollision>();
+	const FRect Current = Box ? Box->GetWorldBounds() : FRect(Location, Location);
+
+	const float MinX = Bounds.m_Left + Location.m_X - Current.m_Left;
+	const float MaxX = Bounds.m_Right + Location.m_X - Current.m_Right;
+
+	const float MinY = Bounds.m_Top + Location.m_Y - Current.m_Top;
+	const float MaxY = Bounds.m_Bottom + Location.m_Y - Current.m_Bottom;
+
+	const FVector2D Clamped(
+		MinX > MaxX ? Bounds.Center().m_X + Location.m_X - Current.Center().m_X : FMath::Clamp(Location.m_X, MinX, MaxX),
+		MinY > MaxY ? Bounds.Center().m_Y + Location.m_Y - Current.Center().m_Y : FMath::Clamp(Location.m_Y, MinY, MaxY));
+
+	const FVector2D Offset = Clamped - Location;
+
+	Character.SetLocation(Clamped);
+
+	URigidbody* Body = Character.GetComponent<URigidbody>();
+	if (!Body)
+	{
+		return;
+	}
+
+	if (Body->IsClimbing() && !Offset.IsNearlyZero())
+	{
+		Body->StopClimbing();
+	}
+
+	if (MinX > MaxX || (Clamped.m_X <= MinX && Body->m_Velocity.m_X < 0.0f) || (Clamped.m_X >= MaxX && Body->m_Velocity.m_X > 0.0f))
+	{
+		Body->m_Velocity.m_X = 0.0f;
+	}
+
+	if (MinY > MaxY || (Clamped.m_Y <= MinY && Body->m_Velocity.m_Y < 0.0f) || (Clamped.m_Y >= MaxY && Body->m_Velocity.m_Y > 0.0f))
+	{
+		Body->m_Velocity.m_Y = 0.0f;
+	}
+
+	bool bLostSupport = Offset.m_Y != 0.0f;
+
+	if (Offset.m_X != 0.0f && Box && Body->m_CurrentFootholdId != INDEX_NONE)
+	{
+		const FFoothold* Support = FindFoothold(Body->m_CurrentFootholdId);
+		const FVector2D Foot = GetFootPosition(*Box);
+
+		bLostSupport = bLostSupport || !Support || !Support->ContainsX(Foot.m_X) || FMath::Abs(Support->GetHeightAtX(Foot.m_X) - Foot.m_Y) > 0.1f;
+	}
+
+	if (bLostSupport)
+	{
+		Body->m_bIsGrounded = false;
+		Body->m_CoyoteTimeRemaining = 0.0f;
+		Body->m_CurrentFootholdId = INDEX_NONE;
+		Body->m_LastFootholdId = INDEX_NONE;
+		Body->m_IgnoredFootholdId = INDEX_NONE;
+		Body->m_bDropThroughRequested = false;
 	}
 }
 
