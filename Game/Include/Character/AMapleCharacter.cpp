@@ -100,12 +100,12 @@ void AMapleCharacter::UpdateAnimation()
 
     FName StateName(L"Idle");
 
-    if (pBody->IsClimbing())
+    if (pBody && pBody->IsClimbing())
     {
         StateName = pBody->GetClimbableType() == EClimbableType::Ladder ? FName(L"Ladder") : FName(L"Rope");
     }
 
-    else if (!pBody->IsGrounded())
+    else if (pBody && !pBody->IsGrounded())
     {
         StateName = FName(L"Jump");
     }
@@ -124,7 +124,7 @@ void AMapleCharacter::UpdateAnimation()
     {
         pStateMachine->SetState(StateName);
 
-        if (pBody->IsClimbing() && FMath::Abs(pBody->GetVelocity().m_Y) <= FMath::KINDA_SMALL_NUMBER)
+        if (pBody && pBody->IsClimbing() && FMath::Abs(pBody->GetVelocity().m_Y) <= FMath::KINDA_SMALL_NUMBER)
         {
             pFlipbook->Stop();
         }
@@ -276,6 +276,17 @@ void AMapleCharacter::Attack()
     UFlipbookComponent* pFlipbook = GetFlipbookComponent();
 
     const URigidbody* pBody = GetComponent<URigidbody>();
+
+    if (!pStateMachine || !pFlipbook || IsDead() || m_bAttacking || (pBody && pBody->IsClimbing()))
+    {
+        return;
+    }
+
+    if (!pStateMachine->HasState(FName(L"Attack")))
+    {
+        UE_LOG(LogRenderer, Warning, L"[PlayerAnimation] attack animation is unavailable");
+        return;
+    }
 
     pStateMachine->SetState(FName(L"Attack"));
     
