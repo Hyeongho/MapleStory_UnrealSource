@@ -237,7 +237,7 @@ Trigger 채널과 Player 마스크를 사용하므로 지나가는 캐릭터를 
 
 ### Game 클라이언트 확인 위치
 
-`Game/Include/UMapleGameInstance.cpp`의 기본 맵을 제공 XML의 `240020210`으로 변경하고,
+`Game/Include/GameInstance/UMapleGameInstance.cpp`의 기본 맵을 제공 XML의 `240020210`으로 변경하고,
 `MAPLE_START_LADDER_ROPE_INDEX=7`로 시작 배치를 선택했다. 선택한 배치의 X와 하단 좌표로
 시작점을 정한 뒤 기존 발판 보정을 사용한다. 이 맵의 7번 사다리에서는 발 위치가
 `(-147, 152)`인 하단 발판에서 시작하며, 카메라는 기존 캐릭터 추적을 사용한다.

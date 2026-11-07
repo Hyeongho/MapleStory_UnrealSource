@@ -22,7 +22,11 @@ Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 
   캐릭터 추적 카메라와 맵 경계 제한, Game에서 지정하는 맵 오브젝트 제외 규칙.
 - 렌더링: 맵 컨테이너 정렬과 발판/매달린 배치의 Life 레이어를 유지한다.
   사용자가 현재 출력이 올바르다고 확인했으므로 모든 로프·사다리를 강제로 뒤로 보내는 예외는 추가하지 않는다.
-- 남은 Phase 10 작업: **피격 후 무적 시간 → 넉백 → 낙사 구역(DeathZone)**.
+- 소스 구현됨: Game의 AMapleCharacter 분리, Health 속성 기반 피해·무적 시간·피격 깜빡임.
+  기본 체력 100, 무적 1초, 깜빡임 간격 0.1초이며 Debug F1/F2로 확인할 수 있다.
+  피격 표시는 투명도를 유지하고 RGB 밝기 65%의 회색 틴트와 원래 색상을 번갈아 적용한다.
+  빌드·테스트 실행과 사용자 플레이 검증은 대기 중이다. 세부 사용법은 Docs/DAMAGE.md를 따른다.
+- 남은 Phase 10 작업: **넉백 → 낙사 구역(DeathZone)**.
   이를 마친 뒤 Phase 11 Audio로 진행한다.
 - 최신 구조: UFlipbook 공유 에셋, Flipbook 컴포넌트의 직접 렌더링, 에셋 참조 기반 상태 전환.
 - 맵 VR 또는 지형 기반 대체 경계를 캐릭터 이동에도 적용한다. 카메라 줌·뷰포트와 독립적이다.
@@ -74,6 +78,12 @@ MyEngine.sln
 │   ├── World/               (Phase 15)
 │   └── AI/                  (Phase 18)
 ├── Game/            → 실행 파일 (.exe)  Engine 참조
+│   └── Include/             (헤더와 cpp를 기능별로 함께 배치)
+│       ├── Launch/          → main.cpp, 실행 설정과 엔진 루프 연결
+│       ├── GameInstance/    → UMapleGameInstance, 맵·플레이어 생성과 시작 설정
+│       ├── Character/       → AMapleCharacter, 아바타·애니메이션·체력·피격
+│       ├── Controller/      → AMaplePlayerController, 키 매핑과 조작
+│       └── Game.vcxproj     → 프로젝트 위치는 유지, 필터도 기능별 폴더에 맞춤
 └── Tests/           → 단위 테스트 (.exe)  Engine 참조
 ```
 
@@ -317,7 +327,7 @@ using uint64 = uint64_t;
 - [x] `GetDeltaTime()` / `GetTimeSeconds()` 전역 접근 (`FTimerManager.h/.cpp`에
   `TickGlobalClock()`과 함께 자유 함수로 구현 — `FTimerManager` 클래스와는
   무관한 파일 스코프 QueryPerformanceCounter 기반 클럭. 초기에는
-  `Game/Include/main.cpp` 루프에 연결했고, 현재는 `FEngineLoop::Tick()`이
+  `Game/Include/Launch/main.cpp` 루프에 연결했고, 현재는 `FEngineLoop::Tick()`이
   `TickGlobalClock()`/`GetDeltaTime()`을 호출해 델타타임을 공급한다.
   `UEngine::Tick()`이 같은 델타타임으로 타이머와 월드를 갱신한다)
 
@@ -537,7 +547,7 @@ Phase 8 렌더러 항목 전체 완료.
      `dotnet publish -r win-x64 -p:NativeLib=Shared -c Release`로 빌드.
   2. 결과물 `WzNativeLib.dll`(`bin/Release/net8.0/win-x64/publish/`)을
      `Game/Bin/`(`MapleStory.exe`와 같은 폴더)에 복사.
-  3. `Game/Include/main.cpp`의 `TestWzPath`/`TestCanvasNodePath` 상수를
+  3. `Game/Include/Launch/main.cpp`의 `TestWzPath`/`TestCanvasNodePath` 상수를
      로컬에 있는 실제 WZ 파일 경로/Canvas 노드 경로로 수정.
   4. 1차 검증은 엔진 빌드 전에 `wz_test.exe`로 먼저 해볼 수 있음 —
      `wz_test.exe WzNativeLib.dll "<wz경로>" "" "" "<canvas 노드 경로>" canvas.bmp`
@@ -657,7 +667,7 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
   확인하세요" 조언이 실행 불가능한 조언이었다는 지적으로 발견.
   `FMemoryTracker`(Phase 1)는 `operator new`/`delete`(`MemoryOverride.cpp`)에
   이미 걸려있어 자동으로 집계는 되고 있었지만, `ReportLeaks()` 호출이
-  `Test/Include/main.cpp`에만 있고 `Game/Include/main.cpp`엔 없어서
+  `Test/Include/main.cpp`에만 있고 `Game/Include/Launch/main.cpp`엔 없어서
   실제 게임 실행 시 결과를 볼 방법이 없었다 — `wWinMain` 종료 직전,
   다른 모든 엔진 싱글턴(`pWorld`~`pDevice`)이 이미 다 정리된 시점에
   `#ifdef _DEBUG`로 감싼 `FMemoryTracker::ReportLeaks()` 호출을 추가.
@@ -803,7 +813,7 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 - [x] 로프·사다리 충돌 영역 — WZ 배치 연동, Trigger 겹침, 상하 이동·중력 정지·끝점 처리
 - [x] 로프·사다리 점프 이탈과 재진입 지연
 - [x] 낙하 상태 판정 / 코요테 타임 — 지면 이탈 직후 0.1초 동안 첫 점프 허용(Game 설정)
-- [ ] 무적 프레임 (i-frame, 피격 후 무적)
+- [x] 무적 프레임 (i-frame, 피격 후 무적) — 소스 구현, 빌드·사용자 검증 대기
 - [ ] 넉백 물리 (보스 스킬 피격)
 - [ ] 낙사 구역 (DeathZone)
 
@@ -812,7 +822,7 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 - [x] Map.wz ladderRope 데이터 파싱 → UClimbableComponent Trigger 연동
 
 완료 기준: 실제 맵의 발판·경사면 이동, 점프·낙하, 로프·사다리 이동을 확인하고,
-남은 피격 무적·넉백·낙사 구역을 구현·검증한다. Phase 10 전체를 완료한 상태는 아니다.
+피격 무적은 소스를 구현했으며 사용자 검증을 기다린다. 넉백·낙사 구역이 남아 있어 Phase 10 전체 완료는 아니다.
 
 #### 실제 맵 물리와 이동 (2026-10-10)
 
@@ -999,7 +1009,8 @@ struct FModifierKeyState {
 - [x] 캐릭터 추적 카메라·맵 경계 제한 — 유효한 VR을 우선하고 없으면 발판·로프·사다리 범위로 보완
 - [ ] `ULevel.h / .cpp` / `UGameMode.h / .cpp` — 멀티 레벨 관리와 게임 규칙
 - [ ] 포털 이동 / 데이터 기반 스폰 포인트 / 낙사 구역
-- [ ] Game 전용 플레이어 클래스와 맵 구성 분리 — 현재 UMapleGameInstance의 생성·설정 역할을 필요에 따라 이관
+- [x] Game 전용 캐릭터 클래스 분리 — AMapleCharacter가 아바타·애니메이션·체력·피격을 담당(소스 구현, 사용자 검증 대기)
+- [ ] 맵 구성·플레이어 스폰 규칙 분리 — 현재 UMapleGameInstance의 생성·설정 역할을 Level/GameMode 도입 시 이관
 
 ★ WZ 병행:
 - [x] DLL의 Map.wz 구조·이미지 추출 → FMapLoader/FMapScene 연결
@@ -1015,8 +1026,9 @@ MapRender2의 후면 배경 → 레이어별 Obj/Reactor/Tile/Life → Portal/Sk
 배경 반복/스크롤 규칙을 반영한다. 포털·리액터는 현재 배치·이미지 표시 범위이며 실제 동작은 후속이다.
 
 `UGameInstance`는 엔진 수명 훅이며 전역 싱글톤이나 Subsystem 프레임워크를 구현한 것은 아니다.
-Game의 `UMapleGameInstance`가 맵 선택·제외 규칙·플레이어 생성·애니메이션 설정을 맡는다.
-향후 Game 전용 플레이어/월드 구성 클래스로 나눌 수 있지만 그 분리는 아직 구현하지 않았다.
+Game의 `UMapleGameInstance`가 맵 선택·제외 규칙·플레이어 생성·시작 위치 설정을 맡는다.
+`AMapleCharacter`는 아바타 로딩·애니메이션 선택·체력·피격 규칙을 담당한다.
+맵 구성과 플레이어 생성·리스폰 규칙을 Level/GameMode로 분리하는 작업은 아직 구현하지 않았다.
 
 선행 구현은 현재 플레이에 필요한 최소 범위다. Phase 15 완료 기준은 실제 WZ 맵의
 레벨 수명·맵 전환·스폰 처리를 구현하고 검증하는 것으로 갱신한다.
@@ -1045,7 +1057,7 @@ Phase 8(렌더러)에서 만든 것들(`SpriteBatch`/`RenderQueue`/`WzTextureLoa
   함수 추가 — `Tick()`과 같은 전파 패턴(`AActor::Render`가 `m_Components`를
   순회). `Object/` 폴더가 `Render/` 폴더(d3d11.h 등)를 몰라도 되도록
   `class FRenderQueue;` 전방 선언만 사용.
-- 현재 `Game/Include/main.cpp`는 실행 설정, `UMapleGameInstance` 생성,
+- 현재 `Game/Include/Launch/main.cpp`는 실행 설정, `UMapleGameInstance` 생성,
   `FEngineLoop::Init()`/`Run()` 호출만 맡는다. 플레이어 생성은
   `UMapleGameInstance::InitPlayer()`에, 월드 Tick/Render는 Engine에 있다.
 - 프레임 순서: 입력 메시지 수집 → Controller 입력 처리 → GameInstance PreTick →
@@ -1284,9 +1296,12 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 ### 다음 개발 순서
 
 현재 Phase 10의 Map.wz 발판·로프·사다리 연결과 기본 이동은 구현했다.
-다음은 **피격 후 무적 시간 → 넉백 → 낙사 구역** 순서로 진행한다.
+피격 후 무적 시간은 Game 캐릭터에 구현했으며, 사용자 확인 후 **넉백 → 낙사 구역** 순서로 진행한다.
 
-1. 피격 후 무적 시간: 일정 시간 동안 중복 피해를 거부하고 무적 상태를 표시한다.
+1. 피격 후 무적 시간 검증: Debug F1 피해와 F2 체력 초기화로 중복 피해 차단·만료·깜빡임을 확인한다.
+   AMapleCharacter는 기존 UAttributeSet/UAbilitySystemComponent를 사용하며 아바타 로딩·애니메이션 선택도 담당한다.
+   Test/Include/main.cpp에는 기존 물리·공유 에셋 검사를 보존하고 피격 검사 소스를 추가했다.
+   main에 복원할 때 Test의 main.cpp와 프로젝트 설정을 함께 반영한다. 빌드·테스트는 실행하지 않았다.
 2. 넉백: 피격 방향으로 속도를 적용하고 반응 시간 동안 이동 입력을 제어한다.
    체력·피격 규칙은 Game 캐릭터 쪽에서 관리하고 공통 이동·충돌은 Engine 기능을 사용한다.
 3. 낙사 구역: 추락을 감지하고 Game이 지정한 시작점 복귀 정책과 연결한다.

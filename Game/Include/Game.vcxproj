@@ -92,6 +92,11 @@
     <OutDir>../Bin/</OutDir>
     <IntDir>../BinObj/</IntDir>
   </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -153,13 +158,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="UMapleGameInstance.cpp" />
-    <ClCompile Include="AMaplePlayerController.cpp" />
+    <ClCompile Include="Launch\main.cpp" />
+    <ClCompile Include="GameInstance\UMapleGameInstance.cpp" />
+    <ClCompile Include="Controller\AMaplePlayerController.cpp" />
+    <ClCompile Include="Character\AMapleCharacter.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UMapleGameInstance.h" />
-    <ClInclude Include="AMaplePlayerController.h" />
+    <ClInclude Include="GameInstance\UMapleGameInstance.h" />
+    <ClInclude Include="Controller\AMaplePlayerController.h" />
+    <ClInclude Include="Character\AMapleCharacter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

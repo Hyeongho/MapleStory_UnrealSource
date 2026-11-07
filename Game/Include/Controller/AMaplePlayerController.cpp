@@ -1,5 +1,6 @@
 ﻿#include "EnginePCH.h"
-#include "AMaplePlayerController.h"
+#include "Controller/AMaplePlayerController.h"
+#include "Character/AMapleCharacter.h"
 #include "Input/UPlayerInput.h"
 #include "Input/UInputComponent.h"
 #include "Object/ACharacter.h"
@@ -24,6 +25,14 @@ void AMaplePlayerController::SetupInputMappings()
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(VerticalAxis, EKeys::Up, -1.0f));
 	PlayerInput.AddAxisMapping(FInputAxisKeyMapping(VerticalAxis, EKeys::Down, 1.0f));
 	PlayerInput.AddActionMapping(FInputActionKeyMapping(JumpAction, EKeys::Alt));
+#ifdef _DEBUG
+	const FName DamageAction(L"DebugDamage");
+	const FName ResetAction(L"DebugResetHealth");
+	PlayerInput.RemoveActionMappings(DamageAction);
+	PlayerInput.RemoveActionMappings(ResetAction);
+	PlayerInput.AddActionMapping(FInputActionKeyMapping(DamageAction, FKey(VK_F1)));
+	PlayerInput.AddActionMapping(FInputActionKeyMapping(ResetAction, FKey(VK_F2)));
+#endif
 }
 
 void AMaplePlayerController::SetupInputComponent()
@@ -31,6 +40,10 @@ void AMaplePlayerController::SetupInputComponent()
 	// 기본 축 바인딩을 유지하고 점프는 누른 순간에만 실행한다.
 	Super::SetupInputComponent();
 	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnJumpPressed>(FName(L"Jump"), EInputEvent::Pressed, this);
+#ifdef _DEBUG
+	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnDebugDamagePressed>(FName(L"DebugDamage"), EInputEvent::Pressed, this);
+	GetInputComponent().BindAction<AMaplePlayerController, &AMaplePlayerController::OnDebugResetHealthPressed>(FName(L"DebugResetHealth"), EInputEvent::Pressed, this);
+#endif
 }
 
 void AMaplePlayerController::OnJumpPressed()
@@ -50,3 +63,21 @@ void AMaplePlayerController::OnJumpPressed()
 		}
 	}
 }
+
+#ifdef _DEBUG
+void AMaplePlayerController::OnDebugDamagePressed()
+{
+	if (AMapleCharacter* pCharacter = Cast<AMapleCharacter>(GetCharacter()))
+	{
+		pCharacter->TakeDamage(10.0f);
+	}
+}
+
+void AMaplePlayerController::OnDebugResetHealthPressed()
+{
+	if (AMapleCharacter* pCharacter = Cast<AMapleCharacter>(GetCharacter()))
+	{
+		pCharacter->ResetHealth();
+	}
+}
+#endif

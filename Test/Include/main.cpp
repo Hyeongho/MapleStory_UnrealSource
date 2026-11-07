@@ -53,6 +53,7 @@
 #include "Animation/UFlipbookComponent.h"
 #include "Render/USpriteComponent.h"
 #include "Animation/UAnimNotify.h"
+#include "Character/AMapleCharacter.h"
 
 // A COM test double: tracks ownership without a GPU or a window.
 class FTestTextureView : public ID3D11ShaderResourceView
@@ -3480,6 +3481,94 @@ int main()
 			check(bHasBounds && Bounds == FRect(-200, -100, -199, 100));
 		}
 		wprintf(L"[Camera] Map bounds fallback: %d failure(s)\n", g_TestFailCount - CameraFailuresBefore);
+	}
+
+	// Game 캐릭터의 체력·무적 시간과 회색 틴트, 기존 투명도 보존을 검증한다.
+	{
+		const int32 FailuresBefore = g_TestFailCount;
+		FTestTextureView Texture;
+		{
+			UWorld World;
+			AMapleCharacter* Character = World.SpawnActor<AMapleCharacter>();
+			UFlipbookComponent* Flipbook = Character->GetFlipbookComponent();
+			TArray<FFlipbookFrame> Frames;
+			FFlipbookFrame Frame;
+			Frame.m_pTexture = &Texture;
+			Frame.m_A0 = 128;
+			Frame.m_A1 = 128;
+			Frames.Add(Frame);
+			Flipbook->SetFlipbook(UFlipbook::Create(Frames));
+			Flipbook->SetAlpha(200);
+			const FLinearColor OriginalTint(0.8f, 0.6f, 0.4f, 0.75f);
+			const FLinearColor DamageTint = OriginalTint * FLinearColor(0.65f, 0.65f, 0.65f, 1.0f);
+			Flipbook->SetTint(OriginalTint);
+			check(Character->GetHealth() == 100.0f && Character->GetMaxHealth() == 100.0f);
+			check(Character->GetAbilitySystemComponent()->GetAttributeCurrentValue(FName(L"Health")) == 100.0f);
+
+			const float FirstDamage = Character->TakeDamage(25.0f);
+			check(FirstDamage == 25.0f && Character->GetHealth() == 75.0f);
+			check(Character->IsInvulnerable() && Character->GetInvulnerabilityTimeRemaining() == 1.0f);
+			check(Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == DamageTint);
+			const float IgnoredDamage = Character->TakeDamage(40.0f);
+			check(IgnoredDamage == 0.0f && Character->GetHealth() == 75.0f);
+			check(Character->GetInvulnerabilityTimeRemaining() == 1.0f); // 무시한 피격으로 연장하지 않는다.
+			const float NegativeDamage = Character->TakeDamage(-1.0f);
+			const float ZeroDamage = Character->TakeDamage(0.0f);
+			const float InvalidDamage = Character->TakeDamage(NAN);
+			const float InfiniteDamage = Character->TakeDamage(INFINITY);
+			check(NegativeDamage == 0.0f && ZeroDamage == 0.0f && InvalidDamage == 0.0f && InfiniteDamage == 0.0f);
+
+			FRenderQueue Queue;
+			Flipbook->Render(Queue);
+			check(Queue.Num() == 1);
+			if (Queue.Num() == 1)
+			{
+				const float ExpectedAlpha = OriginalTint.m_A * (200.0f / 255.0f) * (128.0f / 255.0f);
+				const FLinearColor& RenderTint = Queue.GetSortedEntries()[0].m_Tint;
+				check(IsPhysicsTestNear(RenderTint.m_R, DamageTint.m_R));
+				check(IsPhysicsTestNear(RenderTint.m_G, DamageTint.m_G));
+				check(IsPhysicsTestNear(RenderTint.m_B, DamageTint.m_B));
+				check(IsPhysicsTestNear(RenderTint.m_A, ExpectedAlpha));
+			}
+			World.Tick(0.1f);
+			check(Character->IsInvulnerable() && Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == OriginalTint);
+			World.Tick(0.1f);
+			check(Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == DamageTint);
+			Character->Tick(-1.0f);
+			Character->Tick(NAN);
+			check(IsPhysicsTestNear(Character->GetInvulnerabilityTimeRemaining(), 0.8f));
+			World.Tick(1.0f);
+			check(!Character->IsInvulnerable() && Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == OriginalTint);
+
+			const float FatalDamage = Character->TakeDamage(500.0f);
+			check(FatalDamage == 75.0f && Character->GetHealth() == 0.0f && Character->IsDead());
+			const float DamageAfterDeath = Character->TakeDamage(10.0f);
+			check(DamageAfterDeath == 0.0f && Character->GetHealth() == 0.0f);
+			Character->ResetHealth();
+			check(Character->GetHealth() == 100.0f && !Character->IsDead() && !Character->IsInvulnerable());
+			const float DamageBeforeReset = Character->TakeDamage(10.0f);
+			check(DamageBeforeReset == 10.0f && Character->IsInvulnerable());
+			Character->ResetHealth();
+			check(Character->GetHealth() == 100.0f && !Character->IsInvulnerable() && Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == OriginalTint);
+			Character->SetInvulnerabilityDuration(0.0f);
+			const float ImmediateDamageA = Character->TakeDamage(10.0f);
+			const float ImmediateDamageB = Character->TakeDamage(10.0f);
+			check(ImmediateDamageA == 10.0f && ImmediateDamageB == 10.0f && Character->GetHealth() == 80.0f);
+			check(!Character->IsInvulnerable() && Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == OriginalTint);
+			Character->SetMaxHealth(40.0f);
+			Character->SetMaxHealth(NAN);
+			check(Character->GetMaxHealth() == 40.0f && Character->GetHealth() == 40.0f);
+			Character->SetInvulnerabilityDuration(1.0f);
+			Character->SetInvulnerabilityDuration(-1.0f);
+			Character->SetDamageBlinkInterval(0.0f);
+			const float LastDamage = Character->TakeDamage(5.0f);
+			check(LastDamage == 5.0f && Character->IsInvulnerable());
+			Character->EndPlay();
+			check(!Character->IsInvulnerable() && Flipbook->GetAlpha() == 200 && Flipbook->GetTint() == OriginalTint);
+			World.DestroyActor(Character);
+		}
+		check(Texture.m_Refs == 1 && Texture.m_AddRefCalls == Texture.m_ReleaseCalls);
+		wprintf(L"[Tests] Maple character damage / invulnerability - %s\n", g_TestFailCount == FailuresBefore ? L"PASSED" : L"FAILED");
 	}
 
 	if (g_TestFailCount > 0)

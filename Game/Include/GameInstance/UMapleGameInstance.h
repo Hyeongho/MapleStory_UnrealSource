@@ -2,10 +2,6 @@
 
 #include "EnginePCH.h"
 #include "UGameInstance.h"
-#include "Core/String/FName.h"
-
-class ACharacter;
-class UAnimStateMachine;
 
 // 맵과 플레이어 캐릭터의 초기화 등 MapleStory 전용 설정을 담당한다.
 class UMapleGameInstance : public UGameInstance
@@ -19,17 +15,13 @@ public:
 
 	// 게임 수명
 	virtual bool Init(UEngine& Engine) override;
-	virtual void Shutdown() override;
-	// 물리 갱신이 끝난 실제 이동 상태로 플레이어 애니메이션을 선택한다.
+	// 물리 갱신 후 게임 캐릭터에 애니메이션 선택을 위임한다.
 	virtual void Tick(float DeltaTime) override;
 
 protected:
 	// 게임별 키 설정과 동작 바인딩을 담당하는 컨트롤러를 생성한다.
 	virtual APlayerController* CreatePlayerController(UWorld& World) override;
 
-	// 게임 구현을 확장할 때 사용하는 캐릭터 및 애니메이션 준비 단계
+	// 게임 캐릭터의 생성과 맵 시작 위치 설정
 	void InitPlayer();
-	bool RegisterAvatarState(FName StateName, const char* ActionName);
-	ACharacter* m_pPlayerCharacter = nullptr; // 실제 소유자는 엔진의 UWorld다.
-	UAnimStateMachine* m_pAnimStateMachine = nullptr;
 };

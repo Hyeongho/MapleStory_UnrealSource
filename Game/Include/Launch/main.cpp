@@ -1,6 +1,6 @@
 ﻿#include "EnginePCH.h"
 #include "EngineLoop.h"
-#include "UMapleGameInstance.h"
+#include "GameInstance/UMapleGameInstance.h"
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,

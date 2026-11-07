@@ -1,36 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="Launch">
+      <UniqueIdentifier>{0B31796C-48DF-4B91-8920-861234A1C263}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="GameInstance">
+      <UniqueIdentifier>{29B09B55-C7D9-4D74-B397-6D94A7FF9510}</UniqueIdentifier>
     </Filter>
-    <Filter Include="리소스 파일">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Character">
+      <UniqueIdentifier>{A2C83D04-3170-4F46-A5BF-D7E4591CB8C3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Controller">
+      <UniqueIdentifier>{384797EE-61CF-4DC2-98AE-1FD82D649B77}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Launch\main.cpp">
+      <Filter>Launch</Filter>
     </ClCompile>
-    <ClCompile Include="UMapleGameInstance.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="GameInstance\UMapleGameInstance.cpp">
+      <Filter>GameInstance</Filter>
     </ClCompile>
-    <ClCompile Include="AMaplePlayerController.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Controller\AMaplePlayerController.cpp">
+      <Filter>Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Character\AMapleCharacter.cpp">
+      <Filter>Character</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="UMapleGameInstance.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="GameInstance\UMapleGameInstance.h">
+      <Filter>GameInstance</Filter>
     </ClInclude>
-    <ClInclude Include="AMaplePlayerController.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="Controller\AMaplePlayerController.h">
+      <Filter>Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Character\AMapleCharacter.h">
+      <Filter>Character</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

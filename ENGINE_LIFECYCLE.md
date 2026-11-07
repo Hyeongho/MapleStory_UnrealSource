@@ -6,7 +6,7 @@ Game의 Windows 진입점은 창 제목, 화면 크기, 표시 모드를 설정�
 
 | 위치 | 역할 |
 | --- | --- |
-| `Game/Include/main.cpp` | 실행 설정, 게임 인스턴스와 엔진 루프 연결 |
+| `Game/Include/Launch/main.cpp` | 실행 설정, 게임 인스턴스와 엔진 루프 연결 |
 | `Engine/Include/EngineLoop.h/.cpp` | 창 생성, Windows 메시지 처리, 시간 측정, Init/Run/Tick/Exit |
 | `Engine/Include/Engine.h/.cpp` | UEngine과 GEngine, 공통 시스템의 생성 및 해제, 월드를 통한 컨트롤러 조회 |
 | `Engine/Include/Input/UPlayerInput.h/.cpp` | 키 상태, 누름/해제 전환, 게임별 축 매핑 |
@@ -14,8 +14,9 @@ Game의 Windows 진입점은 창 제목, 화면 크기, 표시 모드를 설정�
 | `Engine/Include/Object/APlayerController.h/.cpp` | 플레이어 입력 소유, 입력 처리 순서, 기본 카메라 조작 |
 | `Engine/Include/UGameInstance.h/.cpp` | 게임 초기화·갱신·종료를 연결하는 기본 클래스 |
 | `Engine/Include/World/UWorld.h/.cpp` | 액터·물리 및 선택적으로 생성한 맵 씬의 관리 |
-| `Game/Include/UMapleGameInstance.h/.cpp` | 게임 컨트롤러 생성, WZ 맵 선택, 아바타 생성, 데모 타이머, 카메라 시작 위치 |
-| `Game/Include/AMaplePlayerController.h/.cpp` | 게임별 키 매핑 및 동작 바인딩 확장 |
+| `Game/Include/GameInstance/UMapleGameInstance.h/.cpp` | 게임 컨트롤러·캐릭터 생성, WZ 맵 선택, 플레이어 시작 위치 설정 |
+| `Game/Include/Character/AMapleCharacter.h/.cpp` | 아바타 로딩, 애니메이션 선택, 체력과 피격 후 무적·깜빡임 |
+| `Game/Include/Controller/AMaplePlayerController.h/.cpp` | 게임별 키 매핑 및 동작 바인딩 확장 |
 
 언리얼의 FEngineLoop / UEngine / UGameInstance 역할 분담을 참고했다. 현재 프로젝트의 단일 월드와 2D 맵 씬에 맞춘 구조이며 언리얼의 전체 실행 구조를 구현한 것은 아니다.
 
