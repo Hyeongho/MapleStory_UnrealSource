@@ -1,0 +1,55 @@
+diff --git a/Engine/Include/World/FMapLoader.cpp b/Engine/Include/World/FMapLoader.cpp
+index 7f2526a..e4257ac 100644
+--- a/Engine/Include/World/FMapLoader.cpp
++++ b/Engine/Include/World/FMapLoader.cpp
+@@ -6,6 +6,7 @@
+ #include "Render/USpriteComponent.h"
+ #include "Render/FCamera2D.h"
+ #include "Animation/UFlipbookComponent.h"
++#include "Animation/USpineComponent.h"
+ #include "Core/Containers/TArray.h"
+ #include "Physics/UBoxCollision.h"
+ 
+@@ -18,6 +19,15 @@ void FMapLoader::SpawnAnimatedActor(UWorld& World, FMapScene& Scene, const FWzAn
+ 
+ 	AActor* Actor = World.SpawnActor<AActor>();
+ 	Scene.TrackActor(Actor->GetActorId());
++	if (Anim.m_Spine)
++	{
++		USpineComponent* Spine = Actor->AddComponent<USpineComponent>();
++		Spine->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
++		Spine->SetAnimation(Anim.m_Spine);
++		Spine->SetMapOrder(Layer, Z0, Z1);
++		Spine->SetFlipHorizontal(bFlip);
++		return;
++	}
+ 	USpriteComponent* SpriteComp = Actor->AddComponent<USpriteComponent>();
+ 	SpriteComp->SetRelativeTransform(FTransform2D(Location, 0.0f, FVector2D(1.0f, 1.0f)));
+ 	SpriteComp->SetFlipHorizontal(bFlip);
+@@ -112,7 +122,10 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
+ 	{
+ 		const FMapBackItem& Item = BackItems[i];
+ 		FWzAnimation Anim;
+-		if (!FWzMapLoader::LoadBackAnim(Device, WzPath, Item, Anim))
++		const bool bLoaded = Item.m_Ani == 2
++			? FWzMapLoader::LoadSpinePlacement(Device, WzPath, MapPath, INDEX_NONE, Item.m_Index, Anim)
++			: FWzMapLoader::LoadBackAnim(Device, WzPath, Item, Anim);
++		if (!bLoaded)
+ 		{
+ 			// 로딩 실패를 Spine 미지원으로 오인하지 않도록 항목과 결과를 남긴다.
+ 			UE_LOG(LogRenderer, Warning, L"[MapBack] load failed: slot=%d resource=%hs/%d ani=%d spine=%d", Item.m_Index, Item.m_Bs, Item.m_No, Item.m_Ani, (int32)Anim.m_bIsSpine);
+@@ -155,7 +168,13 @@ void FMapLoader::LoadMap(FDXDevice& Device, UWorld& World, FCamera2D& Camera, co
+ 			FWzAnimation Anim;
+ 			if (!FWzMapLoader::LoadObjAnim(Device, WzPath, Item, Anim))
+ 			{
+-				continue;
++				// 일반 프레임이 아니면 원본 맵 배치의 Spine 애니메이션을 읽는다.
++				if (!FWzMapLoader::LoadSpinePlacement(Device, WzPath, MapPath, LayerIndex, Item.m_Index, Anim))
++				{
++					UE_LOG(LogRenderer, Warning, L"[MapObj] load failed: layer=%d slot=%d resource=%hs/%hs/%hs/%hs",
++						LayerIndex, Item.m_Index, Item.m_Os, Item.m_L0, Item.m_L1, Item.m_L2);
++					continue;
++				}
+ 			}
+ 
+ 			// 오브젝트의 정렬 1차 키는 프레임이 아니라 WZ obj 노드의 z다

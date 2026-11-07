@@ -49,6 +49,27 @@ void FRenderQueue::Flush(FSpriteBatch& SpriteBatch)
 			continue; // UI는 화면 좌표라 FlushUI()에서 항등 변환으로 따로 그린다.
 		}
 
+		if (Entry.m_pSpine)
+		{
+			// 지연 스프라이트를 먼저 비워야 Spine이 그 큐 위치에 정확히 들어간다.
+			if (bBatchOpen)
+			{
+				SpriteBatch.End();
+				bBatchOpen = false;
+			}
+			const FVector2D BasePosition = Entry.m_Position + GCamera2D->GetLocation() * (1.0f - Entry.m_ParallaxFactor);
+			for (int32 TileY = Entry.m_TileT; TileY < Entry.m_TileB; TileY++)
+			{
+				for (int32 TileX = Entry.m_TileL; TileX < Entry.m_TileR; TileX++)
+				{
+					const FVector2D Position = BasePosition + FVector2D(Entry.m_TileOffset.m_X * (float)TileX,
+						Entry.m_TileOffset.m_Y * (float)TileY);
+					SpriteBatch.DrawSpine(*Entry.m_pSpine, Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint, Transform);
+				}
+			}
+			continue;
+		}
+
 		if (!bBatchOpen || Entry.m_Blend != CurrentBlend)
 		{
 			if (bBatchOpen)
@@ -94,6 +115,17 @@ void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
 
 		if (Entry.m_Layer != ELayer::UI)
 		{
+			continue;
+		}
+		if (Entry.m_pSpine)
+		{
+			if (bBatchOpen)
+			{
+				SpriteBatch.End();
+				bBatchOpen = false;
+			}
+			SpriteBatch.DrawSpine(*Entry.m_pSpine, Entry.m_Position, Entry.m_Scale,
+				Entry.m_RotationRadians, Entry.m_Tint, DirectX::XMMatrixIdentity());
 			continue;
 		}
 

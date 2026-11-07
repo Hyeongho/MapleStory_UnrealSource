@@ -147,6 +147,11 @@ void UWorld::UpdateCharacterLayers()
 		ACharacter* pCharacter = Cast<ACharacter>(m_Actors[i]);
 		if (pCharacter)
 		{
+			if (const FRect* Bounds = m_pMapScene->GetWorldBounds())
+			{
+				// 물리 비활성 캐릭터와 직접 이동도 같은 맵 경계를 적용한다.
+				m_PhysicsWorld.ConstrainCharacterToBounds(*pCharacter, *Bounds);
+			}
 			m_pMapScene->UpdateCharacterLayer(*pCharacter);
 			if (pController && pController->GetCharacter() == pCharacter && !pCharacter->GetComponent<URigidbody>())
 			{

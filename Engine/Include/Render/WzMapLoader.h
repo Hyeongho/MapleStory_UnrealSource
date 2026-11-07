@@ -3,6 +3,7 @@
 #include "EnginePCH.h"
 #include "Core/Containers/TArray.h"
 #include "Core/Math/FVector2D.h"
+#include "Render/WzSpineAnimation.h"
 
 class FDXDevice;
 
@@ -33,7 +34,7 @@ struct FMapBackItem
 	char m_Bs[32] = {};
 	int32 m_Index = 0;
 	int32 m_No = 0;
-	int32 m_Ani = 0; // 0=정적("back"), 1=애니메이션("ani"), 2=spine(미지원)
+	int32 m_Ani = 0; // 0=정적, 1=프레임 애니메이션, 2=Spine
 	int32 m_SpineNo = 0;
 	int32 m_Front = 0; // 0=맵 레이어보다 뒤, 1=맵 레이어보다 앞
 	int32 m_F = 0;     // 좌우 반전
@@ -163,7 +164,8 @@ struct FWzAnimation
 {
 	TArray<FWzAnimFrame> m_Frames;
 	bool m_bRepeat = true;
-	bool m_bIsSpine = false; // true면 이번 범위 밖 — 호출자가 건너뛴다
+	bool m_bIsSpine = false;
+	TSharedPtr<FWzSpineAnimation> m_Spine;
 	bool m_bHasFlowX = false, m_bHasFlowY = false;
 	int32 m_FlowX = 0, m_FlowY = 0;
 	// 전 프레임 (-origin, size)의 합집합 — back의 cx/cy 기본값·타일 컬링용.
@@ -171,7 +173,7 @@ struct FWzAnimation
 
 	bool IsValid() const
 	{
-		return m_Frames.Num() > 0;
+		return m_Frames.Num() > 0 || (bool)m_Spine;
 	}
 
 	// 보유한 모든 프레임 텍스처를 Release한다. 소유자가 수명이 끝날 때 호출.
@@ -207,10 +209,14 @@ public:
 	static void LoadMapPortals(const char* WzPath, const char* MapPath, TArray<FMapPortalItem>& OutPortals);
 	static void LoadMapReactors(const char* WzPath, const char* MapPath, TArray<FMapReactorItem>& OutReactors);
 
+	// 기존 프레임 API와 분리해 Spine 배치의 본 계산 인스턴스를 만든다.
+	static bool LoadSpinePlacement(FDXDevice& Device, const char* WzPath, const char* MapPath,
+		int32 LayerIndex, int32 PlacementIndex, FWzAnimation& OutAnim);
+
 	// ── 애니메이션 로딩 ──
 	// 경로 조립 규칙은 전부 브리지(C#) 쪽에 있다 — MapRender의
 	// MapData.PreloadResource와 같은 자리에 두어야 규칙이 어긋났을 때 드러난다.
-	// 실패하거나 spine(미지원)이면 false, OutAnim.m_bIsSpine으로 구분 가능.
+	// 프레임 추출 실패/Spine이면 false. 맵 배치의 Spine은 LoadSpinePlacement로 이어서 읽는다.
 	static bool LoadBackAnim(FDXDevice& Device, const char* WzPath, const FMapBackItem& Item, FWzAnimation& OutAnim);
 	static bool LoadObjAnim(FDXDevice& Device, const char* WzPath, const FMapObjItem& Item, FWzAnimation& OutAnim);
 	static bool LoadTileAnim(FDXDevice& Device, const char* WzPath, const char* TileSet, const FMapTileItem& Item, FWzAnimation& OutAnim);

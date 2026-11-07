@@ -31,7 +31,6 @@ void USpriteComponent::SetTexture(ID3D11ShaderResourceView* Texture, const FVect
 	}
 
 	m_pTexture = Texture;
-
 	m_Origin = Origin;
 }
 

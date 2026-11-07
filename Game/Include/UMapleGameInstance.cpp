@@ -87,7 +87,8 @@ void UMapleGameInstance::Tick(float DeltaTime)
 	{
 		StateName = FName(L"Jump");
 	}
-	else if (FMath::Abs(pBody->GetVelocity().m_X) > FMath::KINDA_SMALL_NUMBER)
+	// 지상 걷기는 입력으로 선택해 맵 끝이나 벽에서 막혀도 걷는 모션을 유지한다.
+	else if (FMath::Abs(pCharacter->GetLastMovementInputVector().m_X) > FMath::KINDA_SMALL_NUMBER)
 	{
 		StateName = FName(L"Move");
 	}
@@ -164,7 +165,6 @@ void UMapleGameInstance::InitPlayer()
 		pBody->SetCoyoteTime(MAPLE_COYOTE_TIME);
 	}
 
-	m_pPlayerCharacter->AddComponent<UFlipbookComponent>();
 	m_pAnimStateMachine = m_pPlayerCharacter->AddComponent<UAnimStateMachine>();
 	const bool bHasMove = RegisterAvatarState(FName(L"Move"), "walk1");
 	const bool bHasIdle = RegisterAvatarState(FName(L"Idle"), "stand1");
@@ -206,12 +206,13 @@ bool UMapleGameInstance::RegisterAvatarState(FName StateName, const char* Action
 		UE_LOG(LogRenderer, Warning, L"[PlayerAnimation] avatar action unavailable: %hs", ActionName);
 		return false;
 	}
-	m_pAnimStateMachine->RegisterState(StateName, Frames, true);
+	TSharedPtr<UFlipbook> Flipbook = UFlipbook::Create(Frames);
+	const bool bRegistered = Flipbook && m_pAnimStateMachine->RegisterState(StateName, Flipbook, true);
 
-	// 상태 머신이 AddRef한 뒤에는 로딩 과정에서 보유하던 참조를 즉시 반납한다.
+	// 에셋이 확보한 참조만 남기고 로딩 과정의 참조를 반납한다.
 	for (int32 i = 0; i < Frames.Num(); i++)
 	{
 		Frames[i].m_pTexture->Release();
 	}
-	return true;
+	return bRegistered;
 }

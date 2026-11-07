@@ -1,6 +1,7 @@
 ﻿#include "EnginePCH.h"
 #include "SpriteBatch.h"
 #include "Core/Memory/FMemory.h"
+#include "Render/WzSpineAnimation.h"
 
 FSpriteBatch::FSpriteBatch() = default;
 
@@ -16,6 +17,11 @@ bool FSpriteBatch::Initialize(FDXDevice& Device)
 	m_pContext = Device.GetContext();
 	m_pSpriteBatch = new DirectX::SpriteBatch(m_pContext);
 	m_pCommonStates = new DirectX::CommonStates(Device.GetDevice());
+	if (!InitializeSpine(Device))
+	{
+		Shutdown();
+		return false;
+	}
 
 #ifdef _DEBUG
 	m_pDebugLineTexture = CreateSolidColorTexture(Device, FColor::White);
@@ -31,6 +37,25 @@ bool FSpriteBatch::Initialize(FDXDevice& Device)
 
 void FSpriteBatch::Shutdown()
 {
+	delete m_pSpineBatch;
+	m_pSpineBatch = nullptr;
+	delete m_pSpineEffect;
+	m_pSpineEffect = nullptr;
+	if (m_pSpineInputLayout)
+	{
+		m_pSpineInputLayout->Release();
+		m_pSpineInputLayout = nullptr;
+	}
+	if (m_pMultiplyBlend)
+	{
+		m_pMultiplyBlend->Release();
+		m_pMultiplyBlend = nullptr;
+	}
+	if (m_pScreenBlend)
+	{
+		m_pScreenBlend->Release();
+		m_pScreenBlend = nullptr;
+	}
 	if (m_pSpriteBatch)
 	{
 		delete m_pSpriteBatch;
@@ -61,7 +86,7 @@ void FSpriteBatch::Begin(DirectX::FXMMATRIX Transform, EBlendMode BlendMode)
 
 	// DirectXTK는 블렌드 상태를 Begin에서만 받는다 — 한 배치 안에서 섞을 수
 	// 없으므로, 블렌드가 바뀌는 지점마다 FRenderQueue::Flush가 배치를 끊는다.
-	ID3D11BlendState* pBlendState = (BlendMode == EBlendMode::Additive) ? m_pCommonStates->Additive() : m_pCommonStates->NonPremultiplied();
+	ID3D11BlendState* pBlendState = GetBlendState(BlendMode);
 
 	m_pSpriteBatch->Begin(DirectX::SpriteSortMode_Deferred, pBlendState, m_pCommonStates->PointClamp(), nullptr, m_pCommonStates->CullNone(), nullptr, Transform);
 }
@@ -88,6 +113,122 @@ void FSpriteBatch::End()
 	check(m_bInBeginEnd);
 	m_pSpriteBatch->End();
 	m_bInBeginEnd = false;
+}
+
+ID3D11BlendState* FSpriteBatch::GetBlendState(EBlendMode BlendMode) const
+{
+	switch (BlendMode)
+	{
+	case EBlendMode::Additive:
+		return m_pCommonStates->Additive();
+	case EBlendMode::Multiply:
+		return m_pMultiplyBlend;
+	case EBlendMode::Screen:
+		return m_pScreenBlend;
+	default:
+		return m_pCommonStates->NonPremultiplied();
+	}
+}
+
+bool FSpriteBatch::InitializeSpine(FDXDevice& Device)
+{
+	m_pSpineEffect = new DirectX::BasicEffect(Device.GetDevice());
+	m_pSpineEffect->SetVertexColorEnabled(true);
+	m_pSpineEffect->SetTextureEnabled(true);
+	m_pSpineEffect->SetLightingEnabled(false);
+	m_pSpineBatch = new DirectX::PrimitiveBatch<DirectX::VertexPositionColorTexture>(m_pContext);
+	const void* Bytecode = nullptr;
+	size_t BytecodeSize = 0;
+	m_pSpineEffect->GetVertexShaderBytecode(&Bytecode, &BytecodeSize);
+	HRESULT Result = Device.GetDevice()->CreateInputLayout(DirectX::VertexPositionColorTexture::InputElements,
+		DirectX::VertexPositionColorTexture::InputElementCount, Bytecode, BytecodeSize, &m_pSpineInputLayout);
+	if (FAILED(Result))
+	{
+		return false;
+	}
+	D3D11_BLEND_DESC Desc = {};
+	D3D11_RENDER_TARGET_BLEND_DESC& Target = Desc.RenderTarget[0];
+	Target.BlendEnable = TRUE;
+	Target.BlendOp = D3D11_BLEND_OP_ADD;
+	Target.SrcBlend = D3D11_BLEND_DEST_COLOR;
+	Target.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	Target.SrcBlendAlpha = D3D11_BLEND_ONE;
+	Target.DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+	Target.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	Target.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	if (FAILED(Device.GetDevice()->CreateBlendState(&Desc, &m_pMultiplyBlend)))
+	{
+		return false;
+	}
+	Target.SrcBlend = D3D11_BLEND_ONE;
+	Target.DestBlend = D3D11_BLEND_INV_SRC_COLOR;
+	return SUCCEEDED(Device.GetDevice()->CreateBlendState(&Desc, &m_pScreenBlend));
+}
+
+void FSpriteBatch::DrawSpine(const FWzSpineAnimation& Animation, const FVector2D& Position,
+	const FVector2D& Scale, float RotationRadians, const FLinearColor& Tint, DirectX::FXMMATRIX Transform)
+{
+	check(!m_bInBeginEnd);
+	const TArray<FSpineVertex>& Vertices = Animation.GetVertices();
+	if (Vertices.Num() == 0)
+	{
+		return;
+	}
+	D3D11_VIEWPORT Viewport = {};
+	UINT ViewportCount = 1;
+	m_pContext->RSGetViewports(&ViewportCount, &Viewport);
+	if (ViewportCount == 0 || Viewport.Width <= 0.0f || Viewport.Height <= 0.0f)
+	{
+		return;
+	}
+	m_pSpineEffect->SetWorld(Transform);
+	m_pSpineEffect->SetView(DirectX::XMMatrixIdentity());
+	m_pSpineEffect->SetProjection(DirectX::XMMatrixOrthographicOffCenterLH(0.0f, Viewport.Width, Viewport.Height, 0.0f, 0.0f, 1.0f));
+	m_pContext->IASetInputLayout(m_pSpineInputLayout);
+	m_pContext->RSSetState(m_pCommonStates->CullNone());
+	m_pContext->OMSetDepthStencilState(m_pCommonStates->DepthNone(), 0);
+	ID3D11SamplerState* Sampler = m_pCommonStates->LinearClamp();
+	m_pContext->PSSetSamplers(0, 1, &Sampler);
+	const float Cos = FMath::Cos(RotationRadians);
+	const float Sin = FMath::Sin(RotationRadians);
+	bool bBatchOpen = false;
+	int32 CurrentPage = INDEX_NONE;
+	int32 CurrentBlend = INDEX_NONE;
+	for (int32 i = 0; i + 2 < Vertices.Num(); i += 3)
+	{
+		const FSpineVertex& First = Vertices[i];
+		if (CurrentPage != First.m_Page || CurrentBlend != First.m_Blend)
+		{
+			if (bBatchOpen)
+			{
+				m_pSpineBatch->End();
+			}
+			CurrentPage = First.m_Page;
+			CurrentBlend = First.m_Blend;
+			m_pSpineEffect->SetTexture(Animation.GetPageTexture(CurrentPage));
+			m_pSpineEffect->Apply(m_pContext);
+			m_pContext->OMSetBlendState(GetBlendState((EBlendMode)CurrentBlend), nullptr, 0xffffffff);
+			m_pSpineBatch->Begin();
+			bBatchOpen = true;
+		}
+		DirectX::VertexPositionColorTexture Triangle[3];
+		for (int32 Corner = 0; Corner < 3; Corner++)
+		{
+			const FSpineVertex& Source = Vertices[i + Corner];
+			const float X = Source.m_X * Scale.m_X;
+			const float Y = Source.m_Y * Scale.m_Y;
+			Triangle[Corner].position = DirectX::XMFLOAT3(Position.m_X + X * Cos - Y * Sin,
+				Position.m_Y + X * Sin + Y * Cos, 0.0f);
+			Triangle[Corner].textureCoordinate = DirectX::XMFLOAT2(Source.m_U, Source.m_V);
+			Triangle[Corner].color = DirectX::XMFLOAT4(Source.m_R * Tint.m_R, Source.m_G * Tint.m_G,
+				Source.m_B * Tint.m_B, Source.m_A * Tint.m_A);
+		}
+		m_pSpineBatch->DrawTriangle(Triangle[0], Triangle[1], Triangle[2]);
+	}
+	if (bBatchOpen)
+	{
+		m_pSpineBatch->End();
+	}
 }
 
 #ifdef _DEBUG

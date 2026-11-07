@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "AActor.h"
-#include "Render/USpriteComponent.h"
+#include "Animation/UFlipbookComponent.h"
 #include "Render/WzTextureLoader.h"
 
 class UBoxCollision;
@@ -14,9 +14,9 @@ public:
     ACharacter();
     virtual ~ACharacter() override;
 
-	// FWzTextureLoader::LoadAvatarTexture를 감싸서, 결과를 내부 USpriteComponent에
+	// FWzTextureLoader::LoadAvatarTexture를 감싸서, 결과를 내부 UFlipbookComponent에
 	// 바로 세팅한다. 실패(DLL/노드 없음)해도 조용히 무시 — 호출자는
-	// GetSpriteComponent()->HasTexture()로 확인.
+	// GetFlipbookComponent()->HasTexture()로 확인.
 	void LoadAvatar(FDXDevice& Device, const char* WzPath, const char* LoadoutSpec, const char* ActionName, int32 FrameIndex, const char* EmotionName = "default", int32 EmotionFrameIndex = 0);
 
 	void SetLocation(const FVector2D& Location);
@@ -27,6 +27,8 @@ public:
 
 	// 이번 프레임의 이동 방향을 모은 뒤 Tick에서 강체 속도에 반영한다.
 	void AddMovementInput(const FVector2D& Direction);
+	// 마지막 Tick에서 소비한 입력. 충돌로 속도가 0이 되어도 조작 방향을 조회할 수 있다.
+	const FVector2D& GetLastMovementInputVector() const;
 	void SetMoveSpeed(float Speed);
 	// 지상·코요테 타임 점프 또는 사다리·로프 점프 이탈. 속도는 게임에서 조절할 수 있다.
 	void SetJumpSpeed(float Speed);
@@ -41,14 +43,18 @@ public:
 	void SetMapLayer(int32 LayerIndex, int32 FootholdOrder = 0);
 	int32 GetMapLayer() const;
 
-	USpriteComponent* GetSpriteComponent() const { return m_pSpriteComponent; }
+	UFlipbookComponent* GetFlipbookComponent() const
+	{
+		return m_pFlipbookComponent;
+	}
 
 private:
-	USpriteComponent* m_pSpriteComponent = nullptr;
+	UFlipbookComponent* m_pFlipbookComponent = nullptr;
 	UBoxCollision* m_pCollisionComponent = nullptr;
 	URigidbody* m_pRigidbody = nullptr;
 	int32 m_MapLayer = INDEX_NONE;
 	FVector2D m_PendingMovementInput = FVector2D::Zero;
+	FVector2D m_LastMovementInput = FVector2D::Zero;
 	float m_MoveSpeed = 200.0f;
 	float m_JumpSpeed = 420.0f;
 };

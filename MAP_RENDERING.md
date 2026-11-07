@@ -111,7 +111,8 @@ ID 중복·0 값, 정확한 영역 조회, 액터 삭제 후 조회와 새 액�
 ## 범위와 확인 상태
 
 기본 프레임 이미지의 배치·정렬·배경 이동·반복 규칙을 원본 소스와 대조했다.
-Spine, NPC/몬스터 로딩, 포털/리액터 상태 전환, 오브젝트 이동 경로와 조건부 표시,
+Spine 배경·오브젝트 지원은 아래 추가 항목과 같이 구현했고 실행 확인은 사용자에게 맡긴다.
+NPC/몬스터 로딩, 포털/리액터 상태 전환, 오브젝트 이동 경로와 조건부 표시,
 파티클 및 특수 셰이더는 렌더링 변경에 포함하지 않았다. 후속 작업에서 Map.wz 발판을
 PhysicsWorld에 등록했고, 아래 로프·사다리 배치도 연결했다. 기존 렌더링 검증 기록과
 각 후속 변경의 실행 확인은 별도로 판단한다.
@@ -312,3 +313,110 @@ fix: MapRender2 기준 맵 애니메이션과 배경 및 캐릭터 정렬 연동
 - 발판 레이어를 기준으로 캐릭터와 맵 오브젝트의 앞뒤 관계 적용
 - 맵 재로드 액터 정리와 픽셀 버퍼 범위 검사 추가
 ```
+
+## Spine 배경·오브젝트 지원
+
+`Map/Map/Map4/410017300.img`의 배경 7개는 모두 `ani=2`이며,
+오브젝트 11개 중 10개가 `spineAni=Moving`을 지정한다. 일반 타일은 없다.
+기존 프레임 추출 API는 Spine을 건너뛰었으므로 이 맵을 구성하는 그림 대부분이 생략됐다.
+
+- DLL: 기존 `References/spine-monogame.dll`의 Spine 2/4 CPU 런타임과
+  `Common/SpineLoader.cs`의 탐지·해석 규칙을 사용한다. MonoGame 장치는 생성하지 않는다.
+- 배치 조회: `wz_spine_load_placement(wzPath, mapPath, layer, slot, outMeta)`.
+  layer=-1은 back, 0~7은 해당 obj다. `info/link` 해석, 실제 `spineAni`, `timeScale`을 반영한다.
+  배경에 `spineNo`가 없으면 `spine` 폴더를 사용하며 `spine0`으로 강제하지 않는다.
+- 데이터: atlas BGRA 페이지와 슬롯 순서대로 펼친 삼각형 메시를 전달한다.
+  Region/Mesh/가중 메시, Spine 4 클리핑, 슬롯·attachment 색/알파, 네 가지 BlendMode를 처리한다.
+- C++: `FWzSpineAnimation`이 네이티브 인스턴스와 GPU 텍스처를 소유한다.
+  오브젝트는 `USpineComponent`, 배경은 `FMapScene`이 갱신한다.
+  기존 정렬된 큐 위치에서 스프라이트 배치를 비운 뒤 DirectXTK BasicEffect/PrimitiveBatch로 그린다.
+- 배경 시차·스크롤·반복·알파와 좌우 반전은 기존 계산을 공유한다.
+  캐릭터 Life 레이어와 일반 전경 오브젝트의 정렬 규칙은 바꾸지 않았다.
+- 기존 배치/프레임 구조체의 ABI는 유지하며 새 API의 버전을 확인한다.
+  새 export가 없는 DLL은 경고를 남기고 기존 프레임 맵 지원을 유지한다.
+- 페이지·메시·오류 문자열 복사본은 `wz_free`, 인스턴스는 `wz_spine_destroy`로 해제한다.
+  맵 해제·재로드 및 오브젝트 파괴 시 소유 참조가 정리된다.
+- 현재는 메인 스레드 호출을 전제로 한다. 기존 DLL의 전역 WZ 루트 캐시를 병렬로 사용하지 않는다.
+  특수 셰이더, 일반 오브젝트 이동 경로, 게임 스크립트·태그 조건 등은 별도 범위다.
+
+### 사용자 확인
+
+빌드·게임 실행·DLL publish는 수행하지 않았다. `Test/Include/main.cpp`에는
+빈 포즈, 잘못된 정점 수·atlas 페이지·블렌드 혼합·NaN을 검사하는 소스를 추가했다.
+
+1. DLL을 다시 publish해 실제 Game 실행 폴더의 `WzNativeLib.dll`을 교체한다.
+2. Engine/Game을 빌드하고 `Map\Map\Map4\410017300.img`를 선택한다.
+3. `[MapSpine] loaded`의 layer=-1/slot 0~6 배경과 오브젝트 로딩을 확인한다.
+   오류가 있으면 `detail`의 리소스 경로·애니메이션·atlas 정보를 확인한다.
+4. `Moving` 애니메이션, 뒤·앞 가림, 반전, 카메라 이동, 맵 재로드 후 잔존 여부를 확인한다.
+   일반 프레임 맵도 다시 확인한다.
+5. 이 맵은 로프·사다리가 없으므로 테스트용 시작 배치 번호는 INDEX_NONE으로 둔다.
+   XML의 sp 시작점은 (-2,-23), 바닥은 y=-9다. 기존 맵 시작 좌표를 그대로 쓰면
+   바닥 아래에서 생성될 수 있으므로 Game의 시작점 설정도 함께 확인한다.
+
+## WzComparerR2 MapRender2 표시 단축키
+
+기준 소스는 `WzComparerR2.MapRender/FrmMapRender2.cs`의 입력 바인딩이다.
+숫자는 키보드 윗줄 D0~D9이며 맵 레이어 0~7의 번호를 뜻하지 않는다.
+아래 표는 WzComparerR2의 조작 설명이며 이 클라이언트에 단축키를 추가한 것은 아니다.
+
+| 단축키 | 동작 |
+|---|---|
+| Ctrl+1 | 후면 배경(back, front=0) 표시/숨김 |
+| Ctrl+2 | 리액터 표시/숨김 |
+| Ctrl+3 | 맵 오브젝트(obj) 표시/숨김 |
+| Ctrl+4 | 타일(tile) 표시/숨김 |
+| Ctrl+5 | NPC 표시/숨김 |
+| Ctrl+6 | 몬스터 표시 → 몬스터+히트박스 → 숨김 → 표시 순환 |
+| Ctrl+7 | 발판, 로프·사다리 선, SkyWhale, IlluminantCluster 경로, SpringPortal 경로, Portal 범위, Obstacle 영역 표시/숨김 |
+| Ctrl+8 | 포털 일반 표시 → 편집용 표시 → 숨김 → 일반 표시 순환 |
+| Ctrl+9 | 전면 배경(back, front=1) 표시/숨김 |
+| Ctrl+0 | 이펙트 표시/숨김 |
+
+Ctrl+7은 FootHoldVisible의 현재 값으로 관련 진단 항목들을 함께 전환한다.
+시각적인 선·범위 표시를 제어하며 충돌 규칙을 켜거나 끄는 기능은 아니다.
+로프·사다리의 그림은 obj이므로 Ctrl+3, 판정 선은 Ctrl+7의 대상이다.
+Ctrl+8은 일반 포털 표시 시 IlluminantCluster 그림을 켜고 편집 표시에서는 끈다.
+Ctrl+U는 별도로 카메라의 맵 범위 제한(AdjustRectEnabled)을 전환한다.
+
+## 반복 재생
+
+일반 프레임은 기존 UFlipbookComponent의 반복 분기를 사용한다.
+루프가 켜져 있으면 마지막 프레임 다음 인덱스만 0으로 바꾸고, 꺼져 있으면 마지막 프레임에서 정지한다.
+이 과정에서 프레임 배열이나 텍스처를 다시 로드하지 않는다.
+
+Spine은 런타임이 제공하는 SetAnimation의 loop 인자를 사용한다.
+리소스의 repeat가 없으면 true, 명시적 0이면 false를 초기 설정으로 전달한다.
+루프마다 skeleton/state/atlas를 다시 생성하거나 SetAnimation을 다시 호출하지 않는다.
+
+매 프레임 계산한 Spine 정점을 C++으로 전달할 때의 버퍼 할당은 루프 시작과 별개의 처리다.
+이 부분은 기존 API를 유지하며, 별도 캐시 API나 반복 설정 export를 추가하지 않는다.
+UFlipbookComponent는 SetLooping, IsLooping, IsPlaying으로 반복 여부를 설정하고 상태를 조회한다.
+SetLooping은 플래그만 변경하며 재생 위치를 초기화하거나 프레임 배열을 다시 등록하지 않는다.
+일반 애니메이션은 UFlipbook::Create(Frames)에서 전체 프레임을 보관하는 공유 에셋을 만든다.
+UFlipbookComponent는 SetFlipbook(Asset)으로 선택하고 자체 Render에서 현재 프레임을 제출한다.
+같은 에셋을 다시 선택하면 재생 위치를 유지하며, PlayFromStart로 명시적으로 처음부터 재생할 수 있다.
+프레임 전환·반복·상태 전환에서 텍스처별 AddRef/Release를 호출하거나 프레임 배열을 복사하지 않는다.
+원점·알파·블렌딩·프레임 Z는 기존 WZ 규칙대로 적용한다.
+에셋 참조는 TSharedPtr로 관리하며 마지막 소유자가 놓을 때만 프레임 텍스처를 해제한다.
+캐릭터는 기본 Flipbook 컴포넌트를 사용하므로 추가로 같은 컴포넌트를 붙이지 않는다.
+GetSpriteComponent 대신 GetFlipbookComponent를 사용한다. 정적 맵 이미지는 기존 Sprite로 그린다.
+동일 에셋 인스턴스를 여러 컴포넌트에 넘겨 공유할 수 있으며 WZ 경로별 자동 캐시는 이번 범위에 포함하지 않는다.
+Spine의 변경은 NativeSpineScene 생성 시 loop 인자 연결뿐이다.
+빌드·실행은 하지 않았다.
+
+## 캐릭터의 맵 경계
+
+기존에는 카메라에만 VR 제한을 적용하고 캐릭터의 물리 이동에는 적용하지 않아 맵 밖으로 이동할 수 있었다.
+FMapLoader는 유효한 VR 또는 기존 지형 기반 대체 영역을 FMapScene에도 등록한다.
+FPhysicsWorld는 매 서브스텝 뒤 캐릭터 충돌체의 전체 영역을 맵 내부로 보정하고 바깥 방향 속도를 차단한다.
+지상 걷기 모션은 물리 속도 대신 캐릭터가 마지막 Tick에서 소비한 수평 입력으로 선택한다.
+맵 끝·벽에서 입력 중이면 제자리에서 걷고, 방향키를 놓으면 다음 Tick에 대기로 전환한다.
+UWorld의 물리 갱신 이후에도 같은 제한을 적용해 물리 비활성 상태와 직접 이동을 처리한다.
+줌이나 뷰포트 크기로 줄어든 카메라 중심 이동 범위 대신 맵의 원래 경계를 사용한다.
+맵을 정리하면 이전 이동 경계도 해제한다. 유효한 영역이 없으면 임의의 경계를 만들지 않는다.
+몸체가 맵보다 큰 축은 중앙에 배치한다. 현재는 상하좌우 제한이며 DeathZone 도입은 별도 계획이다.
+
+수동 확인: 좌우 끝까지 이동, 위쪽 경계 부근 점프·사다리, 아래쪽 경계, 맵 전환과 기존 Life 정렬.
+Test/Include/main.cpp에는 에셋 공유·독립 재생·상태 전환·정렬·반전 및 큰 DeltaTime의 이동 경계 검사 코드를 반영했다.
+이 변경의 빌드·테스트 실행은 사용자가 수행한다.

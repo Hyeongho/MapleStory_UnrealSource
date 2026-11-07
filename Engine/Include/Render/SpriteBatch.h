@@ -20,7 +20,11 @@ enum class EBlendMode : uint8
 {
 	NonPremultiplied = 0,
 	Additive = 1,
+	Multiply = 2,
+	Screen = 3,
 };
+
+class FWzSpineAnimation;
 
 class FSpriteBatch
 {
@@ -38,6 +42,10 @@ public:
 
 	void End();
 
+	// 스프라이트 배치 밖에서 호출한다. 같은 맵 큐의 정렬 위치에 Spine 삼각형을 그린다.
+	void DrawSpine(const FWzSpineAnimation& Animation, const FVector2D& Position, const FVector2D& Scale,
+		float RotationRadians, const FLinearColor& Tint, DirectX::FXMMATRIX Transform);
+
 #ifdef _DEBUG
 	// Begin/End 사이에서 호출한다. 1픽셀 텍스처로 월드 좌표의 선분을 그린다.
 	void DrawDebugLine(const FVector2D& Start, const FVector2D& End, const FLinearColor& Tint, float Thickness = 1.5f);
@@ -49,10 +57,18 @@ public:
 	static ID3D11ShaderResourceView* CreateCheckerboardTexture(FDXDevice& Device, uint32 Width, uint32 Height, uint32 CellSize, FColor ColorA, FColor ColorB);
 
 private:
+	ID3D11BlendState* GetBlendState(EBlendMode BlendMode) const;
+	bool InitializeSpine(FDXDevice& Device);
+
 	ID3D11DeviceContext* m_pContext = nullptr; // non-owning
 	DirectX::SpriteBatch* m_pSpriteBatch = nullptr;
 	DirectX::CommonStates* m_pCommonStates = nullptr;
 	bool m_bInBeginEnd = false;
+	DirectX::BasicEffect* m_pSpineEffect = nullptr;
+	DirectX::PrimitiveBatch<DirectX::VertexPositionColorTexture>* m_pSpineBatch = nullptr;
+	ID3D11InputLayout* m_pSpineInputLayout = nullptr;
+	ID3D11BlendState* m_pMultiplyBlend = nullptr;
+	ID3D11BlendState* m_pScreenBlend = nullptr;
 #ifdef _DEBUG
 	// 충돌 디버그 선분용 텍스처는 SpriteBatch가 생성하고 해제한다.
 	ID3D11ShaderResourceView* m_pDebugLineTexture = nullptr;

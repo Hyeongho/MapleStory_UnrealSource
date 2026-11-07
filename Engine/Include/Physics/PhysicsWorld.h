@@ -5,6 +5,8 @@
 
 class UWorld;
 class AActor;
+class ACharacter;
+class FRect;
 class URigidbody;
 class UBoxCollision;
 class UClimbableComponent;
@@ -22,6 +24,8 @@ public:
 
 	// 월드 시뮬레이션 갱신
 	void Tick(float DeltaTime);
+	// 충돌체 전체를 맵 안으로 보정하고 경계 바깥을 향한 속도만 차단한다.
+	void ConstrainCharacterToBounds(ACharacter& Character, const FRect& Bounds);
 
 	// 월드 중력 설정 / 조회
 	void SetGravity(float Gravity);

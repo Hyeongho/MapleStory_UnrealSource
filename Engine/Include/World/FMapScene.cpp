@@ -76,6 +76,23 @@ void FMapScene::TrackActor(uint32 ActorId)
 	m_ActorIds.Add(ActorId);
 }
 
+bool FMapScene::SetWorldBounds(const FRect& Bounds)
+{
+	m_bHasWorldBounds = _finite(Bounds.m_Left) && _finite(Bounds.m_Top)
+		&& _finite(Bounds.m_Right) && _finite(Bounds.m_Bottom)
+		&& Bounds.Width() > 0.0f && Bounds.Height() > 0.0f;
+	if (m_bHasWorldBounds)
+	{
+		m_WorldBounds = Bounds;
+	}
+	return m_bHasWorldBounds;
+}
+
+const FRect* FMapScene::GetWorldBounds() const
+{
+	return m_bHasWorldBounds ? &m_WorldBounds : nullptr;
+}
+
 void FMapScene::UnregisterPhysicsFootholds()
 {
 	for (int32 i = 0; i < m_PhysicsVerticalFootholdIds.Num(); i++)
@@ -93,6 +110,7 @@ void FMapScene::UnregisterPhysicsFootholds()
 
 void FMapScene::ReleaseResources()
 {
+	m_bHasWorldBounds = false;
 	UnregisterPhysicsLadderRopes();
 	// 이 맵이 등록한 발판만 해제해 월드의 다른 물리 발판은 유지한다.
 	UnregisterPhysicsFootholds();
@@ -348,6 +366,13 @@ void FMapScene::Tick(float DeltaTime)
 	if (_finite(DeltaTime) && DeltaTime >= 0.0f)
 	{
 		m_TimeMs += (double)DeltaTime * 1000.0;
+		for (int32 i = 0; i < m_Backs.Num(); i++)
+		{
+			if (m_Backs[i].m_Anim.m_Spine)
+			{
+				m_Backs[i].m_Anim.m_Spine->Tick(DeltaTime);
+			}
+		}
 	}
 }
 
@@ -365,8 +390,10 @@ const FWzAnimFrame* FMapScene::PickFrame(const FWzAnimation& Anim, int32* OutFra
 void FMapScene::RenderBack(FRenderQueue& Queue, FBackEntry& Entry)
 {
 	int32 FrameAlpha = 255;
-	const FWzAnimFrame* pFrame = PickFrame(Entry.m_Anim, &FrameAlpha);
-	if (!pFrame || !pFrame->m_pTexture)
+	// Spine 정점은 배치 원점 기준이다. 일반 프레임과 같은 시차·반복 계산을 사용한다.
+	FWzAnimFrame SpineFrame;
+	const FWzAnimFrame* pFrame = Entry.m_Anim.m_Spine ? &SpineFrame : PickFrame(Entry.m_Anim, &FrameAlpha);
+	if (!pFrame || (!pFrame->m_pTexture && !Entry.m_Anim.m_Spine))
 	{
 		if (!Entry.m_bLoggedRenderState)
 		{
@@ -460,6 +487,7 @@ void FMapScene::RenderBack(FRenderQueue& Queue, FBackEntry& Entry)
 
 	FRenderQueueEntry Draw;
 	Draw.m_pTexture = pFrame->m_pTexture;
+	Draw.m_pSpine = Entry.m_Anim.m_Spine.Get();
 	// 스프라이트 원점 보정은 USpriteComponent와 같은 규칙(좌상단 기준 오프셋).
 	Draw.m_Position = FVector2D(Position.m_X - pFrame->m_Origin.m_X, Position.m_Y - pFrame->m_Origin.m_Y);
 	Draw.m_Scale = FVector2D(Item.m_F != 0 ? -1.0f : 1.0f, 1.0f);

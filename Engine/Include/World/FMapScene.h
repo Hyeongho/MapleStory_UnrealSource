@@ -3,9 +3,9 @@
 #include "EnginePCH.h"
 #include "Core/Containers/TArray.h"
 #include "Render/WzMapLoader.h"
+#include "Core/Math/FRect.h"
 
 class FRenderQueue;
-class FRect;
 class UWorld;
 class ACharacter;
 
@@ -40,6 +40,9 @@ public:
 	void SetFootholds(const TArray<FMapFootholdItem>& Footholds);
 	// VR 경계가 없을 때 발판·로프·사다리 배치로 카메라 제한 영역을 계산한다.
 	bool CalculateCameraBounds(FRect& OutBounds) const;
+	// 맵의 실제 영역. 카메라 뷰포트와 독립적으로 캐릭터 이동에도 사용한다.
+	bool SetWorldBounds(const FRect& Bounds);
+	const FRect* GetWorldBounds() const;
 	// 로프·사다리 원본을 보존하고 이 맵의 Trigger 액터를 생성한다.
 	void SetLadderRopes(const TArray<FMapLadderRopeItem>& LadderRopes);
 	const TArray<FMapLadderRopeItem>& GetLadderRopes() const;
@@ -103,4 +106,6 @@ private:
 	UWorld& m_World; // 소유 월드에 대한 비소유 참조. 월드가 씬보다 오래 살아 있다.
 
 	double m_TimeMs = 0.0;
+	FRect m_WorldBounds;
+	bool m_bHasWorldBounds = false;
 };

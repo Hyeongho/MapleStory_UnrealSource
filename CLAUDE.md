@@ -8,7 +8,7 @@ DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따�
 목표 게임: MapleStory 스타일 2D 플랫포머 RPG  
 포트폴리오 목적: 넥슨 MapleStory 팀 등 대형 스튜디오 지원
 
-## 현재 진행 상태 (2026-10-10)
+## 현재 진행 상태 (2026-11-07)
 
 현재는 **Phase 10 Physics / Collision**을 진행하고 있다. 이 문서는
 `codex/safety-debt-fixes`의 `CLAUDE.md`를 바탕으로 현재 작업 코드와 사용자 확인 내용을 반영했다.
@@ -24,6 +24,9 @@ Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 
   사용자가 현재 출력이 올바르다고 확인했으므로 모든 로프·사다리를 강제로 뒤로 보내는 예외는 추가하지 않는다.
 - 남은 Phase 10 작업: **피격 후 무적 시간 → 넉백 → 낙사 구역(DeathZone)**.
   이를 마친 뒤 Phase 11 Audio로 진행한다.
+- 최신 구조: UFlipbook 공유 에셋, Flipbook 컴포넌트의 직접 렌더링, 에셋 참조 기반 상태 전환.
+- 맵 VR 또는 지형 기반 대체 경계를 캐릭터 이동에도 적용한다. 카메라 줌·뷰포트와 독립적이다.
+- 이번 구조 변경과 이동 경계 수정은 소스 검토 상태이며 빌드·테스트는 실행하지 않았다.
 
 체크 표시 `[x]`는 해당 구현이 있음을 뜻한다. 사용자 Game 동작 확인과 자동 테스트 통과는
 구분해서 기록한다. 최신 회귀 검사 코드는 `Test/Include/main.cpp`에 있으며, 빌드·실행은 사용자가 수행한다.
@@ -598,52 +601,28 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
 문서의 `Engine/Animation/`이 아니라 실제 스캐폴딩된 `Engine/Include/`
 하위 경로 사용)
 
-- [x] `UFlipbookComponent.h / .cpp` — 스프라이트 시트(정확히는 지금은
-  WZ 아바타 합성 텍스처 시퀀스) 프레임 재생. `UActorComponent` 상속,
-  `SetFrames(TArray<FFlipbookFrame>, bLoop)`로 프레임 목록을 받아
-  `Tick(DeltaTime)`이 경과 시간에 따라 프레임을 넘기면서 형제
-  `USpriteComponent`(`GetOwner()->GetComponent<USpriteComponent>()`로
-  `BeginPlay()`에서 캐싱)의 텍스처를 교체한다. `FFlipbookFrame`은
-  텍스처(`ID3D11ShaderResourceView*`)+원점+프레임당 표시 시간(초)
-  묶음 — 딜레이는 아직 호출자가 지정(아래 "WZ 애니메이션 프레임 딜레이
-  → UFlipbookComponent 연동" 참고, 이번엔 미착수).
-  **소유권 규칙**: `ID3D11ShaderResourceView`는 COM 레퍼런스 카운트
-  객체이고 `USpriteComponent::SetTexture()`는 넘겨받은 레퍼런스를
-  소유권째 가져가 다음 교체 시 `Release()`를 소비한다 — 같은 프레임을
-  루프마다 반복해서 넘겨야 하므로, `SetFrames()`는 각 텍스처를
-  `AddRef()`해서 컴포넌트 수명 동안 자체 보관하고, `Tick()`이 매번
-  프레임을 넘기기 직전에 그 프레임 텍스처를 한 번 더 `AddRef()`한다
-  (`AddRef` 없이 그대로 넘기면 두 번째 루프에서 이미 해제된 포인터를
-  다시 쓰는 use-after-free가 됨).
-  초기 `Game/Include/main.cpp` 데모(현재 로딩은 `UMapleGameInstance::InitPlayer()`로 이관): `pPlayerCharacter`에
-  `"walk1"` 액션의 프레임을 `FrameIndex` 0부터 실패(`nullptr`)할
-  때까지 순차 로드해(`LoadAvatarTexture`가 프레임 개수를 미리 알려주지
-  않아서 런타임 추론) `UFlipbookComponent`에 태우고 `Play()` — WZ에
-  `walk1` 데이터가 없으면 조용히 폴백(기존 `stand1` 정적 프레임 유지).
-- [x] `UAnimStateMachine.h / .cpp` — Idle→Move→Attack→Dead 상태 전환.
-  `UFlipbookComponent`의 형제 컴포넌트(`GetComponent<UFlipbookComponent>()`로
-  `BeginPlay()`에서 캐싱 — `UFlipbookComponent`가 `USpriteComponent`를
-  찾는 것과 동일한 패턴), `TMap<FName, FAnimStateData>`(프레임 배열+루프
-  여부)로 상태를 등록해두고 `SetState(FName)` 한 번으로 형제의
-  `SetFrames()`+`Play()`를 대신 호출해준다. 같은 상태로 다시
-  `SetState()`하면 no-op(매번 애니메이션 재시작 방지), 미등록 이름이면
-  `ensure()` 경고 후 무시.
-  **소유권 규칙**: `RegisterState()`가 넘겨받은 텍스처를 `AddRef()`해서
-  "지금 활성 상태인지와 무관하게, 등록된 모든 상태에 대해 동시에"
-  컴포넌트 수명 동안 보관한다 — `SetState()`는 이 보관본을 그대로
-  `UFlipbookComponent::SetFrames()`에 넘길 뿐이고, `SetFrames()`가 자기
-  예전 프레임을 알아서 `Release()`하므로 "떠나는 상태"를 위한 해제
-  로직이 따로 필요 없다.
-  **`AddComponent` 순서 주의**: `UFlipbookComponent`를 `UAnimStateMachine`보다
-  먼저 붙여야 한다 — 반대 순서면 `UAnimStateMachine::BeginPlay()`
-  시점에 형제가 아직 없어서 캐시가 영구히 `nullptr`로 굳는다(이전
-  라운드에 고친 "스폰 후 `AddComponent`는 즉시 `BeginPlay()` 호출"
-  버그와 맞물리는 지점 — 현재 `UMapleGameInstance::InitPlayer()`에서도 이 순서를 유지한다).
-  초기 `main.cpp` 데모에서는 `"Idle"`/`"Move"`를 타이머로 토글했다.
-  현재는 `UMapleGameInstance::Tick()`이 물리 갱신 이후의 Grounded, 속도,
-  오르기 상태와 로프/사다리 종류로 Idle/Move/Jump/Ladder/Rope를 선택한다.
-  같은 상태는 재시작하지 않으며, 매달려 정지하면 프레임 진행만 멈추고 이동하면 다시 재생한다.
-  WZ 액션이 없으면 등록된 Idle 또는 Move로 보완한다.
+- [x] `UFlipbook.h / .cpp` — 여러 컴포넌트가 공유하는 불변 애니메이션 에셋.
+  `Create(Frames)`가 전체 null 텍스처를 검사한 후 프레임 정보와 텍스처 참조를 한 번만 보관한다.
+  마지막 에셋 참조가 사라질 때 각 텍스처를 Release한다. 현재 엔진은 GC가 없으므로
+  에셋 수명은 자체 `TSharedPtr<UFlipbook>`로 관리한다.
+- [x] `UFlipbookComponent.h / .cpp` — `USceneComponent`를 상속하고
+  공유 에셋 선택, 프레임 번호·경과 시간·반복·재생 속도와 직접 렌더링을 담당한다.
+  `SetFlipbook(Asset)`은 다른 에셋일 때만 재생 위치를 초기화한다.
+  같은 에셋을 선택하거나 루프가 반복되면 프레임 배열을 복사하거나 COM 참조를 바꾸지 않는다.
+  Stop과 비반복 종료는 마지막 표시를 유지한다. PlayFromStart는 재생 위치를 초기화한다.
+  WZ의 프레임별 지연 시간, origin, a0/a1, blend, Z와 프레임 Notify를 유지한다.
+  별도 Sprite를 찾거나 텍스처 포인터를 빌려주는 구조는 제거했다.
+- [x] `UAnimStateMachine.h / .cpp` — 상태별로 프레임 배열 대신 공유 에셋과
+  루프 설정을 보관한다. 상태 전환은 SetFlipbook/SetLooping/Play를 호출하며
+  텍스처별 AddRef/Release나 프레임 배열 복사가 없다. 같은 상태는 재시작하지 않는다.
+  컴포넌트를 사용할 때 소유 액터에서 조회하므로 형제 컴포넌트의 캐시가 남지 않는다.
+  ACharacter는 기본으로 Flipbook 컴포넌트를 생성한다.
+  Game은 Idle/Move/Jump/Ladder/Rope 에셋을 등록하고 실제 물리 상태로 선택한다.
+  지상 Idle/Move는 GetLastMovementInputVector의 수평 입력으로 선택해 맵 끝·벽에서
+  속도가 0이 되어도 입력 중에는 걷는다. 점프와 오르기 상태 판정은 물리 결과를 사용한다.
+  로프·사다리에서 정지하면 재생만 멈추고 이동하면 이어서 재생한다.
+  정적 맵 이미지는 USpriteComponent를, 애니메이션 맵 오브젝트는 UFlipbookComponent를 사용한다.
+  공유는 같은 UFlipbook 인스턴스를 전달할 때 이루어지며, WZ 전체 자동 중복 제거 캐시는 별도 후속 범위다.
 - [x] `UAnimNotify.h / .cpp` — 특정 프레임에 이벤트 발생. 실제 언리얼과
   동일하게 `UObject`를 상속해 `Notify(AActor*)`를 오버라이드하는
   서브클래스 방식(이미 있는 `UClass`/`Cast<T>` 인프라 재사용, Phase 7.7의
@@ -720,7 +699,7 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
   C++ 쪽 `FAvatarTexture`(`WzTextureLoader.h`)에 `int32 m_DelayMs = 120`
   필드 추가, `main.cpp`의 walk1 로딩 루프가 하드코딩했던 `0.15f` 대신
   `Frame.m_DelayMs / 1000.0f`를 그대로 `FFlipbookFrame::m_Duration`에
-  사용하도록 교체. `UFlipbookComponent::SetFrames()`에는 방어 코드
+  사용하도록 교체. `UFlipbook::Create()`에는 방어 코드
   추가 — WZ 딜레이가 0 이하로 들어오면 `Tick()`의 프레임 전환
   `while` 루프가 절대 안 끝나는 무한 루프가 되므로, 그런 경우만
   화면에 안 티 나는 최소값(0.001초)으로 클램프.
@@ -731,6 +710,15 @@ Studio 로컬 빌드·시각 검증 완료** (DirectXTK 별도 빌드 등 아래
 완료 기준: 캐릭터 이동 시 Walk 애니메이션 자동 전환 — 최소 입력과 물리 상태를
 연결해 구현했다. 지상 이동·정지, 공중, 로프·사다리에 맞춰 상태를 전환한다.
 Attack/Dead 등 피격·전투 상태의 실제 게임 연결은 후속 작업이다.
+
+일반 프레임은 기존 구현처럼 루프 설정이 켜진 경우에만 프레임 번호를 0으로 되돌리고,
+꺼져 있으면 마지막 프레임에서 정지한다. Spine은 기존 런타임의 Loop 인자에 repeat 설정을 전달한다.
+UFlipbookComponent의 SetLooping/IsLooping/IsPlaying은 플래그 설정·상태 조회만 담당한다.
+반복 처리를 위해 별도 버퍼 캐시 API나 DLL의 반복 설정 export를 추가하지 않는다.
+Spine의 매 프레임 메시 전달 버퍼 할당은 반복 시작과 별개이며 이번 변경 범위에서 유지한다.
+
+아래 버그 노트는 과거 Sprite 연동 구조의 기록이다. 현재 Flipbook은 직접 렌더링하며
+형제 Sprite 캐시를 사용하지 않는다. AddComponent의 BeginPlay 전파 보강은 계속 유지한다.
 
 **버그 노트 — `AddComponent<T>()`가 스폰 후 추가된 컴포넌트에
 `BeginPlay()`를 안 부르던 문제**: 위 데모를 처음 붙였을 때 캐릭터가
@@ -1118,7 +1106,8 @@ DLL 작업 저장소는 `D:/WzComparerR2_cpp/WzComparerR2`이며, 주요 소스�
 - DLL 소스는 `repeat` 누락 시 기본 반복과 `info/link` 배치 해석을 반영한다.
   DLL 소스 수정과 실행 파일의 DLL 교체는 별개이며 실제 배포·빌드는 사용자가 수행한다.
 - 실제 Map.wz 발판과 로프·사다리를 PhysicsWorld에 연결했다.
-  Spine·NPC/몬스터 맵 로딩·포털/리액터 상태 전환 등 전체 MapRender2 기능은 아직 지원하지 않는다.
+  Spine 2/4 배경·오브젝트는 별도 CPU 메시 API와 C++ 출력 경로를 추가했다(빌드·실행 확인 대기).
+  NPC/몬스터 맵 로딩·포털/리액터 상태 전환 등 전체 MapRender2 기능은 아직 지원하지 않는다.
 
 ### WZ 작업 병행 타임라인
 
@@ -1279,10 +1268,10 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 
 ### 안전성 보강 (2026-09-19)
 
-- **애니메이션 null 텍스처 계약**: `SetFrames`와 `RegisterState`에서 전체 입력을
-  먼저 검사한다. null 텍스처가 하나라도 있으면 `UE_LOG` 경고 후 전체 요청을 거부하며
-  기존 프레임, 재생 상태, COM 참조를 유지한다. 빈 배열은 허용한다.
-  Release에서도 동일하게 검사한다. 프레임을 걸러내지 않으므로 인덱스와 Notify 배치가 바뀌지 않는다.
+- **애니메이션 null 텍스처 계약**: 최초에는 SetFrames/RegisterState의 배열 입력을 검사했다.
+  현재 공유 에셋 구조에서는 UFlipbook::Create가 전체 배열을 먼저 검사하고 null 텍스처가 있으면
+  참조를 확보하지 않고 실패한다. RegisterState는 빈 에셋 포인터를 거부하고 기존 상태를 유지한다.
+  빈 프레임 배열의 에셋은 허용한다. SetFlipbook의 빈 포인터는 명시적 재생 대상 해제다.
 - **TSharedPtr 교차 타입 생성자**: 언리얼식 `TPointerIsConvertibleFromTo`와 `TEnableIf`로
   암시적 포인터 변환이 가능한 타입만 허용한다. 업캐스트와 const 추가는 허용하고,
   다운캐스트, const 제거, 무관한 타입, private/모호한 베이스 변환은 컴파일 단계에서 차단한다.

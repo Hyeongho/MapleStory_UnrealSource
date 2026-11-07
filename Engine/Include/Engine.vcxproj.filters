@@ -66,6 +66,12 @@
     <ClInclude Include="Engine.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Animation\USpineComponent.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\WzSpineAnimation.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
     <ClInclude Include="EnginePCH.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -306,6 +312,9 @@
     <ClInclude Include="Animation\UFlipbookComponent.h">
       <Filter>07. Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Animation\UFlipbook.h">
+      <Filter>07. Animation</Filter>
+    </ClInclude>
     <ClInclude Include="Animation\UAnimNotify.h">
       <Filter>07. Animation</Filter>
     </ClInclude>
@@ -515,6 +524,9 @@
     <ClCompile Include="Animation\UFlipbookComponent.cpp">
       <Filter>07. Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Animation\UFlipbook.cpp">
+      <Filter>07. Animation</Filter>
+    </ClCompile>
     <ClCompile Include="Animation\UAnimStateMachine.cpp">
       <Filter>07. Animation</Filter>
     </ClCompile>
@@ -550,6 +562,12 @@
     </ClCompile>
     <ClCompile Include="Render\WzMapLoader.cpp">
       <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\WzSpineAnimation.cpp">
+      <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\USpineComponent.cpp">
+      <Filter>07. Animation</Filter>
     </ClCompile>
     <ClCompile Include="World\FMapLoader.cpp">
       <Filter>06. World</Filter>

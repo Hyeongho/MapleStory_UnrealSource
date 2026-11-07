@@ -50,6 +50,8 @@
 #include "World/FMapScene.h"
 #include "Render/FCamera2D.h"
 #include "Animation/UAnimStateMachine.h"
+#include "Animation/UFlipbookComponent.h"
+#include "Render/USpriteComponent.h"
 #include "Animation/UAnimNotify.h"
 
 // A COM test double: tracks ownership without a GPU or a window.
@@ -57,9 +59,19 @@ class FTestTextureView : public ID3D11ShaderResourceView
 {
 public:
 	ULONG m_Refs = 1;
+	ULONG m_AddRefCalls = 0;
+	ULONG m_ReleaseCalls = 0;
 	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void** Out) override { if (Out) *Out = nullptr; return E_NOINTERFACE; }
-	ULONG STDMETHODCALLTYPE AddRef() override { return ++m_Refs; }
-	ULONG STDMETHODCALLTYPE Release() override { return --m_Refs; }
+	ULONG STDMETHODCALLTYPE AddRef() override
+	{
+		++m_AddRefCalls;
+		return ++m_Refs;
+	}
+	ULONG STDMETHODCALLTYPE Release() override
+	{
+		++m_ReleaseCalls;
+		return --m_Refs;
+	}
 	void STDMETHODCALLTYPE GetDevice(ID3D11Device** Out) override { *Out = nullptr; }
 	HRESULT STDMETHODCALLTYPE GetPrivateData(REFGUID, UINT*, void*) override { return E_NOTIMPL; }
 	HRESULT STDMETHODCALLTYPE SetPrivateData(REFGUID, UINT, const void*) override { return E_NOTIMPL; }
@@ -2208,56 +2220,181 @@ int main()
 		check(FSharedConversionDerived::m_Destructions == DestructionsBefore + 1);
 	}
 
-	// Invalid animation input must not release old frames or retain partial input.
+	// 공유 에셋은 한 번만 텍스처 참조를 확보하고 재생·상태 전환에서는 유지한다.
 	{
-		FTestTextureView Texture;
+		const int32 FailuresBefore = g_TestFailCount;
+		FTestTextureView FirstTexture;
+		FTestTextureView NextTexture;
 		FTestFrameNotify Notify;
-		TArray<FFlipbookFrame> Valid;
-		FFlipbookFrame Frame;
-		Frame.m_pTexture = &Texture;
-		Frame.m_pNotify = &Notify;
-		Valid.Add(Frame);
-		TArray<FFlipbookFrame> Invalid = Valid;
-		Invalid.Add(FFlipbookFrame{});
-		TArray<FFlipbookFrame> Empty;
 		{
-			UFlipbookComponent Flipbook;
-			Flipbook.SetFrames(Valid);
-			check(Texture.m_Refs == 2);
-			Flipbook.Play();
-			Flipbook.Tick(0.05f);
-			Flipbook.SetFrames(Invalid, false);
-			check(Texture.m_Refs == 2);
-			Flipbook.Tick(0.06f);
-			check(Notify.m_Count == 1); // elapsed time, playing and loop flag preserved
-			Flipbook.SetFrames(Empty);
-			check(Texture.m_Refs == 1);
-			Flipbook.SetFrames(Invalid);
-			Flipbook.Play();
-			Flipbook.Tick(0.25f);
-			check(Texture.m_Refs == 1);
+			TArray<FFlipbookFrame> Frames;
+			FFlipbookFrame Frame;
+			Frame.m_pTexture = &FirstTexture;
+			Frame.m_Origin = FVector2D(2.0f, 3.0f);
+			Frame.m_Duration = 1.0f;
+			Frame.m_A0 = 0;
+			Frame.m_A1 = 200;
+			Frames.Add(Frame);
+			Frame.m_pTexture = &NextTexture;
+			Frame.m_Origin = FVector2D(5.0f, 7.0f);
+			Frame.m_A0 = 255;
+			Frame.m_A1 = 255;
+			Frame.m_bBlend = true;
+			Frame.m_Z = 7;
+			Frame.m_pNotify = &Notify;
+			Frames.Add(Frame);
+			TSharedPtr<UFlipbook> Walk = UFlipbook::Create(Frames);
+			check(Walk && Walk->GetNumFrames() == 2 && Walk->GetTotalDuration() == 2.0);
+			check(FirstTexture.m_Refs == 2 && NextTexture.m_Refs == 2);
+
+			TArray<FFlipbookFrame> Invalid = Frames;
+			Invalid.Add(FFlipbookFrame{});
+			TSharedPtr<UFlipbook> Rejected = UFlipbook::Create(Invalid);
+			check(!Rejected && FirstTexture.m_AddRefCalls == 1 && NextTexture.m_AddRefCalls == 1);
+			TArray<FFlipbookFrame> IdleFrames;
+			IdleFrames.Add(Frames[0]);
+			TSharedPtr<UFlipbook> Idle = UFlipbook::Create(IdleFrames);
+			const ULONG FirstAdds = FirstTexture.m_AddRefCalls;
+			const ULONG NextAdds = NextTexture.m_AddRefCalls;
+
+			UWorld World;
+			ACharacter* First = World.SpawnActor<ACharacter>();
+			ACharacter* Second = World.SpawnActor<ACharacter>();
+			UFlipbookComponent* FirstFlipbook = First->GetFlipbookComponent();
+			UFlipbookComponent* SecondFlipbook = Second->GetFlipbookComponent();
+			UAnimStateMachine* States = First->AddComponent<UAnimStateMachine>();
+			const bool bWalkRegistered = States->RegisterState(FName(L"Walk"), Walk);
+			const bool bIdleRegistered = States->RegisterState(FName(L"Idle"), Idle);
+			check(bWalkRegistered && bIdleRegistered);
+			States->SetState(FName(L"Walk"));
+			SecondFlipbook->SetFlipbook(Walk);
+			SecondFlipbook->Play();
+			FirstFlipbook->SetUseFrameZ(true);
+			check(FirstFlipbook->GetFlipbook().Get() == SecondFlipbook->GetFlipbook().Get());
+			check(First->GetComponent<USpriteComponent>() == nullptr);
+
+			FirstFlipbook->Tick(1.0f);
+			SecondFlipbook->Tick(0.25f);
+			check(FirstFlipbook->GetCurrentFrameIndex() == 1 && SecondFlipbook->GetCurrentFrameIndex() == 0);
 			check(Notify.m_Count == 1);
-			Flipbook.SetFrames(Valid);
+			States->SetState(FName(L"Walk"));
+			check(FirstFlipbook->GetCurrentFrameIndex() == 1);
+			const bool bSameAssetChanged = FirstFlipbook->SetFlipbook(Walk);
+			check(!bSameAssetChanged && FirstFlipbook->GetCurrentFrameIndex() == 1);
+			const bool bRejectedState = States->RegisterState(FName(L"Walk"), Rejected, false);
+			check(!bRejectedState && FirstFlipbook->GetFlipbook() == Walk);
+
+			FRenderQueue Queue;
+			FirstFlipbook->Render(Queue);
+			check(Queue.Num() == 1);
+			if (Queue.Num() == 1)
+			{
+				const FRenderQueueEntry& Entry = Queue.GetSortedEntries()[0];
+				check(Entry.m_pTexture == &NextTexture);
+				check(Entry.m_Position == FVector2D(-5.0f, -7.0f));
+				check(Entry.m_Blend == EBlendMode::Additive && Entry.m_Z0 == 7);
+			}
+			Queue.Clear();
+			SecondFlipbook->Render(Queue);
+			check(Queue.Num() == 1);
+			if (Queue.Num() == 1)
+			{
+				const FRenderQueueEntry& Entry = Queue.GetSortedEntries()[0];
+				check(Entry.m_Position == FVector2D(-2.0f, -3.0f));
+				check(FMath::Abs(Entry.m_Tint.m_A - 50.0f / 255.0f) < 0.001f);
+			}
+			SecondFlipbook->SetFlipHorizontal(true);
+			Queue.Clear();
+			SecondFlipbook->Render(Queue);
+			if (Queue.Num() == 1)
+			{
+				const FRenderQueueEntry& Entry = Queue.GetSortedEntries()[0];
+				check(Entry.m_Position == FVector2D(2.0f, -3.0f) && Entry.m_Scale.m_X == -1.0f);
+			}
+
+			for (int32 i = 0; i < 30; i++)
+			{
+				FirstFlipbook->Tick(1.0f);
+				States->SetState(FName(L"Idle"));
+				States->SetState(FName(L"Walk"));
+			}
+			check(FirstTexture.m_AddRefCalls == FirstAdds && FirstTexture.m_ReleaseCalls == 0);
+			check(NextTexture.m_AddRefCalls == NextAdds && NextTexture.m_ReleaseCalls == 0);
+			FirstFlipbook->SetLooping(false);
+			FirstFlipbook->PlayFromStart();
+			FirstFlipbook->Tick(3.0f);
+			check(!FirstFlipbook->IsPlaying() && FirstFlipbook->GetCurrentFrameIndex() == 1);
+			FirstFlipbook->PlayFromStart();
+			FirstFlipbook->SetPlayRate(2.0f);
+			FirstFlipbook->Tick(0.5f);
+			check(FirstFlipbook->GetCurrentFrameIndex() == 1);
+			FirstFlipbook->Stop();
+			FirstFlipbook->Tick(1.0f);
+			check(FirstFlipbook->GetCurrentFrameIndex() == 1);
+
+			// 등록한 쪽을 제거해도 다른 컴포넌트가 공유 에셋의 수명을 보장한다.
+			World.DestroyActor(First);
+			Walk.Reset();
+			Idle.Reset();
+			check(FirstTexture.m_Refs == 2 && NextTexture.m_Refs == 2);
+			SecondFlipbook->Tick(4.0f);
+			SecondFlipbook->SetFlipbook(TSharedPtr<UFlipbook>());
+			Queue.Clear();
+			SecondFlipbook->Render(Queue);
+			check(Queue.Num() == 0);
+			check(FirstTexture.m_Refs == 1 && NextTexture.m_Refs == 1);
 		}
-		check(Texture.m_Refs == 1);
-		{
-			UAnimStateMachine StateMachine;
-			const FName Idle(L"NullContractIdle");
-			StateMachine.RegisterState(Idle, Valid);
-			StateMachine.SetState(Idle);
-			StateMachine.RegisterState(Idle, Invalid);
-			check(StateMachine.GetCurrentState() == Idle);
-			check(Texture.m_Refs == 2);
-			StateMachine.RegisterState(FName(L"RejectedState"), Invalid);
-			check(Texture.m_Refs == 2);
-			StateMachine.RegisterState(Idle, Empty);
-			check(Texture.m_Refs == 1);
-			StateMachine.RegisterState(Idle, Valid);
-		}
-		check(Texture.m_Refs == 1);
-		wprintf(L"[Tests] Shared conversion / animation null contract - PASSED\n");
+		check(FirstTexture.m_Refs == 1 && NextTexture.m_Refs == 1);
+		check(FirstTexture.m_AddRefCalls == FirstTexture.m_ReleaseCalls);
+		check(NextTexture.m_AddRefCalls == NextTexture.m_ReleaseCalls);
+		wprintf(L"[Tests] Shared flipbook assets / direct rendering - %s\n", g_TestFailCount == FailuresBefore ? L"PASSED" : L"FAILED");
 	}
 
+	// 맵 경계는 카메라와 독립적으로 캐릭터 충돌체 전체에 적용한다.
+	{
+		const int32 FailuresBefore = g_TestFailCount;
+		UWorld World;
+		FMapScene& Scene = World.CreateMapScene();
+		const bool bBoundsSet = Scene.SetWorldBounds(FRect(-100.0f, -50.0f, 100.0f, 100.0f));
+		check(bBoundsSet);
+		World.GetPhysicsWorld().SetGravity(0.0f);
+		ACharacter* Character = World.SpawnActor<ACharacter>();
+		Character->EnablePhysics(FVector2D(10.0f, 20.0f));
+		URigidbody* Body = Character->GetComponent<URigidbody>();
+		Character->AddMovementInput(FVector2D(1.0f, 0.0f));
+		World.Tick(5.0f);
+		check(IsPhysicsTestNear(Character->GetLocation().m_X, 90.0f));
+		check(IsPhysicsTestNear(Body->GetVelocity().m_X, 0.0f));
+		Character->AddMovementInput(FVector2D(-1.0f, 0.0f));
+		World.Tick(5.0f);
+		check(IsPhysicsTestNear(Character->GetLocation().m_X, -90.0f));
+		check(IsPhysicsTestNear(Body->GetVelocity().m_X, 0.0f));
+		Body->SetVelocity(FVector2D(0.0f, -1000.0f));
+		World.Tick(0.5f);
+		check(IsPhysicsTestNear(Character->GetLocation().m_Y, -10.0f));
+		check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0.0f));
+		Body->SetVelocity(FVector2D(0.0f, 1000.0f));
+		World.Tick(0.5f);
+		check(IsPhysicsTestNear(Character->GetLocation().m_Y, 100.0f));
+		check(IsPhysicsTestNear(Body->GetVelocity().m_Y, 0.0f));
+
+		const bool bBoundsChanged = Scene.SetWorldBounds(FRect(-25.0f, -20.0f, 25.0f, 60.0f));
+		check(bBoundsChanged);
+		World.Tick(0.0f);
+		const FRect Collider = Character->GetComponent<UBoxCollision>()->GetWorldBounds();
+		check(Collider.m_Left >= -25.0f && Collider.m_Right <= 25.0f);
+		check(Collider.m_Top >= -20.0f && Collider.m_Bottom <= 60.0f);
+		ACharacter* DirectCharacter = World.SpawnActor<ACharacter>();
+		DirectCharacter->SetLocation(FVector2D(500.0f, -500.0f));
+		World.Tick(0.0f);
+		check(DirectCharacter->GetLocation() == FVector2D(25.0f, -20.0f));
+		Scene.Clear();
+		check(Scene.GetWorldBounds() == nullptr);
+		DirectCharacter->SetLocation(FVector2D(500.0f, -500.0f));
+		World.Tick(0.0f);
+		check(DirectCharacter->GetLocation() == FVector2D(500.0f, -500.0f));
+		wprintf(L"[Tests] Character map bounds - %s\n", g_TestFailCount == FailuresBefore ? L"PASSED" : L"FAILED");
+	}
 	// Phase 8 — Renderer(DX11) 코어 부트스트랩
 	// HWND가 필요 없는 부분(디바이스 생성)만 콘솔에서 검증한다.
 	// 실제 스프라이트 렌더링(SpriteBatch/RenderQueue/FCamera2D)은 Game.exe를 실행해
@@ -3176,7 +3313,10 @@ int main()
 				ACharacter* pCharacter = World.SpawnActor<ACharacter>();
 				pCharacter->SetLocation(FVector2D(0, 80));
 				pCharacter->EnablePhysics(FVector2D(12, 24));
-				pCharacter->GetSpriteComponent()->SetTexture(&CharacterTexture);
+				TArray<FFlipbookFrame> CharacterFrames;
+				CharacterFrames.Add(FFlipbookFrame{ &CharacterTexture });
+				pCharacter->GetFlipbookComponent()->SetFlipbook(UFlipbook::Create(CharacterFrames));
+				CharacterTexture.Release(); // 로딩 참조를 반납하고 에셋의 보관 참조만 남긴다.
 				URigidbody* pBody = pCharacter->GetComponent<URigidbody>();
 				World.Tick(0.01f);
 				check(pBody->IsGrounded() && pCharacter->GetMapLayer() == 1);
@@ -3237,6 +3377,37 @@ int main()
 			check(CharacterTexture.m_Refs == 0);
 		}
 		wprintf(L"[Rendering] Climbing character layer: %d failure(s)\n", g_TestFailCount - LayerFailuresBefore);
+	}
+
+	// DLL에서 받은 Spine 메시가 잘못된 정점/페이지로 GPU에 제출되지 않도록 검사한다.
+	{
+		const int32 SpineFailuresBefore = g_TestFailCount;
+		FSpineVertex Vertices[3] = {};
+		for (int32 i = 0; i < 3; i++)
+		{
+			Vertices[i].m_R = Vertices[i].m_G = Vertices[i].m_B = Vertices[i].m_A = 1.0f;
+		}
+		Vertices[1].m_X = 10.0f;
+		Vertices[2].m_Y = 10.0f;
+		check(FWzSpineAnimation::ValidateGeometry(Vertices, 3, 1));
+		check(FWzSpineAnimation::ValidateGeometry(nullptr, 0, 1)); // 투명한 빈 포즈는 허용
+		check(!FWzSpineAnimation::ValidateGeometry(nullptr, 3, 1));
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 2, 1));
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, -3, 1));
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 3, 0));
+		Vertices[1].m_Page = 1;
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 3, 1)); // 없는 atlas 페이지
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 3, 2)); // 한 삼각형 안의 페이지 혼합
+		Vertices[1].m_Page = 0;
+		Vertices[2].m_Blend = 1;
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 3, 1));
+		Vertices[2].m_Blend = 0;
+		const uint32 NaNBits = 0x7fc00000;
+		memcpy(&Vertices[0].m_X, &NaNBits, sizeof(NaNBits));
+		check(!FWzSpineAnimation::ValidateGeometry(Vertices, 3, 1));
+		Vertices[0].m_X = 0.0f;
+		check(FWzSpineAnimation::ValidateGeometry(Vertices, 3, 1));
+		wprintf(L"[Rendering] Spine geometry contract: %d failure(s)\n", g_TestFailCount - SpineFailuresBefore);
 	}
 
 	// VR이 없는 맵의 경계 계산과 카메라 추적 제한
