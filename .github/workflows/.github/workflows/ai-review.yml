@@ -1,0 +1,96 @@
+name: AI Cross Review
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  # Each main push keeps its own review; superseded PR reviews can be cancelled.
+  group: ai-cross-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Review main pushes, and ready PRs from this repository.
+    if: >-
+      (github.event_name == 'push' && github.event.deleted == false) ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # No checkout: this workflow never executes repository code.
+      - name: Opus -> Sol -> Opus -> Sol
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_AUTO_APPROVE: ${{ vars.AI_AUTO_APPROVE || 'false' }}
+          AI_REQUIRED_CHECKS: ${{ vars.AI_REQUIRED_CHECKS }}
+        shell: python
+        run: |
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          REPO = os.environ["GITHUB_REPOSITORY"]
+          EVENT = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+          IS_PUSH = "pull_request" not in EVENT
+          NUMBER = EVENT.get("pull_request", {}).get("number")
+          API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+          ROOT = f"/repos/{REPO}"
+          PR = f"{ROOT}/pulls/{NUMBER}" if NUMBER is not None else None
+          LIMIT = 120_000
+
+          def request(url, headers, data=None, stream=False):
+              payload = None if data is None else json.dumps(data).encode("utf-8")
+              req = urllib.request.Request(url, data=payload, headers=headers)
+              return urllib.request.urlopen(req, timeout=1200 if stream else 60)
+
+          def github(path, data=None):
+              headers = {
+                  "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+                  "User-Agent": "ai-cross-review",
+              }
+              with request(API + path, headers, data) as response:
+                  return json.load(response)
+
+          def pages(path, key=None):
+              items = []
+              for page in range(1, 32):
+                  sep = "&" if "?" in path else "?"
+                  result = github(f"{path}{sep}per_page=100&page={page}")
+                  batch = result[key] if key else result
+                  items.extend(batch)
+                  if len(batch) < 100:
+                      return items
+              raise RuntimeError("Pagination limit reached")
+
+          def stream_json(url, headers, payload, vendor):
+              # SSE text only. Thinking and token-by-token output are not logged.
+              chunks = []
+              completed = False
+              stopped = False
+              def consume(lines):
+                  nonlocal completed, stopped
+                  if not lines:
+                      return
+                  raw = "\n".join(lines)
+                  if raw == "[DONE]":
+                      return
+                  event = json.loads(raw)
+                  kind = event.get("type", "")
+                  if kind in ("error", "response.failed", "response.incomplete"):
