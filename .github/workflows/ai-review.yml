@@ -28,18 +28,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      - name: Claude Code 설치
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.322
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
       # No checkout: this workflow never executes repository code.
       - name: AI 코드 교차 검토 (Opus → Sol → Opus → Sol)
         env:
           GH_TOKEN: ${{ github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Keep the existing Secret name, but its value must be a setup-token token.
+          # Do not also export ANTHROPIC_API_KEY: that would select API-key billing.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.ANTHROPIC_API_KEY }}
           AI_AUTO_APPROVE: ${{ vars.AI_AUTO_APPROVE || 'false' }}
           AI_REQUIRED_CHECKS: ${{ vars.AI_REQUIRED_CHECKS }}
         shell: python
         run: |
           import json
           import os
+          import shutil
+          import subprocess
+          import tempfile
           import urllib.error
           import urllib.request
           from pathlib import Path
@@ -56,14 +67,16 @@ jobs:
           class ApiRequestError(RuntimeError):
               pass
 
+          class ReviewConfigurationError(RuntimeError):
+              pass
+
           def request(url, headers, data=None, stream=False):
               payload = None if data is None else json.dumps(data).encode("utf-8")
               req = urllib.request.Request(url, data=payload, headers=headers)
               try:
                   return urllib.request.urlopen(req, timeout=1200 if stream else 60)
               except urllib.error.HTTPError as error:
-                  service = ("Claude" if url.startswith("https://api.anthropic.com/") else
-                             "OpenAI" if url.startswith("https://api.openai.com/") else "GitHub")
+                  service = "OpenAI" if url.startswith("https://api.openai.com/") else "GitHub"
                   hints = {
                       400: "요청 형식이나 모델 설정을 확인하세요.",
                       401: "등록한 API 키가 올바른지 확인하세요.",
@@ -111,13 +124,12 @@ jobs:
                       return items
               raise RuntimeError("Pagination limit reached")
 
-          def stream_json(url, headers, payload, vendor):
+          def stream_json(url, headers, payload):
               # SSE text only. Thinking and token-by-token output are not logged.
               chunks = []
               completed = False
-              stopped = False
               def consume(lines):
-                  nonlocal completed, stopped
+                  nonlocal completed
                   if not lines:
                       return
                   raw = "\n".join(lines)
@@ -127,24 +139,10 @@ jobs:
                   kind = event.get("type", "")
                   if kind in ("error", "response.failed", "response.incomplete"):
                       raise RuntimeError("Model response failed or was incomplete")
-                  if vendor == "openai":
-                      if kind == "response.output_text.delta":
-                          chunks.append(event["delta"])
-                      elif kind == "response.completed":
-                          completed = event["response"].get("status") == "completed"
-                  else:
-                      if kind == "content_block_start":
-                          block = event.get("content_block", {})
-                          if block.get("type") == "text":
-                              chunks.append(block.get("text", ""))
-                      elif kind == "content_block_delta":
-                          delta = event.get("delta", {})
-                          if delta.get("type") == "text_delta":
-                              chunks.append(delta["text"])
-                      elif kind == "message_delta":
-                          stopped = event.get("delta", {}).get("stop_reason") == "end_turn"
-                      elif kind == "message_stop":
-                          completed = stopped
+                  if kind == "response.output_text.delta":
+                      chunks.append(event["delta"])
+                  elif kind == "response.completed":
+                      completed = event["response"].get("status") == "completed"
               with request(url, headers, payload, stream=True) as response:
                   pending = []
                   for raw_line in response:
@@ -224,19 +222,56 @@ jobs:
                   raise ValueError("Approval conflicts with a blocking finding")
               return result
 
+          def call_claude_code(prompt):
+              executable = shutil.which("claude")
+              if not executable:
+                  raise ReviewConfigurationError("Claude Code를 찾지 못했습니다. 앞 단계의 설치 로그를 확인하세요.")
+              with tempfile.TemporaryDirectory(prefix="ai-review-") as folder:
+                  # A fresh directory prevents loading repository hooks or instructions.
+                  # The native Claude Code process receives only its own provider secret.
+                  child_env = {key: value for key, value in os.environ.items()
+                               if key not in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GH_TOKEN", "GITHUB_TOKEN")}
+                  child_env["CLAUDE_CONFIG_DIR"] = str(Path(folder) / "config")
+                  args = [executable, "-p", "--model", "claude-opus-5-5",
+                          "--effort", "xhigh", "--output-format", "json",
+                          "--json-schema", json.dumps(SCHEMA, ensure_ascii=False),
+                          "--system-prompt", SYSTEM, "--max-turns", "8",
+                          "--tools", "", "--strict-mcp-config",
+                          "--mcp-config", '{"mcpServers":{}}',
+                          "--safe-mode", "--no-session-persistence"]
+                  try:
+                      process = subprocess.run(args, input=prompt, cwd=folder, env=child_env,
+                                               capture_output=True, text=True, encoding="utf-8",
+                                               timeout=1200, check=False)
+                  except subprocess.TimeoutExpired:
+                      raise ReviewConfigurationError("Claude Code 검토가 20분 제한을 초과했습니다. 검토 범위를 줄이거나 다시 실행하세요.") from None
+              try:
+                  response = json.loads(process.stdout)
+              except (ValueError, TypeError):
+                  response = {}
+              if process.returncode != 0 or not isinstance(response, dict) or response.get("is_error"):
+                  result = response.get("result", "") if isinstance(response, dict) else ""
+                  detail = (str(result) + " " + process.stderr).lower()
+                  if any(word in detail for word in ("usage limit", "rate limit", "quota", "hit your limit")):
+                      hint = "Pro 구독 사용 한도에 도달했습니다. 사용량이 초기화된 후 다시 실행하세요."
+                  elif any(word in detail for word in ("login", "log in", "oauth", "401", "authentication", "expired token")):
+                      hint = "Pro 인증 토큰이 유효한지 확인하세요. claude setup-token으로 다시 발급하고 기존 Secret 값을 갱신하세요."
+                  elif "model" in detail:
+                      hint = "현재 Pro 계정에서 Claude Opus 5.5를 이용할 수 있는지 확인하세요."
+                  else:
+                      hint = "Pro 인증 토큰과 계정 이용 상태를 확인하세요. 기존 Secret 이름은 ANTHROPIC_API_KEY입니다."
+                  # Never echo CLI output: it can contain credentials or private code.
+                  raise ReviewConfigurationError("Claude Code 구독 인증 검토에 실패했습니다. " + hint)
+              if not isinstance(response.get("structured_output"), dict):
+                  raise ReviewConfigurationError("Claude Code가 구조화된 검토 결과를 반환하지 않았습니다. 검토를 다시 실행하세요.")
+              return response["structured_output"]
+
           def call_model(vendor, context, history, index):
               prompt = json.dumps({"round": index + 1, "pr": context,
                                    "previous_reviews": history}, ensure_ascii=False)
               headers = {"Content-Type": "application/json"}
               if vendor == "opus":
-                  headers.update({"Authorization": "Bearer " + os.environ["ANTHROPIC_API_KEY"],
-                                  "anthropic-version": "2026-10-21"})
-                  data = {"model": "claude-opus-5-5", "max_tokens": 32768,
-                          "stream": True, "system": SYSTEM,
-                          "output_config": {"effort": "xhigh",
-                                            "format": {"type": "json_schema", "schema": SCHEMA}},
-                          "messages": [{"role": "user", "content": prompt}]}
-                  result = stream_json("https://api.anthropic.com/v1/messages", headers, data, "anthropic")
+                  result = call_claude_code(prompt)
               else:
                   headers["Authorization"] = "Bearer " + os.environ["OPENAI_API_KEY"]
                   data = {"model": "gpt-6.1-sol", "max_output_tokens": 32768,
@@ -244,7 +279,7 @@ jobs:
                           "reasoning": {"effort": "xhigh"}, "input": prompt,
                           "text": {"format": {"type": "json_schema", "name": "pr_review",
                                               "strict": True, "schema": SCHEMA}}}
-                  result = stream_json("https://api.openai.com/v1/responses", headers, data, "openai")
+                  result = stream_json("https://api.openai.com/v1/responses", headers, data)
               return validate(result)
 
           def verdict(reports):
@@ -268,7 +303,13 @@ jobs:
               return not failed, "필수 CI 통과" if not failed else "미통과 또는 미실행 CI: " + ", ".join(failed)
 
           def main():
-              for name in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+              token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+              if not token:
+                  raise ReviewConfigurationError("GitHub Secret ANTHROPIC_API_KEY에 claude setup-token으로 발급한 Pro 인증 토큰을 등록하세요.")
+              if token.startswith("sk-ant-api"):
+                  raise ReviewConfigurationError("ANTHROPIC_API_KEY에 일반 API 키가 등록되어 있습니다. 이름은 유지하고 값을 claude setup-token으로 발급한 Pro 인증 토큰으로 바꾸세요.")
+              os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
+              for name in ("OPENAI_API_KEY",):
                   if not os.environ.get(name):
                       raise RuntimeError(f"GitHub에 등록된 API 키가 없습니다: {name}")
               gaps = []
@@ -345,6 +386,7 @@ jobs:
               scope = f"main 푸시 전체 변경: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
               body = [f"## AI 교차 검토: {label}", f"검토 커밋: `{sha}`", scope,
                       "Claude Opus 5.5 / GPT 6.1 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
+                      "Claude: Pro 구독 인증 · GPT: OpenAI API 키 인증",
                       "검토 범위는 변경 코드이며, 코드 수정·빌드·테스트는 수행하지 않았습니다.", actual]
               body.extend("- " + gap for gap in gaps[:20])
               for index, report in enumerate(reports):
@@ -372,7 +414,7 @@ jobs:
               main()
           except Exception as error:
               # Do not print request headers, keys, model inputs, or API error bodies.
-              message = (str(error) if isinstance(error, ApiRequestError) else
+              message = (str(error) if isinstance(error, (ApiRequestError, ReviewConfigurationError)) else
                          "AI 코드 검토 중 오류가 발생했습니다 (" + type(error).__name__ +
                          "). 저장소의 API 키, API 잔액·모델 이용 권한, GitHub 권한을 확인하세요.")
               print("::error::" + message)
