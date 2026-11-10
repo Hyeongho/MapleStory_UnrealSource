@@ -124,6 +124,46 @@ jobs:
                       return items
               raise RuntimeError("Pagination limit reached")
 
+          def openai_stream_error(event):
+              response = event.get("response") or {}
+              error = response.get("error") or event.get("error") or event
+              if not isinstance(error, dict):
+                  error = {}
+              reason = (response.get("incomplete_details") or {}).get("reason", "")
+              code = error.get("code") or reason or error.get("type")
+              hints = {
+                  "credit_balance_exhausted": "OpenAI API 크레딧이 부족합니다. OpenAI Platform의 결제 설정에서 잔액을 확인하세요.",
+                  "insufficient_quota": "OpenAI API 크레딧 또는 사용 한도가 부족합니다. API 잔액과 조직·프로젝트 한도를 확인하세요.",
+                  "billing_hard_limit_reached": "OpenAI API 결제 한도에 도달했습니다. 결제 설정과 사용 한도를 확인하세요.",
+                  "organization_spend_limit_exceeded": "OpenAI API 조직 지출 한도에 도달했습니다. 조직의 지출 한도를 확인하세요.",
+                  "project_spend_limit_exceeded": "OpenAI API 프로젝트 지출 한도에 도달했습니다. 해당 프로젝트의 지출 한도를 확인하세요.",
+                  "organization_usage_limit_exceeded": "OpenAI에서 승인한 조직 API 사용 한도에 도달했습니다. 조직 사용 한도를 확인하세요.",
+                  "rate_limit_exceeded": "OpenAI API 호출 또는 토큰 처리 속도 한도를 초과했습니다. 잠시 기다린 뒤 다시 실행하세요.",
+                  "slow_down": "OpenAI API 요청 속도가 너무 빠르게 증가했습니다. 잠시 기다린 뒤 다시 실행하세요.",
+                  "model_not_found": "현재 OpenAI API 프로젝트에서 gpt-6.1-sol 모델을 사용할 수 있는지 확인하세요.",
+                  "invalid_api_key": "GitHub Secret OPENAI_API_KEY에 유효한 OpenAI API 키가 등록되어 있는지 확인하세요.",
+                  "authentication_error": "OpenAI API 인증에 실패했습니다. OPENAI_API_KEY를 확인하세요.",
+                  "unsupported_parameter": "OpenAI API에서 지원하지 않는 요청 설정입니다. 요청 매개변수를 확인하세요.",
+                  "unsupported_value": "OpenAI API 요청 설정값이 지원되지 않습니다. 모델과 추론 수준 설정을 확인하세요.",
+                  "invalid_request_error": "OpenAI API 요청 형식이나 모델 설정을 확인하세요.",
+                  "invalid_json_schema": "OpenAI API가 검토 결과의 JSON 스키마를 거절했습니다. 스키마 설정을 확인하세요.",
+                  "max_output_tokens": "GPT 검토가 설정된 최대 출력 토큰 내에 완료되지 않았습니다. 출력 토큰 한도나 검토 범위를 조정해야 합니다.",
+                  "content_filter": "GPT가 요청 내용에 대한 검토 결과를 완료하지 못했습니다. 검토 범위를 확인하세요.",
+                  "server_error": "OpenAI API 서버가 요청 처리 중 오류를 반환했습니다. 잠시 후 다시 실행하세요.",
+                  "server_is_overloaded": "OpenAI 모델이 일시적으로 과부하 상태입니다. 잠시 후 다시 실행하세요.",
+                  "service_unavailable_error": "OpenAI API를 일시적으로 사용할 수 없습니다. 잠시 후 다시 실행하세요.",
+              }
+              # Only known error identifiers are displayed, never raw response text.
+              if isinstance(code, str) and code in hints:
+                  message = f"GPT 6.1 Sol 검토 실패: {hints[code]} (오류 코드: {code})"
+              else:
+                  message = "GPT 6.1 Sol 검토 중 OpenAI API가 실패 또는 미완료 응답을 반환했습니다."
+                  fields = [name for name in ("model", "reasoning.effort", "text.format", "max_output_tokens")
+                            if error.get("param") == name]
+                  if fields:
+                      message += " 확인할 설정: " + ", ".join(fields) + "."
+              return ApiRequestError(message)
+
           def stream_json(url, headers, payload):
               # SSE text only. Thinking and token-by-token output are not logged.
               chunks = []
@@ -138,11 +178,13 @@ jobs:
                   event = json.loads(raw)
                   kind = event.get("type", "")
                   if kind in ("error", "response.failed", "response.incomplete"):
-                      raise RuntimeError("Model response failed or was incomplete")
+                      raise openai_stream_error(event)
                   if kind == "response.output_text.delta":
                       chunks.append(event["delta"])
                   elif kind == "response.completed":
                       completed = event["response"].get("status") == "completed"
+                      if not completed:
+                          raise openai_stream_error(event)
               with request(url, headers, payload, stream=True) as response:
                   pending = []
                   for raw_line in response:
@@ -154,8 +196,11 @@ jobs:
                           pending.append(line[5:].lstrip())
                   consume(pending)
               if not completed:
-                  raise RuntimeError("Model stream did not complete")
-              return json.loads("".join(chunks))
+                  raise ApiRequestError("GPT 6.1 Sol 응답이 완료되기 전에 연결이 종료되었습니다. 잠시 후 다시 실행하세요.")
+              try:
+                  return json.loads("".join(chunks))
+              except ValueError:
+                  raise ApiRequestError("GPT 6.1 Sol이 올바른 JSON 검토 결과를 반환하지 않았습니다.") from None
 
           SCHEMA = {
               "type": "object", "additionalProperties": False,
@@ -196,6 +241,18 @@ jobs:
           DECISION_LABELS = {"APPROVE": "검토 통과", "REQUEST_CHANGES": "수정 필요", "HOLD": "판단 보류"}
           SEVERITY_LABELS = {"blocking": "수정 필수", "warning": "주의", "info": "참고"}
           MODEL_LABELS = {"opus": "Claude Opus 5.5", "sol": "GPT 6.1 Sol"}
+
+          def report_lines(reports):
+              lines = []
+              for index, report in enumerate(reports):
+                  result = report["result"]
+                  lines.append(f"\n<details><summary>{index + 1}차 검토 · {MODEL_LABELS[report['model']]} · {DECISION_LABELS[result['decision']]}</summary>\n")
+                  lines.append(result["reason"])
+                  for finding in result["findings"]:
+                      location = f"{finding['line']}줄" if finding["line"] else "줄 위치 미확인"
+                      lines.append(f"- **{SEVERITY_LABELS[finding['severity']]}** · 파일: `{finding['file']}` · {location} — {finding['explanation']}")
+                  lines.append("\n</details>\n")
+              return lines
 
           def validate(result):
               if not isinstance(result, dict) or set(result) != {"decision", "reason", "findings"}:
@@ -369,6 +426,9 @@ jobs:
                   for index, model in enumerate(("opus", "sol", "opus", "sol")):
                       print(f"{index + 1}/4차 검토 시작: {MODEL_LABELS[model]} (추론 수준: xhigh)", flush=True)
                       reports.append({"model": model, "result": call_model(model, context, reports, index)})
+                      progress = [f"## AI 교차 검토 진행: {len(reports)}/4회 완료",
+                                  f"검토 커밋: `{sha}`"] + report_lines(reports)
+                      Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n\n".join(progress) + "\n", encoding="utf-8")
                   decision = verdict(reports)
               else:
                   decision = "HOLD"
@@ -389,21 +449,14 @@ jobs:
                       "Claude: Pro 구독 인증 · GPT: OpenAI API 키 인증",
                       "검토 범위는 변경 코드이며, 코드 수정·빌드·테스트는 수행하지 않았습니다.", actual]
               body.extend("- " + gap for gap in gaps[:20])
-              for index, report in enumerate(reports):
-                  result = report["result"]
-                  body.append(f"\n<details><summary>{index + 1}차 검토 · {MODEL_LABELS[report['model']]} · {DECISION_LABELS[result['decision']]}</summary>\n")
-                  body.append(result["reason"])
-                  for finding in result["findings"]:
-                      location = f"{finding['line']}줄" if finding["line"] else "줄 위치 미확인"
-                      body.append(f"- **{SEVERITY_LABELS[finding['severity']]}** · 파일: `{finding['file']}` · {location} — {finding['explanation']}")
-                  body.append("\n</details>\n")
+              body.extend(report_lines(reports))
               if not IS_PUSH:
                   latest = github(PR)
                   if latest["state"] != "open" or latest["draft"] or latest["head"]["sha"] != sha or latest["base"]["sha"] != base:
                       print("검토 중 PR이 변경되어 이전 코드에 대한 결과는 게시하지 않습니다.")
                       return
               rendered = "\n\n".join(body)
-              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "w", encoding="utf-8") as out:
                   out.write(rendered + "\n")
               if not IS_PUSH:
                   github(PR + "/reviews", {"commit_id": sha, "body": rendered, "event": review_event})
