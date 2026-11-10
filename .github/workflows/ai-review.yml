@@ -53,10 +53,29 @@ jobs:
           PR = f"{ROOT}/pulls/{NUMBER}" if NUMBER is not None else None
           LIMIT = 120_000
 
+          class ApiRequestError(RuntimeError):
+              pass
+
           def request(url, headers, data=None, stream=False):
               payload = None if data is None else json.dumps(data).encode("utf-8")
               req = urllib.request.Request(url, data=payload, headers=headers)
-              return urllib.request.urlopen(req, timeout=1200 if stream else 60)
+              try:
+                  return urllib.request.urlopen(req, timeout=1200 if stream else 60)
+              except urllib.error.HTTPError as error:
+                  service = ("Claude" if url.startswith("https://api.anthropic.com/") else
+                             "OpenAI" if url.startswith("https://api.openai.com/") else "GitHub")
+                  hints = {
+                      400: "요청 형식이나 모델 설정을 확인하세요.",
+                      401: "등록한 API 키가 올바른지 확인하세요.",
+                      402: "API 결제 상태와 사용 가능한 잔액을 확인하세요.",
+                      403: "계정의 API 이용 권한과 저장소 권한을 확인하세요.",
+                      404: "요청한 모델 또는 저장소 자료에 접근할 수 있는지 확인하세요.",
+                      429: "API 잔액과 호출 한도를 확인한 후 다시 실행하세요.",
+                  }
+                  # Only a service name, status code and fixed Korean guidance are exposed.
+                  # API response bodies can contain sensitive data and are never logged.
+                  hint = hints.get(error.code, "서비스 상태와 네트워크 연결을 확인한 후 다시 실행하세요.")
+                  raise ApiRequestError(f"{service} API 요청 실패 (HTTP {error.code}). {hint}") from None
 
           def github(path, data=None):
               headers = {
@@ -340,7 +359,8 @@ jobs:
               main()
           except Exception as error:
               # Do not print request headers, keys, model inputs, or API error bodies.
-              message = ("AI 코드 검토 중 오류가 발생했습니다 (" + type(error).__name__ +
+              message = (str(error) if isinstance(error, ApiRequestError) else
+                         "AI 코드 검토 중 오류가 발생했습니다 (" + type(error).__name__ +
                          "). 저장소의 API 키, API 잔액·모델 이용 권한, GitHub 권한을 확인하세요.")
               print("::error::" + message)
               with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
