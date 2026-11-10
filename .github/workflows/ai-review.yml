@@ -1,10 +1,11 @@
-name: AI Cross Review
+name: AI Subscription Cross Review
 
 on:
   push:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,35 +13,62 @@ permissions:
   checks: read
   statuses: read
 
+# One serialized stream owns the CI session, including its Secret write-back.
 concurrency:
-  # Each main push keeps its own review; superseded PR reviews can be cancelled.
-  group: ai-cross-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  group: ai-subscription-session-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   review:
-    # Review main pushes, and ready PRs from this repository.
+    # Do not restore account credentials in public repositories or fork PRs.
     if: >-
-      (github.event_name == 'push' && github.event.deleted == false) ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.draft == false)
+      github.event.repository.private == true &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && github.event.deleted == false) ||
+       (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.draft == false))
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+    env:
+      CODEX_HOME: ${{ runner.temp }}/ai-review-codex
     steps:
-      - name: Claude Code 설치
+      - name: Native Claude Code와 Codex CLI 설치
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL https://claude.ai/install.sh | bash -s -- 2.1.322
+          curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh
           printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
-      # No checkout: this workflow never executes repository code.
-      - name: AI 코드 교차 검토 (Opus → Sol → Opus → Sol)
+
+      - name: GitHub 전용 ChatGPT 로그인 복원
+        id: auth
+        shell: python
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          CODEX_AUTH_WRITER_TOKEN: ${{ secrets.CODEX_AUTH_WRITER_TOKEN }}
+        run: |
+          import json, os
+          from pathlib import Path
+          if not os.environ.get("CODEX_AUTH_WRITER_TOKEN"):
+              raise SystemExit("CODEX_AUTH_WRITER_TOKEN Secret을 등록하세요. 갱신된 인증을 저장하는 데 필요합니다.")
+          try:
+              auth = json.loads(os.environ.get("CODEX_AUTH_JSON", ""))
+              tokens = auth.get("tokens") or {}
+              assert auth.get("auth_mode") == "chatgpt"
+              assert tokens.get("access_token") and tokens.get("refresh_token")
+          except (ValueError, TypeError, AttributeError, AssertionError):
+              raise SystemExit("CODEX_AUTH_JSON에 CI 전용 codex login으로 만든 ChatGPT auth.json 전체를 등록하세요.")
+          os.umask(0o077)
+          folder = Path(os.environ["CODEX_HOME"])
+          folder.mkdir(parents=True, exist_ok=True)
+          (folder / "auth.json").write_text(json.dumps(auth), encoding="utf-8")
+
+      # No checkout: neither source code nor PR-controlled scripts are executed.
+      - name: 구독 사용량으로 4회 교차 검토
         env:
           GH_TOKEN: ${{ github.token }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Keep the existing Secret name, but its value must be a setup-token token.
-          # Do not also export ANTHROPIC_API_KEY: that would select API-key billing.
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.ANTHROPIC_API_KEY }}
           AI_AUTO_APPROVE: ${{ vars.AI_AUTO_APPROVE || 'false' }}
           AI_REQUIRED_CHECKS: ${{ vars.AI_REQUIRED_CHECKS }}
@@ -56,7 +84,7 @@ jobs:
           from pathlib import Path
 
           REPO = os.environ["GITHUB_REPOSITORY"]
-          EVENT = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
+          EVENT = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
           IS_PUSH = "pull_request" not in EVENT
           NUMBER = EVENT.get("pull_request", {}).get("number")
           API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
@@ -74,34 +102,23 @@ jobs:
               payload = None if data is None else json.dumps(data).encode("utf-8")
               req = urllib.request.Request(url, data=payload, headers=headers)
               try:
-                  return urllib.request.urlopen(req, timeout=1200 if stream else 60)
+                  return urllib.request.urlopen(req, timeout=60)
               except urllib.error.HTTPError as error:
-                  service = "OpenAI" if url.startswith("https://api.openai.com/") else "GitHub"
-                  hints = {
-                      400: "요청 형식이나 모델 설정을 확인하세요.",
-                      401: "등록한 API 키가 올바른지 확인하세요.",
-                      402: "API 결제 상태와 사용 가능한 잔액을 확인하세요.",
-                      403: "계정의 API 이용 권한과 저장소 권한을 확인하세요.",
-                      404: "요청한 모델 또는 저장소 자료에 접근할 수 있는지 확인하세요.",
-                      429: "API 잔액과 호출 한도를 확인한 후 다시 실행하세요.",
-                  }
-                  hint = hints.get(error.code, "서비스 상태와 네트워크 연결을 확인한 후 다시 실행하세요.")
-                  # Classify common failures without exposing raw API messages or keys.
-                  try:
-                      api_error = json.loads(error.read(32768)).get("error", {})
-                      detail = api_error.get("message", "") if isinstance(api_error, dict) else ""
-                      detail = detail.lower() if isinstance(detail, str) else ""
-                      if "credit" in detail and any(word in detail for word in ("balance", "insufficient", "low", "exhaust")):
-                          hint = "API 크레딧이 부족합니다. 해당 서비스의 결제 설정에서 잔액을 확인하고 크레딧을 충전하세요."
-                      elif "api key" in detail and any(word in detail for word in ("invalid", "incorrect", "missing")):
-                          hint = "API 키가 유효하지 않습니다. GitHub에 등록한 해당 서비스의 API 키를 확인하세요."
-                      else:
-                          settings = [name for name in ("model", "output_config", "effort", "thinking", "schema", "max_tokens", "anthropic-version") if name in detail]
-                          if settings:
-                              hint += " 확인할 설정: " + ", ".join(settings) + "."
-                  except (ValueError, AttributeError, OSError):
-                      pass
-                  raise ApiRequestError(f"{service} API 요청 실패 (HTTP {error.code}). {hint}") from None
+                  hint = {401: "GitHub 로그인을 확인하세요.",
+                          403: "저장소 접근 권한과 GitHub API 호출 한도를 확인하세요.",
+                          404: "저장소와 커밋을 읽을 수 있는지 확인하세요."}.get(
+                              error.code, "GitHub 서비스 상태와 네트워크 연결을 확인하세요.")
+                  raise ApiRequestError(f"GitHub 요청 실패 (HTTP {error.code}). {hint}") from None
+
+          def model_env(vendor):
+              blocked = ("OPENAI_", "ANTHROPIC_", "GITHUB_", "GH_", "CODEX_AUTH_", "CLAUDE_CODE_USE_")
+              child = {key: value for key, value in os.environ.items()
+                       if not key.startswith(blocked)
+                       and key not in ("CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN")}
+              if vendor == "opus" and os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+                  child["CLAUDE_CODE_OAUTH_TOKEN"] = os.environ["CLAUDE_CODE_OAUTH_TOKEN"]
+              return child
+
 
           def github(path, data=None):
               headers = {
@@ -124,83 +141,7 @@ jobs:
                       return items
               raise RuntimeError("Pagination limit reached")
 
-          def openai_stream_error(event):
-              response = event.get("response") or {}
-              error = response.get("error") or event.get("error") or event
-              if not isinstance(error, dict):
-                  error = {}
-              reason = (response.get("incomplete_details") or {}).get("reason", "")
-              code = error.get("code") or reason or error.get("type")
-              hints = {
-                  "credit_balance_exhausted": "OpenAI API 크레딧이 부족합니다. OpenAI Platform의 결제 설정에서 잔액을 확인하세요.",
-                  "insufficient_quota": "OpenAI API 크레딧 또는 사용 한도가 부족합니다. API 잔액과 조직·프로젝트 한도를 확인하세요.",
-                  "billing_hard_limit_reached": "OpenAI API 결제 한도에 도달했습니다. 결제 설정과 사용 한도를 확인하세요.",
-                  "organization_spend_limit_exceeded": "OpenAI API 조직 지출 한도에 도달했습니다. 조직의 지출 한도를 확인하세요.",
-                  "project_spend_limit_exceeded": "OpenAI API 프로젝트 지출 한도에 도달했습니다. 해당 프로젝트의 지출 한도를 확인하세요.",
-                  "organization_usage_limit_exceeded": "OpenAI에서 승인한 조직 API 사용 한도에 도달했습니다. 조직 사용 한도를 확인하세요.",
-                  "rate_limit_exceeded": "OpenAI API 호출 또는 토큰 처리 속도 한도를 초과했습니다. 잠시 기다린 뒤 다시 실행하세요.",
-                  "slow_down": "OpenAI API 요청 속도가 너무 빠르게 증가했습니다. 잠시 기다린 뒤 다시 실행하세요.",
-                  "model_not_found": "현재 OpenAI API 프로젝트에서 gpt-6.1-sol 모델을 사용할 수 있는지 확인하세요.",
-                  "invalid_api_key": "GitHub Secret OPENAI_API_KEY에 유효한 OpenAI API 키가 등록되어 있는지 확인하세요.",
-                  "authentication_error": "OpenAI API 인증에 실패했습니다. OPENAI_API_KEY를 확인하세요.",
-                  "unsupported_parameter": "OpenAI API에서 지원하지 않는 요청 설정입니다. 요청 매개변수를 확인하세요.",
-                  "unsupported_value": "OpenAI API 요청 설정값이 지원되지 않습니다. 모델과 추론 수준 설정을 확인하세요.",
-                  "invalid_request_error": "OpenAI API 요청 형식이나 모델 설정을 확인하세요.",
-                  "invalid_json_schema": "OpenAI API가 검토 결과의 JSON 스키마를 거절했습니다. 스키마 설정을 확인하세요.",
-                  "max_output_tokens": "GPT 검토가 설정된 최대 출력 토큰 내에 완료되지 않았습니다. 출력 토큰 한도나 검토 범위를 조정해야 합니다.",
-                  "content_filter": "GPT가 요청 내용에 대한 검토 결과를 완료하지 못했습니다. 검토 범위를 확인하세요.",
-                  "server_error": "OpenAI API 서버가 요청 처리 중 오류를 반환했습니다. 잠시 후 다시 실행하세요.",
-                  "server_is_overloaded": "OpenAI 모델이 일시적으로 과부하 상태입니다. 잠시 후 다시 실행하세요.",
-                  "service_unavailable_error": "OpenAI API를 일시적으로 사용할 수 없습니다. 잠시 후 다시 실행하세요.",
-              }
-              # Only known error identifiers are displayed, never raw response text.
-              if isinstance(code, str) and code in hints:
-                  message = f"GPT 6.1 Sol 검토 실패: {hints[code]} (오류 코드: {code})"
-              else:
-                  message = "GPT 6.1 Sol 검토 중 OpenAI API가 실패 또는 미완료 응답을 반환했습니다."
-                  fields = [name for name in ("model", "reasoning.effort", "text.format", "max_output_tokens")
-                            if error.get("param") == name]
-                  if fields:
-                      message += " 확인할 설정: " + ", ".join(fields) + "."
-              return ApiRequestError(message)
 
-          def stream_json(url, headers, payload):
-              # SSE text only. Thinking and token-by-token output are not logged.
-              chunks = []
-              completed = False
-              def consume(lines):
-                  nonlocal completed
-                  if not lines:
-                      return
-                  raw = "\n".join(lines)
-                  if raw == "[DONE]":
-                      return
-                  event = json.loads(raw)
-                  kind = event.get("type", "")
-                  if kind in ("error", "response.failed", "response.incomplete"):
-                      raise openai_stream_error(event)
-                  if kind == "response.output_text.delta":
-                      chunks.append(event["delta"])
-                  elif kind == "response.completed":
-                      completed = event["response"].get("status") == "completed"
-                      if not completed:
-                          raise openai_stream_error(event)
-              with request(url, headers, payload, stream=True) as response:
-                  pending = []
-                  for raw_line in response:
-                      line = raw_line.decode("utf-8").rstrip("\r\n")
-                      if not line:
-                          consume(pending)
-                          pending = []
-                      elif line.startswith("data:"):
-                          pending.append(line[5:].lstrip())
-                  consume(pending)
-              if not completed:
-                  raise ApiRequestError("GPT 6.1 Sol 응답이 완료되기 전에 연결이 종료되었습니다. 잠시 후 다시 실행하세요.")
-              try:
-                  return json.loads("".join(chunks))
-              except ValueError:
-                  raise ApiRequestError("GPT 6.1 Sol이 올바른 JSON 검토 결과를 반환하지 않았습니다.") from None
 
           SCHEMA = {
               "type": "object", "additionalProperties": False,
@@ -286,9 +227,10 @@ jobs:
               with tempfile.TemporaryDirectory(prefix="ai-review-") as folder:
                   # A fresh directory prevents loading repository hooks or instructions.
                   # The native Claude Code process receives only its own provider secret.
-                  child_env = {key: value for key, value in os.environ.items()
-                               if key not in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GH_TOKEN", "GITHUB_TOKEN")}
-                  child_env["CLAUDE_CONFIG_DIR"] = str(Path(folder) / "config")
+                  child_env = model_env("opus")
+                  # A CI token uses a fresh configuration; local native login stays on this PC.
+                  if child_env.get("CLAUDE_CODE_OAUTH_TOKEN"):
+                      child_env["CLAUDE_CONFIG_DIR"] = str(Path(folder) / "config")
                   args = [executable, "-p", "--model", "claude-opus-5-5",
                           "--effort", "xhigh", "--output-format", "json",
                           "--json-schema", json.dumps(SCHEMA, ensure_ascii=False),
@@ -312,7 +254,7 @@ jobs:
                   if any(word in detail for word in ("usage limit", "rate limit", "quota", "hit your limit")):
                       hint = "Pro 구독 사용 한도에 도달했습니다. 사용량이 초기화된 후 다시 실행하세요."
                   elif any(word in detail for word in ("login", "log in", "oauth", "401", "authentication", "expired token")):
-                      hint = "Pro 인증 토큰이 유효한지 확인하세요. claude setup-token으로 다시 발급하고 기존 Secret 값을 갱신하세요."
+                      hint = "Pro 인증 토큰이 유효한지 확인하세요. PC에서는 claude auth login으로 로그인하고, GitHub에서는 setup-token Secret을 갱신하세요."
                   elif "model" in detail:
                       hint = "현재 Pro 계정에서 Claude Opus 5.5를 이용할 수 있는지 확인하세요."
                   else:
@@ -323,21 +265,56 @@ jobs:
                   raise ReviewConfigurationError("Claude Code가 구조화된 검토 결과를 반환하지 않았습니다. 검토를 다시 실행하세요.")
               return response["structured_output"]
 
+          def call_codex(prompt):
+              executable = shutil.which("codex")
+              if not executable:
+                  raise ReviewConfigurationError("Codex CLI를 설치하고 codex login으로 ChatGPT 계정에 로그인하세요.")
+              with tempfile.TemporaryDirectory(prefix="codex-review-") as folder:
+                  schema_path = Path(folder) / "schema.json"
+                  output_path = Path(folder) / "result.json"
+                  schema_path.write_text(json.dumps(SCHEMA, ensure_ascii=False), encoding="utf-8")
+                  args = [executable, "--ask-for-approval", "never", "exec",
+                          "--model", "gpt-6.1-sol", "--sandbox", "read-only",
+                          "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check",
+                          "--ephemeral", "--color", "never",
+                          "-c", 'model_provider="openai"',
+                          "-c", 'model_reasoning_effort="xhigh"',
+                          "-c", 'forced_login_method="chatgpt"',
+                          "-c", 'cli_auth_credentials_store="file"',
+                          "-c", "features.shell_tool=false", "-c", "features.hooks=false",
+                          "-c", "features.multi_agent=false", "-c", "features.plugins=false",
+                          "-c", 'web_search="disabled"',
+                          "--output-schema", str(schema_path),
+                          "--output-last-message", str(output_path), "-"]
+                  try:
+                      process = subprocess.run(args, input=SYSTEM + "\n\n검토 자료:\n" + prompt,
+                                               cwd=folder, env=model_env("sol"), capture_output=True,
+                                               text=True, encoding="utf-8", timeout=1200, check=False)
+                  except subprocess.TimeoutExpired:
+                      raise ReviewConfigurationError("Codex 검토가 20분 제한을 초과했습니다.") from None
+                  if process.returncode != 0:
+                      detail = (process.stdout + " " + process.stderr).lower()
+                      if any(word in detail for word in ("usage limit", "rate limit", "quota", "limit reached")):
+                          hint = "ChatGPT/Codex 구독 사용 한도를 확인하고 초기화 후 다시 실행하세요."
+                      elif any(word in detail for word in ("login", "log in", "401", "refresh", "authentication")):
+                          hint = "codex login으로 다시 로그인하세요. GitHub에서는 CODEX_AUTH_JSON도 갱신하세요."
+                      elif "model" in detail:
+                          hint = "계정의 GPT 6.1 Sol 이용 권한과 Codex CLI 버전을 확인하세요."
+                      else:
+                          hint = "구독 로그인, 이용 한도와 CLI 설치 상태를 확인하세요."
+                      raise ReviewConfigurationError("Codex 구독 검토에 실패했습니다. " + hint)
+                  try:
+                      result = json.loads(output_path.read_text(encoding="utf-8"))
+                  except (OSError, ValueError):
+                      raise ReviewConfigurationError("Codex가 구조화된 검토 결과를 반환하지 않았습니다.") from None
+                  return result
+
           def call_model(vendor, context, history, index):
               prompt = json.dumps({"round": index + 1, "pr": context,
                                    "previous_reviews": history}, ensure_ascii=False)
-              headers = {"Content-Type": "application/json"}
-              if vendor == "opus":
-                  result = call_claude_code(prompt)
-              else:
-                  headers["Authorization"] = "Bearer " + os.environ["OPENAI_API_KEY"]
-                  data = {"model": "gpt-6.1-sol", "max_output_tokens": 32768,
-                          "stream": True, "store": False, "instructions": SYSTEM,
-                          "reasoning": {"effort": "xhigh"}, "input": prompt,
-                          "text": {"format": {"type": "json_schema", "name": "pr_review",
-                                              "strict": True, "schema": SCHEMA}}}
-                  result = stream_json("https://api.openai.com/v1/responses", headers, data)
+              result = call_claude_code(prompt) if vendor == "opus" else call_codex(prompt)
               return validate(result)
+
 
           def verdict(reports):
               decisions = [r["result"]["decision"] for r in reports[-2:]]
@@ -360,18 +337,24 @@ jobs:
               return not failed, "필수 CI 통과" if not failed else "미통과 또는 미실행 CI: " + ", ".join(failed)
 
           def main():
+              is_ci = os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+              if is_ci and EVENT.get("repository", {}).get("private") is not True:
+                  raise ReviewConfigurationError("구독 인증을 사용하는 GitHub 자동화는 비공개 저장소에서만 실행합니다.")
               token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
-              if not token:
-                  raise ReviewConfigurationError("GitHub Secret ANTHROPIC_API_KEY에 claude setup-token으로 발급한 Pro 인증 토큰을 등록하세요.")
+              if is_ci and not token:
+                  raise ReviewConfigurationError("ANTHROPIC_API_KEY Secret에 claude setup-token 토큰을 등록하세요.")
               if token.startswith("sk-ant-api"):
-                  raise ReviewConfigurationError("ANTHROPIC_API_KEY에 일반 API 키가 등록되어 있습니다. 이름은 유지하고 값을 claude setup-token으로 발급한 Pro 인증 토큰으로 바꾸세요.")
-              os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
-              for name in ("OPENAI_API_KEY",):
-                  if not os.environ.get(name):
-                      raise RuntimeError(f"GitHub에 등록된 API 키가 없습니다: {name}")
+                  raise ReviewConfigurationError("일반 Claude API 키가 등록되어 있습니다. claude setup-token 구독 토큰으로 바꾸세요.")
+              if token:
+                  os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
               gaps = []
               pr = None
               if IS_PUSH:
+                  if "after" not in EVENT:
+                      commit = github(f"{ROOT}/commits/{os.environ['GITHUB_SHA']}")
+                      EVENT["after"] = commit["sha"]
+                      EVENT["before"] = (commit.get("parents") or [{"sha": "0" * 40}])[0]["sha"]
+                      EVENT["head_commit"] = {"message": commit["commit"]["message"]}
                   sha, base = EVENT["after"], EVENT["before"]
                   if EVENT.get("deleted") or not sha.strip("0"):
                       print("브랜치가 삭제되어 이번 검토를 건너뜁니다.")
@@ -446,7 +429,7 @@ jobs:
               scope = f"main 푸시 전체 변경: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
               body = [f"## AI 교차 검토: {label}", f"검토 커밋: `{sha}`", scope,
                       "Claude Opus 5.5 / GPT 6.1 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
-                      "Claude: Pro 구독 인증 · GPT: OpenAI API 키 인증",
+                      "Claude: Pro 구독 인증 · GPT: ChatGPT/Codex 구독 인증",
                       "검토 범위는 변경 코드이며, 코드 수정·빌드·테스트는 수행하지 않았습니다.", actual]
               body.extend("- " + gap for gap in gaps[:20])
               body.extend(report_lines(reports))
@@ -469,8 +452,28 @@ jobs:
               # Do not print request headers, keys, model inputs, or API error bodies.
               message = (str(error) if isinstance(error, (ApiRequestError, ReviewConfigurationError)) else
                          "AI 코드 검토 중 오류가 발생했습니다 (" + type(error).__name__ +
-                         "). 저장소의 API 키, API 잔액·모델 이용 권한, GitHub 권한을 확인하세요.")
+                         "). 구독 로그인·사용 한도·모델 이용 권한과 GitHub 권한을 확인하세요.")
               print("::error::" + message)
               with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
                   out.write("## AI 교차 검토: 실행 오류\n\n" + message + "\n")
               raise SystemExit(1)
+
+      - name: 갱신된 ChatGPT 인증을 다음 실행에 보존
+        if: always() && steps.auth.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.CODEX_AUTH_WRITER_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh secret set CODEX_AUTH_JSON --repo "$GITHUB_REPOSITORY" < "$CODEX_HOME/auth.json"
+
+      - name: 임시 인증 파일 정리
+        if: always()
+        shell: python
+        run: |
+          import os, shutil
+          from pathlib import Path
+          target = Path(os.environ["CODEX_HOME"]).resolve()
+          root = Path(os.environ["RUNNER_TEMP"]).resolve()
+          if target.parent == root and target.name == "ai-review-codex":
+              shutil.rmtree(target, ignore_errors=True)
