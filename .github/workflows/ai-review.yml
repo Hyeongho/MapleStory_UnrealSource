@@ -72,9 +72,22 @@ jobs:
                       404: "요청한 모델 또는 저장소 자료에 접근할 수 있는지 확인하세요.",
                       429: "API 잔액과 호출 한도를 확인한 후 다시 실행하세요.",
                   }
-                  # Only a service name, status code and fixed Korean guidance are exposed.
-                  # API response bodies can contain sensitive data and are never logged.
                   hint = hints.get(error.code, "서비스 상태와 네트워크 연결을 확인한 후 다시 실행하세요.")
+                  # Classify common failures without exposing raw API messages or keys.
+                  try:
+                      api_error = json.loads(error.read(32768)).get("error", {})
+                      detail = api_error.get("message", "") if isinstance(api_error, dict) else ""
+                      detail = detail.lower() if isinstance(detail, str) else ""
+                      if "credit" in detail and any(word in detail for word in ("balance", "insufficient", "low", "exhaust")):
+                          hint = "API 크레딧이 부족합니다. 해당 서비스의 결제 설정에서 잔액을 확인하고 크레딧을 충전하세요."
+                      elif "api key" in detail and any(word in detail for word in ("invalid", "incorrect", "missing")):
+                          hint = "API 키가 유효하지 않습니다. GitHub에 등록한 해당 서비스의 API 키를 확인하세요."
+                      else:
+                          settings = [name for name in ("model", "output_config", "effort", "thinking", "schema", "max_tokens", "anthropic-version") if name in detail]
+                          if settings:
+                              hint += " 확인할 설정: " + ", ".join(settings) + "."
+                  except (ValueError, AttributeError, OSError):
+                      pass
                   raise ApiRequestError(f"{service} API 요청 실패 (HTTP {error.code}). {hint}") from None
 
           def github(path, data=None):
