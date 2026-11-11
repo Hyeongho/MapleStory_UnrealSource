@@ -20,6 +20,19 @@ concurrency:
   queue: max
 
 jobs:
+  configuration:
+    name: 공개 저장소 설정 확인
+    if: github.event.repository.private != true
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: 구독 검토를 실행할 수 없는 이유 표시
+        shell: bash
+        run: |
+          printf '%s\n' '## AI 구독 검토: 설정 필요' '' '현재 저장소는 공개 상태입니다. 이 구독 인증 CI는 비공개 저장소에서만 실행합니다.' '공개 상태를 유지하려면 제공된 local-review.py로 PC에서 검토하세요.' > "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' '::error::현재 공개 저장소이므로 구독 인증 검토를 실행하지 않았습니다. 비공개 저장소에서 사용하거나 PC용 local-review.py를 실행하세요.'
+          exit 1
+
   review:
     # Do not restore account credentials in public repositories or fork PRs.
     if: >-
@@ -31,9 +44,13 @@ jobs:
         github.event.pull_request.draft == false))
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    env:
-      CODEX_HOME: ${{ runner.temp }}/ai-review-codex
     steps:
+      - name: 검토 인증 경로 설정
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'CODEX_HOME=%s/ai-review-codex\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
       - name: Native Claude Code와 Codex CLI 설치
         shell: bash
         run: |
