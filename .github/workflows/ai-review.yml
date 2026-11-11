@@ -44,7 +44,7 @@ jobs:
         id: auth
         shell: python
         env:
-          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CODEX_AUTH_WRITER_TOKEN: ${{ secrets.CODEX_AUTH_WRITER_TOKEN }}
         run: |
           import json, os
@@ -52,12 +52,12 @@ jobs:
           if not os.environ.get("CODEX_AUTH_WRITER_TOKEN"):
               raise SystemExit("CODEX_AUTH_WRITER_TOKEN Secret을 등록하세요. 갱신된 인증을 저장하는 데 필요합니다.")
           try:
-              auth = json.loads(os.environ.get("CODEX_AUTH_JSON", ""))
+              auth = json.loads(os.environ.get("OPENAI_API_KEY", ""))
               tokens = auth.get("tokens") or {}
               assert auth.get("auth_mode") == "chatgpt"
               assert tokens.get("access_token") and tokens.get("refresh_token")
           except (ValueError, TypeError, AttributeError, AssertionError):
-              raise SystemExit("CODEX_AUTH_JSON에 CI 전용 codex login으로 만든 ChatGPT auth.json 전체를 등록하세요.")
+              raise SystemExit("OPENAI_API_KEY CI 전용 codex login으로 만든 ChatGPT auth.json 전체를 등록하세요.")
           os.umask(0o077)
           folder = Path(os.environ["CODEX_HOME"])
           folder.mkdir(parents=True, exist_ok=True)
@@ -293,7 +293,7 @@ jobs:
                       if any(word in detail for word in ("usage limit", "rate limit", "quota", "limit reached")):
                           hint = "ChatGPT/Codex 구독 사용 한도를 확인하고 초기화 후 다시 실행하세요."
                       elif any(word in detail for word in ("login", "log in", "401", "refresh", "authentication")):
-                          hint = "codex login으로 다시 로그인하세요. GitHub에서는 CODEX_AUTH_JSON도 갱신하세요."
+                          hint = "codex login으로 다시 로그인하세요. GitHub에서는 OPENAI_API_KEY도 갱신하세요."
                       elif "model" in detail:
                           hint = "계정의 GPT 6.1 Sol 이용 권한과 Codex CLI 버전을 확인하세요."
                       else:
@@ -468,7 +468,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh secret set CODEX_AUTH_JSON --repo "$GITHUB_REPOSITORY" < "$CODEX_HOME/auth.json"
+          gh secret set OPENAI_API_KEY --repo "$GITHUB_REPOSITORY" < "$CODEX_HOME/auth.json"
 
       - name: 임시 인증 파일 정리
         if: always()
