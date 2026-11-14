@@ -408,6 +408,21 @@ jobs:
                   files = pages(PR + "/files")
                   if len(files) != pr["changed_files"]:
                       gaps.append("변경 파일 목록이 완전하지 않음")
+              ignored_suffixes = {".exe", ".idb"}
+              skipped_files = [
+                  f["filename"] for f in files
+                  if Path(f["filename"]).suffix.lower() in ignored_suffixes
+              ]
+              files = [
+                  f for f in files
+                  if Path(f["filename"]).suffix.lower() not in ignored_suffixes
+              ]
+              if not files and not gaps:
+                  text = "## AI 교차 검토: 대상 없음\n\n빌드 결과물만 변경되어 AI 호출을 생략했습니다.\n\n검토 제외:\n"
+                  text += "\n".join("- " + name for name in skipped_files)
+                  Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(text + "\n", encoding="utf-8")
+                  print("검토할 소스 변경이 없어 AI 호출을 생략했습니다.")
+                  return
               selected = []
               for f in files:
                   patch = f.get("patch", "")
@@ -444,13 +459,17 @@ jobs:
                   elif pr["user"]["login"] == "github-actions[bot]":
                       actual = "동일한 GitHub Actions 봇이 작성한 PR이므로 자기 승인 불가"
               label = DECISION_LABELS[decision]
-              scope = f"main 푸시 전체 변경: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
+              scope = f"main 푸시 커밋 범위: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
               body = [f"## AI 교차 검토: {label}", f"검토 커밋: `{sha}`", scope,
                       "Claude Opus 5.5 / GPT 6.1 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
-                      "Claude: Pro 구독 인증 · GPT: ChatGPT/Codex 구독 인증",
+                      "설정된 인증 방식: Claude Pro 구독 · GPT ChatGPT/Codex 구독",
+                      "AI 검토 응답: 4/4회 수신" if reports else "AI 미호출 — 이번 실행에서는 서버 인증 유효성을 확인하지 않았습니다.",
                       "검토 기준: 버그·기능 회귀·동시성·객체 수명·최적화. 성능 제안은 코드 분석에 따른 것으로 실측 결과가 아닙니다.",
                       "검토 범위는 변경 코드이며, 코드 수정·빌드·테스트는 수행하지 않았습니다.", actual]
               body.extend("- " + gap for gap in gaps[:20])
+              if skipped_files:
+                  body.append("검토에서 제외한 빌드 결과물:")
+                  body.extend("- " + name for name in skipped_files)
               body.extend(report_lines(reports))
               if not IS_PUSH:
                   latest = github(PR)
