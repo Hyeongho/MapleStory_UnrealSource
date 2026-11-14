@@ -4,15 +4,25 @@
 #include "../Controller/AMaplePlayerController.h"
 #include "../Character/AMapleCharacter.h"
 #include "Render/FCamera2D.h"
+
 #include "World/UWorld.h"
 #include "World/FMapLoader.h"
 #include "World/FMapScene.h"
+
 #include "Physics/PhysicsWorld.h"
 #include "Physics/URigidbody.h"
+
+#include "Audio/FAudioManager.h"
+#include "Audio/WzSoundLoader.h"
 
 static const char* MAPLE_WZ_PATH = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
 static const char* MAPLE_MAP_PATH = R"(Map\Map\Map4\410017300.img)";
 static const char* MAPLE_LOADOUT_SPEC = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
+
+// 사용할 오디오 파일의 절대 경로 또는 실행 작업 폴더 기준 경로를 지정한다.
+// 예: LR"(D:\MapleAssets\Audio\BGM.mp3)". nullptr이면 해당 사운드를 사용하지 않는다.
+static const wchar_t* MAPLE_BGM_FILE = nullptr;
+static const wchar_t* MAPLE_ATTACK_SOUND_FILE = nullptr;
 
 // 실제 클라이언트에서 확인할 ladderRope 배치 번호. INDEX_NONE이면 기본 시작점을 쓴다.
 static constexpr int32 MAPLE_START_LADDER_ROPE_INDEX = INDEX_NONE;
@@ -41,6 +51,8 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 	FMapLoader::LoadMap(Engine.GetDevice(), Engine.GetWorld(), Engine.GetCamera(), MAPLE_WZ_PATH, MAPLE_MAP_PATH, MapOptions);
 
 	InitPlayer();
+
+	InitAudio();
 
 	// 시작 위치만 지정하며 이후에는 방향키 입력으로 카메라를 움직인다.
 	Engine.GetCamera().SetLocation(FVector2D(100.0f, 300.0f));
@@ -129,4 +141,8 @@ void UMapleGameInstance::InitPlayer()
 	{
 		pController->Possess(pPlayerCharacter);
 	}
+}
+
+void UMapleGameInstance::InitAudio()
+{
 }

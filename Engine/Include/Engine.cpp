@@ -10,6 +10,7 @@
 #include "World/UWorld.h"
 #include "Physics/PhysicsWorld.h"
 #include "Object/APlayerController.h"
+#include "Audio/FAudioManager.h"
 
 UEngine* GEngine = nullptr;
 
@@ -87,6 +88,10 @@ bool UEngine::Init(HWND hWnd, const FEngineInitParams& Params)
 	m_pWorld = new UWorld();
 	GWorld = m_pWorld;
 
+	// 출력 장치가 없어도 게임은 실행한다. 초기화 실패는 오디오 서비스에서 기록한다.
+	m_AudioManager = MakeShared<FAudioManager>();
+	m_AudioManager->Initialize();
+
 	m_bInitialized = true;
 	GEngine = this;
 	return true;
@@ -110,6 +115,14 @@ void UEngine::Shutdown()
 	}
 
 	m_pWorld = nullptr;
+
+	// 월드의 오디오 컴포넌트를 먼저 중단한 뒤 보이스와 디코더를 COM보다 먼저 정리한다.
+	if (m_AudioManager)
+	{
+		m_AudioManager->Shutdown();
+	}
+
+	m_AudioManager.Reset();
 
 	delete m_pTimerManager;
 
@@ -191,6 +204,11 @@ void UEngine::Tick(float DeltaTime)
 
 	m_pTimerManager->Tick(DeltaTime);
 	m_pWorld->Tick(DeltaTime);
+
+	if (m_AudioManager)
+	{
+		m_AudioManager->Tick(DeltaTime);
+	}
 }
 
 void UEngine::Render()
@@ -238,6 +256,11 @@ FTimerManager& UEngine::GetTimerManager() const
 {
 	check(m_pTimerManager);
 	return *m_pTimerManager;
+}
+
+const TSharedPtr<FAudioManager>& UEngine::GetAudioManager() const
+{
+	return m_AudioManager;
 }
 
 UPlayerInput& UEngine::GetPlayerInput() const

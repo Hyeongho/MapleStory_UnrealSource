@@ -61,6 +61,9 @@
     <Filter Include="09. Input">
       <UniqueIdentifier>{d2620816-2aa0-4574-b1b7-849c8d052717}</UniqueIdentifier>
     </Filter>
+    <Filter Include="10. Audio">
+      <UniqueIdentifier>{2cede5fc-8569-4de5-bef7-59b410c3483b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -360,6 +363,21 @@
     <ClInclude Include="Render\TextureLoader.h">
       <Filter>05. Render</Filter>
     </ClInclude>
+    <ClInclude Include="Audio\AudioTypes.h">
+      <Filter>10. Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\USoundWave.h">
+      <Filter>10. Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\FAudioManager.h">
+      <Filter>10. Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\UAudioComponent.h">
+      <Filter>10. Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\WzSoundLoader.h">
+      <Filter>10. Audio</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -580,6 +598,21 @@
     </ClCompile>
     <ClCompile Include="Render\TextureLoader.cpp">
       <Filter>05. Render</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\USoundWave.cpp">
+      <Filter>10. Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\FAudioManager.cpp">
+      <Filter>10. Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\UAudioComponent.cpp">
+      <Filter>10. Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\WzSoundLoader.cpp">
+      <Filter>10. Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\AudioTypes.cpp">
+      <Filter>10. Audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

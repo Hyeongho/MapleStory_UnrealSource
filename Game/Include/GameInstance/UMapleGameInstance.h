@@ -31,5 +31,8 @@ protected:
 protected:
 	// 게임 구현을 확장할 때 사용하는 캐릭터 및 애니메이션 준비 단계
 	void InitPlayer();
+
+	// 파일 경로와 볼륨 같은 오디오 사용 정책은 게임에서 설정한다.
+	void InitAudio();
 };
 
