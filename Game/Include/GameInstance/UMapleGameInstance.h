@@ -24,4 +24,6 @@ protected:
 
 	// 게임 캐릭터의 생성과 맵 시작 위치 설정
 	void InitPlayer();
+	// 파일 경로와 볼륨 같은 오디오 사용 정책은 게임에서 설정한다.
+	void InitAudio();
 };

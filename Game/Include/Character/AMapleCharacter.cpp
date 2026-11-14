@@ -4,12 +4,15 @@
 #include "Ability/UGameplayEffect.h"
 #include "Animation/UAnimStateMachine.h"
 #include "Physics/URigidbody.h"
+#include "Audio/UAudioComponent.h"
 
 AMapleCharacter::AMapleCharacter()
 {
 	m_Attributes.InitAttribute(FName(L"Health"), m_MaxHealth, 0.0f, m_MaxHealth);
 	AddComponent<UAbilitySystemComponent>()->SetAttributeSet(&m_Attributes);
 	AddComponent<UAnimStateMachine>();
+	m_pAttackAudio = AddComponent<UAudioComponent>();
+	m_pAttackAudio->SetAttachParent(GetFlipbookComponent());
 }
 
 AMapleCharacter::~AMapleCharacter()
@@ -255,7 +258,17 @@ bool AMapleCharacter::Attack()
 	// 입력 시에만 재생 위치를 되돌리고 이후 프레임 진행은 컴포넌트 Tick에 맡긴다.
 	pFlipbook->PlayFromStart();
 	m_bAttacking = true;
+	// 공격이 실제로 시작된 경우에만 재생한다. 오디오 실패는 공격 진행을 막지 않는다.
+	if (m_pAttackAudio->GetSound())
+	{
+		m_pAttackAudio->Play();
+	}
 	return true;
+}
+
+void AMapleCharacter::SetAttackSound(const TSharedPtr<USoundWave>& Sound)
+{
+	m_pAttackAudio->SetSound(Sound);
 }
 
 bool AMapleCharacter::IsAttacking() const

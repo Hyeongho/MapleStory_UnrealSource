@@ -1,17 +1,23 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="00. Runtime">
+      <UniqueIdentifier>{D7781A2E-FBCB-5A55-9D26-4E6B96BF00D4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="00. Runtime\01. Engine">
+      <UniqueIdentifier>{C9AA5C7B-84F3-5A25-A3BF-2FE04E7B737E}</UniqueIdentifier>
     </Filter>
-    <Filter Include="리소스 파일">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="00. Runtime\02. Launch">
+      <UniqueIdentifier>{EA642710-E776-5250-97F9-D25669708CD1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Runtime\03. GameInstance">
+      <UniqueIdentifier>{24E015D3-1421-5041-8E2D-258E11FA8405}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Runtime\04. PCH">
+      <UniqueIdentifier>{E37A9E59-5E7B-5C57-A97D-49E314D975C1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00. Runtime\05. Deployment">
+      <UniqueIdentifier>{30498458-12FB-5F0C-909C-E1922EA68122}</UniqueIdentifier>
     </Filter>
     <Filter Include="01. Core">
       <UniqueIdentifier>{709d8ba3-ca52-4514-9afb-9bff6badb7bf}</UniqueIdentifier>
@@ -40,353 +46,165 @@
     <Filter Include="02. Object">
       <UniqueIdentifier>{07875042-78e6-4b07-b832-bcfc962beac9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02. Object\01. TypeSystem">
+      <UniqueIdentifier>{A0050B58-71B7-58D5-A6C1-B675B8C871C5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Object\02. Actors">
+      <UniqueIdentifier>{E0F67176-421C-5C0E-A2AC-250FF06E4488}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Object\03. Components">
+      <UniqueIdentifier>{64039195-C9B2-5AFD-A9E2-408A19664954}</UniqueIdentifier>
+    </Filter>
     <Filter Include="03. Timer">
       <UniqueIdentifier>{d56e832a-51ec-4ad5-bc53-0490fae6de9a}</UniqueIdentifier>
     </Filter>
     <Filter Include="04. Ability">
       <UniqueIdentifier>{938c909c-0a02-412a-b0e8-787cfbe79f07}</UniqueIdentifier>
     </Filter>
+    <Filter Include="04. Ability\01. Types">
+      <UniqueIdentifier>{1EB8F9AA-0E0F-50BF-B9F6-F5C589354961}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Ability\02. Attributes">
+      <UniqueIdentifier>{4B0907A9-13A2-513A-8E08-561A881468BC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Ability\03. Tags">
+      <UniqueIdentifier>{03E4B0D3-8E23-540A-8B58-4A39339DB6A0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Ability\04. Effects">
+      <UniqueIdentifier>{3FB6DA1A-06D3-5442-8A65-D57EAF09941E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Ability\05. Abilities">
+      <UniqueIdentifier>{2B7825C4-4A68-5D91-B47B-F2A6C5A12169}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04. Ability\06. Components">
+      <UniqueIdentifier>{3B8E905D-11A4-5D82-9C4B-C9634740EE2E}</UniqueIdentifier>
+    </Filter>
     <Filter Include="05. Render">
       <UniqueIdentifier>{77f3b3ab-8b52-4a66-aba9-0f0cd6920790}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\01. Device">
+      <UniqueIdentifier>{6B43A9E5-47F5-569F-A052-D034A908068B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\02. Camera">
+      <UniqueIdentifier>{1A38314F-C2D7-5D8F-BE40-C1EA87F5149D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\03. Pipeline">
+      <UniqueIdentifier>{08AAA5E6-AF8D-51BA-82C5-23F495D71494}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\04. Components">
+      <UniqueIdentifier>{D2D29553-64A5-5277-B137-6B24253E0D6B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\05. Loaders">
+      <UniqueIdentifier>{82DD6BF2-06D0-5B73-A05A-4DBAFBED8F1B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\05. Loaders\01. Images">
+      <UniqueIdentifier>{AD488E3E-F121-582A-89C5-8F718B3F9D55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\05. Loaders\02. Map">
+      <UniqueIdentifier>{E74A50B6-6D9C-5D28-B1C8-2F8BFC07F43D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\05. Loaders\03. Spine">
+      <UniqueIdentifier>{3B6CA209-728A-559A-8C12-7F0438E15C7A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="05. Render\06. Effects">
+      <UniqueIdentifier>{3BA4323A-EB11-53B5-80CD-D02A934204ED}</UniqueIdentifier>
     </Filter>
     <Filter Include="06. World">
       <UniqueIdentifier>{59ea4ce2-3b93-43f0-bc50-4a8cd902762c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="06. World\01. World">
+      <UniqueIdentifier>{6C2EC600-3F1A-51AF-9183-69A1E36735F2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="06. World\02. Map">
+      <UniqueIdentifier>{9B83FDA9-0032-5FC7-B8F1-3C1201902711}</UniqueIdentifier>
+    </Filter>
     <Filter Include="07. Animation">
       <UniqueIdentifier>{c5d89ebf-30f5-40b6-9e88-91fd8095149e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Animation\01. Flipbook">
+      <UniqueIdentifier>{99E5F599-04BA-5624-9D59-3105FD840F33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Animation\02. StateMachine">
+      <UniqueIdentifier>{1F76F82A-2188-58BF-A2D8-3F476B015EDB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Animation\03. Notify">
+      <UniqueIdentifier>{C50356B4-F410-5246-AD85-2AFAB6757739}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="07. Animation\04. Spine">
+      <UniqueIdentifier>{A9AD90AC-46D1-5B0A-992E-4D9EC492D5C8}</UniqueIdentifier>
     </Filter>
     <Filter Include="08. Physics">
       <UniqueIdentifier>{2829071a-2745-4237-baf2-7c06c01afb2d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="08. Physics\01. Shapes">
+      <UniqueIdentifier>{349D19D5-7AE4-5FC8-9251-DDF5A4452782}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\02. Components">
+      <UniqueIdentifier>{617074D6-C4BC-5413-A594-1CA6B12232E8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\02. Components\01. Collision">
+      <UniqueIdentifier>{A977558C-78D6-5908-AF71-670E320EE772}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\02. Components\02. Body">
+      <UniqueIdentifier>{24CF94CB-3A5F-5DBF-9898-5EB4E4B50B9B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\02. Components\03. Climbing">
+      <UniqueIdentifier>{76840FD1-C59B-5C87-9159-E84738032DF0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\03. World">
+      <UniqueIdentifier>{EA2D6F71-6932-5690-BC5A-BA5CEBBB446E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="08. Physics\04. Terrain">
+      <UniqueIdentifier>{484A22DD-909A-54EC-8043-AA18A31DDB56}</UniqueIdentifier>
+    </Filter>
     <Filter Include="09. Input">
       <UniqueIdentifier>{4631E8E0-D413-4A15-B8EF-D13197819D07}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Engine.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Animation\USpineComponent.h">
-      <Filter>07. Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\WzSpineAnimation.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="EnginePCH.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="EngineLoop.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="UGameInstance.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\InputTypes.h">
-      <Filter>09. Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\InputDelegates.h">
-      <Filter>09. Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\UInputComponent.h">
-      <Filter>09. Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\APlayerController.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\UPlayerInput.h">
-      <Filter>09. Input</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FMemory.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FMallocAnsi.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\IAllocator.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FMemoryTracker.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FPoolAllocator.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FStackAllocator.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Templates\TypeTraits.h">
-      <Filter>01. Core\02. Templates</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Templates\AndOrNot.h">
-      <Filter>01. Core\02. Templates</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Templates\Utility.h">
-      <Filter>01. Core\02. Templates</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TArray.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TArrayView.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FColor.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FIntPoint.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FIntRect.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FLinearColor.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FMath.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FMatrix4x4.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FRandomStream.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FRect.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FTransform2D.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FVector2D.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Math\FMatrix3x3.h">
-      <Filter>01. Core\04. Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\HashFunctions.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TMap.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TMultiMap.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TSet.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\String\FText.h">
-      <Filter>01. Core\05. String</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\String\FString.h">
-      <Filter>01. Core\05. String</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\String\FName.h">
-      <Filter>01. Core\05. String</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Logging\FLogger.h">
-      <Filter>01. Core\06. Logging</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Logging\LogMacros.h">
-      <Filter>01. Core\06. Logging</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Templates\TResult.h">
-      <Filter>01. Core\02. Templates</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\SmartPointer\SharedPointerInternals.h">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\SmartPointer\TSharedPtr.h">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\SmartPointer\TWeakPtr.h">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\SmartPointer\TSharedRef.h">
-      <Filter>01. Core\07. SmartPointer</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\CastTemplates.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\ObjectMacros.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\UActorComponent.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\TSubclassOf.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\AActor.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\USceneComponent.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\UObject.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\UClass.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer\FTimerDelegate.h">
-      <Filter>03. Timer</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer\FTimerHandle.h">
-      <Filter>03. Timer</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer\FTimerManager.h">
-      <Filter>03. Timer</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\AbilityTypes.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\FGameplayAttribute.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\UGameplayEffect.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\UGameplayAbility.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\UAttributeSet.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\UAbilitySystemComponent.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\FGameplayTagContainer.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Ability\FGameplayTag.h">
-      <Filter>04. Ability</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\String\FNamePool.h">
-      <Filter>01. Core\05. String</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Memory\FMallocBinned.h">
-      <Filter>01. Core\01. Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Core\Containers\TSparseArray.h">
-      <Filter>01. Core\03. Containers</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\DXDevice.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\DXSwapChain.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\FCamera2D.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\RenderQueue.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\SpriteBatch.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\WzTextureLoader.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\FHitFlash.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\FDamagePopup.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\FScreenFade.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\FDamageFont.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="Object\ACharacter.h">
-      <Filter>02. Object</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\USpriteComponent.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="World\UWorld.h">
-      <Filter>06. World</Filter>
-    </ClInclude>
-    <ClInclude Include="Animation\UFlipbookComponent.h">
-      <Filter>07. Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Animation\UFlipbook.h">
-      <Filter>07. Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Animation\UAnimNotify.h">
-      <Filter>07. Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Animation\UAnimStateMachine.h">
-      <Filter>07. Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\CollisionTypes.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\PhysicsWorld.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\UBoxCollision.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\UCircleCollision.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\UPrimitiveComponent.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\URigidbody.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\FFoothold.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\FOrientedBox2D.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Physics\UClimbableComponent.h">
-      <Filter>08. Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="Render\WzMapLoader.h">
-      <Filter>05. Render</Filter>
-    </ClInclude>
-    <ClInclude Include="World\FMapLoader.h">
-      <Filter>06. World</Filter>
-    </ClInclude>
-    <ClInclude Include="World\FMapScene.h">
-      <Filter>06. World</Filter>
-    </ClInclude>
+    <Filter Include="09. Input\01. Types">
+      <UniqueIdentifier>{67E25167-5643-5E28-BF78-4F563D5DD373}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="09. Input\02. PlayerInput">
+      <UniqueIdentifier>{BE8B8FFD-6BE3-522D-A4E7-D61F9AAE1A4F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="09. Input\03. Bindings">
+      <UniqueIdentifier>{731747BE-E722-52AC-BA03-3B16810B7596}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Audio">
+      <UniqueIdentifier>{909B2F35-A701-43D8-ACFE-C04C67384852}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Audio\01. Assets">
+      <UniqueIdentifier>{05C18964-AB1A-5559-AFF3-8C8FB296F3B9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Audio\02. Playback">
+      <UniqueIdentifier>{53C7FFFE-F7A7-5AC3-BF5F-0BB5C4AA349D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Audio\03. Components">
+      <UniqueIdentifier>{DA5651C3-0890-52E8-8867-9991A7964CB3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="10. Audio\04. WZ">
+      <UniqueIdentifier>{0502DE70-2A66-5E0B-B739-5AEA7D355B10}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>00. Runtime\01. Engine</Filter>
     </ClCompile>
     <ClCompile Include="EngineLoop.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>00. Runtime\02. Launch</Filter>
     </ClCompile>
     <ClCompile Include="UGameInstance.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Input\UPlayerInput.cpp">
-      <Filter>09. Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Input\UInputComponent.cpp">
-      <Filter>09. Input</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\APlayerController.cpp">
-      <Filter>02. Object</Filter>
+      <Filter>00. Runtime\03. GameInstance</Filter>
     </ClCompile>
     <ClCompile Include="EnginePCH.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\Memory\FMemory.cpp">
-      <Filter>01. Core\01. Memory</Filter>
+      <Filter>00. Runtime\04. PCH</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\FMallocAnsi.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
-    <ClCompile Include="Core\Memory\MemoryOverride.cpp">
+    <ClCompile Include="Core\Memory\FMallocBinned.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\FMemory.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\FMemoryTracker.cpp">
@@ -396,6 +214,9 @@
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Memory\FStackAllocator.cpp">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\Memory\MemoryOverride.cpp">
       <Filter>01. Core\01. Memory</Filter>
     </ClCompile>
     <ClCompile Include="Core\Math\FColor.cpp">
@@ -413,6 +234,9 @@
     <ClCompile Include="Core\Math\FMath.cpp">
       <Filter>01. Core\04. Math</Filter>
     </ClCompile>
+    <ClCompile Include="Core\Math\FMatrix3x3.cpp">
+      <Filter>01. Core\04. Math</Filter>
+    </ClCompile>
     <ClCompile Include="Core\Math\FMatrix4x4.cpp">
       <Filter>01. Core\04. Math</Filter>
     </ClCompile>
@@ -428,157 +252,492 @@
     <ClCompile Include="Core\Math\FVector2D.cpp">
       <Filter>01. Core\04. Math</Filter>
     </ClCompile>
-    <ClCompile Include="Core\Math\FMatrix3x3.cpp">
-      <Filter>01. Core\04. Math</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\String\FText.cpp">
+    <ClCompile Include="Core\String\FNamePool.cpp">
       <Filter>01. Core\05. String</Filter>
     </ClCompile>
     <ClCompile Include="Core\String\FString.cpp">
       <Filter>01. Core\05. String</Filter>
     </ClCompile>
+    <ClCompile Include="Core\String\FText.cpp">
+      <Filter>01. Core\05. String</Filter>
+    </ClCompile>
     <ClCompile Include="Core\Logging\FLogger.cpp">
       <Filter>01. Core\06. Logging</Filter>
     </ClCompile>
-    <ClCompile Include="Object\AActor.cpp">
-      <Filter>02. Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\UActorComponent.cpp">
-      <Filter>02. Object</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\USceneComponent.cpp">
-      <Filter>02. Object</Filter>
+    <ClCompile Include="Object\UClass.cpp">
+      <Filter>02. Object\01. TypeSystem</Filter>
     </ClCompile>
     <ClCompile Include="Object\UObject.cpp">
-      <Filter>02. Object</Filter>
+      <Filter>02. Object\01. TypeSystem</Filter>
     </ClCompile>
-    <ClCompile Include="Object\UClass.cpp">
-      <Filter>02. Object</Filter>
+    <ClCompile Include="Object\AActor.cpp">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\ACharacter.cpp">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\APlayerController.cpp">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\UActorComponent.cpp">
+      <Filter>02. Object\03. Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Object\USceneComponent.cpp">
+      <Filter>02. Object\03. Components</Filter>
     </ClCompile>
     <ClCompile Include="Timer\FTimerManager.cpp">
       <Filter>03. Timer</Filter>
     </ClCompile>
-    <ClCompile Include="Ability\UGameplayEffect.cpp">
-      <Filter>04. Ability</Filter>
-    </ClCompile>
-    <ClCompile Include="Ability\UGameplayAbility.cpp">
-      <Filter>04. Ability</Filter>
-    </ClCompile>
-    <ClCompile Include="Ability\UAbilitySystemComponent.cpp">
-      <Filter>04. Ability</Filter>
-    </ClCompile>
-    <ClCompile Include="Ability\FGameplayTagContainer.cpp">
-      <Filter>04. Ability</Filter>
+    <ClCompile Include="Ability\UAttributeSet.cpp">
+      <Filter>04. Ability\02. Attributes</Filter>
     </ClCompile>
     <ClCompile Include="Ability\FGameplayTag.cpp">
-      <Filter>04. Ability</Filter>
+      <Filter>04. Ability\03. Tags</Filter>
     </ClCompile>
-    <ClCompile Include="Ability\UAttributeSet.cpp">
-      <Filter>04. Ability</Filter>
+    <ClCompile Include="Ability\FGameplayTagContainer.cpp">
+      <Filter>04. Ability\03. Tags</Filter>
     </ClCompile>
-    <ClCompile Include="Core\String\FNamePool.cpp">
-      <Filter>01. Core\05. String</Filter>
+    <ClCompile Include="Ability\UGameplayEffect.cpp">
+      <Filter>04. Ability\04. Effects</Filter>
     </ClCompile>
-    <ClCompile Include="Core\Memory\FMallocBinned.cpp">
-      <Filter>01. Core\01. Memory</Filter>
+    <ClCompile Include="Ability\UGameplayAbility.cpp">
+      <Filter>04. Ability\05. Abilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Ability\UAbilitySystemComponent.cpp">
+      <Filter>04. Ability\06. Components</Filter>
     </ClCompile>
     <ClCompile Include="Render\DXDevice.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\01. Device</Filter>
     </ClCompile>
     <ClCompile Include="Render\DXSwapChain.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\RenderQueue.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\SpriteBatch.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\01. Device</Filter>
     </ClCompile>
     <ClCompile Include="Render\FCamera2D.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\02. Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Render\WzTextureLoader.cpp">
-      <Filter>05. Render</Filter>
+    <ClCompile Include="Render\RenderQueue.cpp">
+      <Filter>05. Render\03. Pipeline</Filter>
     </ClCompile>
-    <ClCompile Include="Render\FHitFlash.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\FDamagePopup.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\FScreenFade.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\FDamageFont.cpp">
-      <Filter>05. Render</Filter>
-    </ClCompile>
-    <ClCompile Include="Object\ACharacter.cpp">
-      <Filter>02. Object</Filter>
+    <ClCompile Include="Render\SpriteBatch.cpp">
+      <Filter>05. Render\03. Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="Render\USpriteComponent.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\04. Components</Filter>
     </ClCompile>
-    <ClCompile Include="World\UWorld.cpp">
-      <Filter>06. World</Filter>
+    <ClCompile Include="Render\TextureLoader.cpp">
+      <Filter>05. Render\05. Loaders\01. Images</Filter>
     </ClCompile>
-    <ClCompile Include="Animation\UFlipbookComponent.cpp">
-      <Filter>07. Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="Animation\UFlipbook.cpp">
-      <Filter>07. Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="Animation\UAnimStateMachine.cpp">
-      <Filter>07. Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="Animation\UAnimNotify.cpp">
-      <Filter>07. Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\CollisionTypes.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\PhysicsWorld.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\UBoxCollision.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\UCircleCollision.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\UPrimitiveComponent.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\URigidbody.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\FFoothold.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\FOrientedBox2D.cpp">
-      <Filter>08. Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Physics\UClimbableComponent.cpp">
-      <Filter>08. Physics</Filter>
+    <ClCompile Include="Render\WzTextureLoader.cpp">
+      <Filter>05. Render\05. Loaders\01. Images</Filter>
     </ClCompile>
     <ClCompile Include="Render\WzMapLoader.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\05. Loaders\02. Map</Filter>
     </ClCompile>
     <ClCompile Include="Render\WzSpineAnimation.cpp">
-      <Filter>05. Render</Filter>
+      <Filter>05. Render\05. Loaders\03. Spine</Filter>
     </ClCompile>
-    <ClCompile Include="Animation\USpineComponent.cpp">
-      <Filter>07. Animation</Filter>
+    <ClCompile Include="Render\FDamageFont.cpp">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FDamagePopup.cpp">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FHitFlash.cpp">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FScreenFade.cpp">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="World\UWorld.cpp">
+      <Filter>06. World\01. World</Filter>
     </ClCompile>
     <ClCompile Include="World\FMapLoader.cpp">
-      <Filter>06. World</Filter>
+      <Filter>06. World\02. Map</Filter>
     </ClCompile>
     <ClCompile Include="World\FMapScene.cpp">
-      <Filter>06. World</Filter>
+      <Filter>06. World\02. Map</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UFlipbook.cpp">
+      <Filter>07. Animation\01. Flipbook</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UFlipbookComponent.cpp">
+      <Filter>07. Animation\01. Flipbook</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UAnimStateMachine.cpp">
+      <Filter>07. Animation\02. StateMachine</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\UAnimNotify.cpp">
+      <Filter>07. Animation\03. Notify</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation\USpineComponent.cpp">
+      <Filter>07. Animation\04. Spine</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\CollisionTypes.cpp">
+      <Filter>08. Physics\01. Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\FOrientedBox2D.cpp">
+      <Filter>08. Physics\01. Shapes</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UBoxCollision.cpp">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UCircleCollision.cpp">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UPrimitiveComponent.cpp">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\URigidbody.cpp">
+      <Filter>08. Physics\02. Components\02. Body</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\UClimbableComponent.cpp">
+      <Filter>08. Physics\02. Components\03. Climbing</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\PhysicsWorld.cpp">
+      <Filter>08. Physics\03. World</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics\FFoothold.cpp">
+      <Filter>08. Physics\04. Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\UPlayerInput.cpp">
+      <Filter>09. Input\02. PlayerInput</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\UInputComponent.cpp">
+      <Filter>09. Input\03. Bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\USoundWave.cpp">
+      <Filter>10. Audio\01. Assets</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\AudioTypes.cpp">
+      <Filter>10. Audio\02. Playback</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\FAudioManager.cpp">
+      <Filter>10. Audio\02. Playback</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\UAudioComponent.cpp">
+      <Filter>10. Audio\03. Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\WzSoundLoader.cpp">
+      <Filter>10. Audio\04. WZ</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine.h">
+      <Filter>00. Runtime\01. Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="EngineLoop.h">
+      <Filter>00. Runtime\02. Launch</Filter>
+    </ClInclude>
+    <ClInclude Include="UGameInstance.h">
+      <Filter>00. Runtime\03. GameInstance</Filter>
+    </ClInclude>
+    <ClInclude Include="EnginePCH.h">
+      <Filter>00. Runtime\04. PCH</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMallocAnsi.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMallocBinned.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMemory.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FMemoryTracker.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FPoolAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\FStackAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Memory\IAllocator.h">
+      <Filter>01. Core\01. Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\AndOrNot.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\TResult.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\TypeTraits.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Templates\Utility.h">
+      <Filter>01. Core\02. Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\HashFunctions.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TArray.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TArrayView.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TMap.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TMultiMap.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TSet.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Containers\TSparseArray.h">
+      <Filter>01. Core\03. Containers</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FColor.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FIntPoint.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FIntRect.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FLinearColor.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMath.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMatrix3x3.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FMatrix4x4.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FRandomStream.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FRect.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FTransform2D.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Math\FVector2D.h">
+      <Filter>01. Core\04. Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FName.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FNamePool.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FString.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\String\FText.h">
+      <Filter>01. Core\05. String</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Logging\FLogger.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\Logging\LogMacros.h">
+      <Filter>01. Core\06. Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\SharedPointerInternals.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TSharedRef.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\SmartPointer\TWeakPtr.h">
+      <Filter>01. Core\07. SmartPointer</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\CastTemplates.h">
+      <Filter>02. Object\01. TypeSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\ObjectMacros.h">
+      <Filter>02. Object\01. TypeSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\TSubclassOf.h">
+      <Filter>02. Object\01. TypeSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UClass.h">
+      <Filter>02. Object\01. TypeSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UObject.h">
+      <Filter>02. Object\01. TypeSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\AActor.h">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\ACharacter.h">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\APlayerController.h">
+      <Filter>02. Object\02. Actors</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\UActorComponent.h">
+      <Filter>02. Object\03. Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Object\USceneComponent.h">
+      <Filter>02. Object\03. Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer\FTimerDelegate.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer\FTimerHandle.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer\FTimerManager.h">
+      <Filter>03. Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\AbilityTypes.h">
+      <Filter>04. Ability\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayAttribute.h">
+      <Filter>04. Ability\02. Attributes</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UAttributeSet.h">
+      <Filter>04. Ability\02. Attributes</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayTag.h">
+      <Filter>04. Ability\03. Tags</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\FGameplayTagContainer.h">
+      <Filter>04. Ability\03. Tags</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UGameplayEffect.h">
+      <Filter>04. Ability\04. Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UGameplayAbility.h">
+      <Filter>04. Ability\05. Abilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Ability\UAbilitySystemComponent.h">
+      <Filter>04. Ability\06. Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\DXDevice.h">
+      <Filter>05. Render\01. Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\DXSwapChain.h">
+      <Filter>05. Render\01. Device</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FCamera2D.h">
+      <Filter>05. Render\02. Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\RenderQueue.h">
+      <Filter>05. Render\03. Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\SpriteBatch.h">
+      <Filter>05. Render\03. Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\USpriteComponent.h">
+      <Filter>05. Render\04. Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\TextureLoader.h">
+      <Filter>05. Render\05. Loaders\01. Images</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\WzTextureLoader.h">
+      <Filter>05. Render\05. Loaders\01. Images</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\WzMapLoader.h">
+      <Filter>05. Render\05. Loaders\02. Map</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\WzSpineAnimation.h">
+      <Filter>05. Render\05. Loaders\03. Spine</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FDamageFont.h">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FDamagePopup.h">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FHitFlash.h">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FScreenFade.h">
+      <Filter>05. Render\06. Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="World\UWorld.h">
+      <Filter>06. World\01. World</Filter>
+    </ClInclude>
+    <ClInclude Include="World\FMapLoader.h">
+      <Filter>06. World\02. Map</Filter>
+    </ClInclude>
+    <ClInclude Include="World\FMapScene.h">
+      <Filter>06. World\02. Map</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UFlipbook.h">
+      <Filter>07. Animation\01. Flipbook</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UFlipbookComponent.h">
+      <Filter>07. Animation\01. Flipbook</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UAnimStateMachine.h">
+      <Filter>07. Animation\02. StateMachine</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\UAnimNotify.h">
+      <Filter>07. Animation\03. Notify</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation\USpineComponent.h">
+      <Filter>07. Animation\04. Spine</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\CollisionTypes.h">
+      <Filter>08. Physics\01. Shapes</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\FOrientedBox2D.h">
+      <Filter>08. Physics\01. Shapes</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UBoxCollision.h">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UCircleCollision.h">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UPrimitiveComponent.h">
+      <Filter>08. Physics\02. Components\01. Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\URigidbody.h">
+      <Filter>08. Physics\02. Components\02. Body</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\UClimbableComponent.h">
+      <Filter>08. Physics\02. Components\03. Climbing</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\PhysicsWorld.h">
+      <Filter>08. Physics\03. World</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics\FFoothold.h">
+      <Filter>08. Physics\04. Terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\InputDelegates.h">
+      <Filter>09. Input\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\InputTypes.h">
+      <Filter>09. Input\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\UPlayerInput.h">
+      <Filter>09. Input\02. PlayerInput</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\UInputComponent.h">
+      <Filter>09. Input\03. Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\USoundWave.h">
+      <Filter>10. Audio\01. Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\AudioTypes.h">
+      <Filter>10. Audio\02. Playback</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\FAudioManager.h">
+      <Filter>10. Audio\02. Playback</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\UAudioComponent.h">
+      <Filter>10. Audio\03. Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\WzSoundLoader.h">
+      <Filter>10. Audio\04. WZ</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\Copy.bat">
-      <Filter>소스 파일</Filter>
+      <Filter>00. Runtime\05. Deployment</Filter>
     </None>
   </ItemGroup>
 </Project>

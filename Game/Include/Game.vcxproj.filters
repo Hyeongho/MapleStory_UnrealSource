@@ -1,42 +1,48 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Launch">
-      <UniqueIdentifier>{0B31796C-48DF-4B91-8920-861234A1C263}</UniqueIdentifier>
+    <Filter Include="01. Runtime">
+      <UniqueIdentifier>{A8ADFFAB-6C9A-57A8-BBBE-14D6F8182A83}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GameInstance">
-      <UniqueIdentifier>{29B09B55-C7D9-4D74-B397-6D94A7FF9510}</UniqueIdentifier>
+    <Filter Include="01. Runtime\01. Launch">
+      <UniqueIdentifier>{12FCC605-6DAF-5E34-B0F3-CCA023CBC180}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Character">
-      <UniqueIdentifier>{A2C83D04-3170-4F46-A5BF-D7E4591CB8C3}</UniqueIdentifier>
+    <Filter Include="01. Runtime\02. GameInstance">
+      <UniqueIdentifier>{70689341-D430-56C7-9268-DB854B22AEF5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Controller">
-      <UniqueIdentifier>{384797EE-61CF-4DC2-98AE-1FD82D649B77}</UniqueIdentifier>
+    <Filter Include="02. Gameplay">
+      <UniqueIdentifier>{1CB83920-558A-552E-9693-280FAFA8EBB2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Gameplay\01. Character">
+      <UniqueIdentifier>{09C41339-EF1E-5853-94BC-8BCEFD682E55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02. Gameplay\02. Controller">
+      <UniqueIdentifier>{528E710C-D939-51F1-A595-960A3AD9355A}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Launch\main.cpp">
-      <Filter>Launch</Filter>
+      <Filter>01. Runtime\01. Launch</Filter>
     </ClCompile>
     <ClCompile Include="GameInstance\UMapleGameInstance.cpp">
-      <Filter>GameInstance</Filter>
-    </ClCompile>
-    <ClCompile Include="Controller\AMaplePlayerController.cpp">
-      <Filter>Controller</Filter>
+      <Filter>01. Runtime\02. GameInstance</Filter>
     </ClCompile>
     <ClCompile Include="Character\AMapleCharacter.cpp">
-      <Filter>Character</Filter>
+      <Filter>02. Gameplay\01. Character</Filter>
+    </ClCompile>
+    <ClCompile Include="Controller\AMaplePlayerController.cpp">
+      <Filter>02. Gameplay\02. Controller</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameInstance\UMapleGameInstance.h">
-      <Filter>GameInstance</Filter>
-    </ClInclude>
-    <ClInclude Include="Controller\AMaplePlayerController.h">
-      <Filter>Controller</Filter>
+      <Filter>01. Runtime\02. GameInstance</Filter>
     </ClInclude>
     <ClInclude Include="Character\AMapleCharacter.h">
-      <Filter>Character</Filter>
+      <Filter>02. Gameplay\01. Character</Filter>
+    </ClInclude>
+    <ClInclude Include="Controller\AMaplePlayerController.h">
+      <Filter>02. Gameplay\02. Controller</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -13,6 +13,7 @@ class FTimerManager;
 class UWorld;
 class UPlayerInput;
 class APlayerController;
+class FAudioManager;
 
 // 실행 파일은 설정만 전달하고 실제 시스템 생성과 해제는 엔진이 담당한다.
 struct FEngineInitParams
@@ -52,6 +53,7 @@ public:
 	FTimerManager& GetTimerManager() const;
 	UPlayerInput& GetPlayerInput() const;
 	APlayerController& GetPlayerController() const;
+	const TSharedPtr<FAudioManager>& GetAudioManager() const;
 
 protected:
 	// 엔진 파생 클래스에서도 월드와 공통 시스템을 사용할 수 있다.
@@ -60,6 +62,9 @@ protected:
 	FTimerManager* m_pTimerManager = nullptr;
 
 private:
+	// 오디오 컴포넌트는 이 서비스의 약한 참조를 사용한다.
+	TSharedPtr<FAudioManager> m_AudioManager;
+
 	// 렌더링 자원은 엔진이 소유하고 의존 순서의 역순으로 정리한다.
 	FDXDevice* m_pDevice = nullptr;
 	FDXSwapChain* m_pSwapChain = nullptr;
@@ -69,6 +74,7 @@ private:
 	uint32 m_SyncInterval = 1;
 	bool m_bInitialized = false;
 	bool m_bLoggerInitialized = false;
+	bool m_bComInitialized = false; // 이 엔진이 성공시킨 COM 초기화 호출의 해제 여부.
 };
 
 extern UEngine* GEngine;

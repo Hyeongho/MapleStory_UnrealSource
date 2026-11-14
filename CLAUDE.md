@@ -8,9 +8,9 @@ DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따�
 목표 게임: MapleStory 스타일 2D 플랫포머 RPG  
 포트폴리오 목적: 넥슨 MapleStory 팀 등 대형 스튜디오 지원
 
-## 현재 진행 상태 (2026-11-07)
+## 현재 진행 상태 (2026-11-14)
 
-현재는 **Phase 10 Physics / Collision**을 진행하고 있다. 이 문서는
+현재는 Phase 10의 기본 이동·물리를 구현했고, **Phase 11 Audio 소스 구현 후 사용자 검증 대기** 상태다. 이 문서는
 `codex/safety-debt-fixes`의 `CLAUDE.md`를 바탕으로 현재 작업 코드와 사용자 확인 내용을 반영했다.
 Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 입력·엔진 루프·맵 로더는 선행 구현했다.
 
@@ -29,8 +29,19 @@ Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 
   즉시 효과는 기본값 변경 후 활성 보정을 재적용하며, 피격은 실제 현재 체력 감소량으로 무적을 판단한다.
 - 소스 구현됨: Ctrl 공격 애니메이션 1회 재생. 기본 WZ 액션은 swingO1이며 Game에서 변경할 수 있다.
   공격 재생 중에는 이동 모션 선택을 보류하고 종료 후 현재 이동 상태로 복귀한다. 세부 동작은 Docs/ATTACK.md를 따른다.
-- 남은 Phase 10 작업: **넉백 → 낙사 구역(DeathZone)**.
-  이를 마친 뒤 Phase 11 Audio로 진행한다.
+- 보류: 피격 넉백과 낙사 구역(DeathZone)은 2026-11-14 사용자 요청으로 이번 개발 순서에서 제외한다.
+  두 기능은 미구현 상태로 남기고 Phase 11 Audio로 진행한다.
+- 소스 구현됨: FTextureLoader의 일반 이미지 파일 로딩. PNG/JPEG/BMP/GIF/TIFF 등 WIC 지원 형식을
+  기존 스프라이트·Flipbook에서 사용할 수 있는 2D 텍스처로 만든다. COM 초기화·해제는 UEngine이 관리한다.
+  사용법과 소유권은 Docs/TEXTURE_LOADING.md를 따른다. 빌드·실행은 하지 않았다.
+- 소스 구현됨: USoundWave 파일 디코딩, UEngine 소유 FAudioManager와 UAudioComponent.
+  BGM 반복·페이드 전환, SFX 동시 재생, 32개 보이스 풀, 볼륨·피치와 2D 거리 감쇠를 지원한다.
+  Game은 기본적으로 맵 info/bgm을 읽는다. 직접 지정한 일반 파일 또는 WZ 사운드 노드로 대체할 수 있다.
+  공격이 실제로 시작된 경우에만 효과음을 재생한다. 빌드·실행은 하지 않았으며 Docs/AUDIO.md를 따른다.
+  FWzSoundLoader와 DLL의 wz_read_sound / wz_map_read_bgm을 추가해 Sound.wz의 MP3·PCM과 UOL을 연결했다.
+  새 DLL 게시·교체가 필요하며, 기존 맵 정보 API의 ABI는 유지했다. 맵 전환 시 음악 교체 정책은 Game에서 호출한다.
+- VS 표시 구조: Engine/Game의 .vcxproj.filters를 역할별 하위 필터로 나눴다.
+  실제 파일 위치와 include 경로는 유지하며, 헤더·cpp는 같은 기능 필터에 표시한다. Docs/PROJECT_FILTERS.md 참고.
 - 최신 구조: UFlipbook 공유 에셋, Flipbook 컴포넌트의 직접 렌더링, 에셋 참조 기반 상태 전환.
 - 맵 VR 또는 지형 기반 대체 경계를 캐릭터 이동에도 적용한다. 카메라 줌·뷰포트와 독립적이다.
 - 이번 구조 변경과 이동 경계 수정은 소스 검토 상태이며 빌드·테스트는 실행하지 않았다.
@@ -818,15 +829,16 @@ Phase 18 몬스터 AI 컴포넌트 등)에 공통으로 영향 가는 엔진 공
 - [x] 로프·사다리 점프 이탈과 재진입 지연
 - [x] 낙하 상태 판정 / 코요테 타임 — 지면 이탈 직후 0.1초 동안 첫 점프 허용(Game 설정)
 - [x] 무적 프레임 (i-frame, 피격 후 무적) — 소스 구현, 빌드·사용자 검증 대기
-- [ ] 넉백 물리 (보스 스킬 피격)
-- [ ] 낙사 구역 (DeathZone)
+- [ ] 넉백 물리 (보스 스킬 피격) — 사용자 요청으로 보류
+- [ ] 낙사 구역 (DeathZone) — 사용자 요청으로 보류
 
 ★ WZ 병행 작업:
 - [x] Map.wz Foothold 데이터 파싱 → PhysicsWorld 충돌 데이터 연동
 - [x] Map.wz ladderRope 데이터 파싱 → UClimbableComponent Trigger 연동
 
 완료 기준: 실제 맵의 발판·경사면 이동, 점프·낙하, 로프·사다리 이동을 확인하고,
-피격 무적은 소스를 구현했으며 사용자 검증을 기다린다. 넉백·낙사 구역이 남아 있어 Phase 10 전체 완료는 아니다.
+피격 무적은 소스를 구현했으며 사용자 검증을 기다린다. 넉백·낙사 구역은 사용자 요청으로 보류한다.
+Phase 10의 모든 항목을 구현한 것으로 처리하지 않고, 두 보류 항목을 남긴 채 Phase 11 Audio로 진행한다.
 
 #### 실제 맵 물리와 이동 (2026-10-10)
 
@@ -882,17 +894,25 @@ Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출�
 
 ### Phase 11 — Audio 시스템 (4~5일)
 
-파일 위치: `Engine/Audio/`
+파일 위치: `Engine/Include/Audio/`
 
-- [ ] `FAudioManager.h / .cpp` — XAudio2 래핑
-- [ ] `UAudioComponent.h / .cpp`
-- [ ] BGM 루프 재생 + 페이드인·아웃
-- [ ] SFX 중첩 재생
-- [ ] 사운드 풀 (동시 재생 한도, 타격음 대량 발생 대응)
-- [ ] 볼륨 / 피치 실시간 제어
-- [ ] 거리 기반 감쇠 (2D 포지셔닝)
+- [x] `USoundWave.h / .cpp` — Media Foundation으로 일반 오디오 파일을 공유 PCM 에셋으로 로딩
+- [x] `FAudioManager.h / .cpp` — XAudio2 래핑과 UEngine 초기화·Tick·종료 연동
+- [x] `UAudioComponent.h / .cpp` — 액터 부착, 재생·중단·일시정지·재개, EndPlay 정리
+- [x] BGM 루프 재생 + 페이드인·아웃, 다른 BGM으로 교차 페이드
+- [x] SFX 중첩 재생
+- [x] 사운드 풀 (최대 32개, 자연 종료한 보이스 재사용, 한도 초과 시 신규 재생 거부)
+- [x] 볼륨 / 피치 실시간 제어 (전체 / BGM / SFX / 개별 재생)
+- [x] 거리 기반 선형 감쇠 (플레이어가 청취 기준점, 좌우 패닝은 미구현)
+- [x] Game에서 BGM 파일 및 Ctrl 공격 효과음 파일 지정
+- [x] FWzSoundLoader와 DLL 사운드 API, 임시 파일 없는 메모리 디코딩
+- [x] 맵 info/bgm 자동 선택과 Game에서 WZ 사운드 노드 지정
+- [ ] 사용자 확인: 파일 로딩, 반복 구간, 효과음 중첩, 볼륨·피치, 페이드 전환과 종료
+- [ ] 사용자 확인: 새 DLL 게시·배포 후 WZ BGM / 효과음 / UOL 사운드 재생
 
-완료 기준: 맵 이동 시 BGM 페이드 전환 확인
+소스 구현과 실제 동작 확인을 구분한다. 빌드·실행은 사용자 담당이며 Test 프로젝트를 사용하지 않는다.
+완료 기준: 실제 Game에서 BGM 교체 시 페이드 전환 확인. 맵 이동 자동 연결은 맵 BGM 데이터 연동 후 확인한다.
+사용법과 메모리·스레드 제약은 `Docs/AUDIO.md`를 따른다.
 
 ---
 
@@ -1012,7 +1032,7 @@ struct FModifierKeyState {
 - [x] Game의 `FMapLoadOptions` — oS/l0/l1/l2 경로 접두사 및 선택적 레이어/배치 번호로 오브젝트 제외
 - [x] 캐릭터 추적 카메라·맵 경계 제한 — 유효한 VR을 우선하고 없으면 발판·로프·사다리 범위로 보완
 - [ ] `ULevel.h / .cpp` / `UGameMode.h / .cpp` — 멀티 레벨 관리와 게임 규칙
-- [ ] 포털 이동 / 데이터 기반 스폰 포인트 / 낙사 구역
+- [ ] 포털 이동 / 데이터 기반 스폰 포인트 / 낙사 구역(사용자 요청으로 보류)
 - [x] Game 전용 캐릭터 클래스 분리 — AMapleCharacter가 아바타·애니메이션·체력·피격을 담당(소스 구현, 사용자 검증 대기)
 - [ ] 맵 구성·플레이어 스폰 규칙 분리 — 현재 UMapleGameInstance의 생성·설정 역할을 Level/GameMode 도입 시 이관
 
@@ -1300,17 +1320,17 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 ### 다음 개발 순서
 
 현재 Phase 10의 Map.wz 발판·로프·사다리 연결과 기본 이동은 구현했다.
-피격 후 무적 시간은 Game 캐릭터에 구현했으며, 사용자 확인 후 **넉백 → 낙사 구역** 순서로 진행한다.
+피격 후 무적 시간은 Game 캐릭터에 구현했다. 피격 넉백과 낙사 구역은 2026-11-14 사용자 요청으로 보류하며,
+두 항목의 구현을 선행 조건으로 두지 않고 **Phase 11 Audio**로 진행한다.
 
-1. 피격 후 무적 시간 검증: Debug F1 피해와 F2 체력 초기화로 중복 피해 차단·만료·깜빡임을 확인한다.
-   AMapleCharacter는 기존 UAttributeSet/UAbilitySystemComponent를 사용하며 아바타 로딩·애니메이션 선택도 담당한다.
-   Test 프로젝트는 더 이상 사용하지 않는다. 피격 검증은 Game의 Debug 입력과 로그로 사용자가 확인한다.
-   에이전트는 소스 검토만 수행하며 빌드·실행은 하지 않는다.
-2. 넉백: 피격 방향으로 속도를 적용하고 반응 시간 동안 이동 입력을 제어한다.
-   체력·피격 규칙은 Game 캐릭터 쪽에서 관리하고 공통 이동·충돌은 Engine 기능을 사용한다.
-3. 낙사 구역: 추락을 감지하고 Game이 지정한 시작점 복귀 정책과 연결한다.
-4. 사용자 검증 후 Phase 10을 정리하고 **Phase 11 Audio → Phase 12 UI →
-   Phase 13 Input 확장 → Phase 14 Resource → Phase 15 World 확장**으로 진행한다.
+1. Phase 11 Audio: 새 DLL 배포 후 FAudioManager / USoundWave / UAudioComponent / FWzSoundLoader와 맵 BGM을 Game에서 수동 검증한다.
+2. Phase 12 UI.
+3. Phase 13 Input 확장.
+4. Phase 14 Resource.
+5. Phase 15 World 확장.
+
+Test 프로젝트는 더 이상 사용하지 않는다. 에이전트는 소스 검토만 수행하고 빌드·실행은 사용자가 담당한다.
+기존 피격 기능은 Game의 Debug F1/F2 입력과 로그로 확인할 수 있다.
 
 최소 Input/Controller, UGameInstance/World 및 맵 렌더링은 선행 구현 범위이며,
 Phase 13·15 전체 완료로 처리하지 않는다. 현재 올바르게 출력되는 로프·사다리 렌더링 규칙은 유지한다.

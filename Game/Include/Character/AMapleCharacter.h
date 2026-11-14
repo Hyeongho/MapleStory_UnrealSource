@@ -5,6 +5,8 @@
 #include "Core/Math/FLinearColor.h"
 
 class UAbilitySystemComponent;
+class UAudioComponent;
+class USoundWave;
 
 // MapleStory 전용 체력·피격 규칙과 아바타 애니메이션을 관리한다.
 class AMapleCharacter : public ACharacter
@@ -29,6 +31,9 @@ public:
 	// 공격 모션은 한 번만 재생한다. 사망·공격 중·매달린 상태에서는 시작하지 않는다.
 	bool Attack();
 	bool IsAttacking() const;
+
+	// Game에서 준비한 효과음을 공격 시작에 연결한다. 빈 에셋이면 소리 없이 공격한다.
+	void SetAttackSound(const TSharedPtr<USoundWave>& Sound);
 
 	// 피해 적용. 실제 감소한 체력을 반환하며 무적·사망 상태에서는 0을 반환한다.
 	// 기본 Health에 피해를 적용한 뒤 활성 보정 효과로 현재 체력을 계산한다.
@@ -56,6 +61,8 @@ protected:
 private:
 	void ClearInvulnerability();
 	void UpdateDamageFlash();
+
+	UAudioComponent* m_pAttackAudio = nullptr; // 액터가 소유하는 컴포넌트.
 
 	// 속성은 이 캐릭터가 소유하며 Ability System은 비소유 참조로 연결한다.
 	UAttributeSet m_Attributes;

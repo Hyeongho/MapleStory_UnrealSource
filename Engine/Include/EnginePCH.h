@@ -29,6 +29,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#include <objbase.h>
 
 // -----------------------------------------------------------------------
 // DirectX SDK / DirectXTK 헤더
@@ -42,6 +43,17 @@
 #include <Effects.h>
 #include <PrimitiveBatch.h>
 #include <VertexTypes.h>
+#include <WICTextureLoader.h>
+
+// 오디오 출력과 파일 디코딩에 사용하는 Windows SDK 헤더.
+#include <mmreg.h>
+#include <xaudio2.h>
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <mferror.h>
+#include <wrl/client.h>
+#include <shlwapi.h>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)
@@ -81,6 +93,13 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "xaudio2.lib")
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfreadwrite.lib")
+#pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "shlwapi.lib")
 
 #ifdef _DEBUG
 #pragma comment(lib, "Engine_Debug.lib")
