@@ -357,6 +357,9 @@
     <ClInclude Include="Animation\UFlipbook.h">
       <Filter>07. Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Render\TextureLoader.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -574,6 +577,9 @@
     </ClCompile>
     <ClCompile Include="Animation\UFlipbook.cpp">
       <Filter>07. Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\TextureLoader.cpp">
+      <Filter>05. Render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

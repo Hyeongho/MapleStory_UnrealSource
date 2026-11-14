@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -252,6 +252,7 @@
     <ClInclude Include="Render\FDamagePopup.h" />
     <ClInclude Include="Render\FHitFlash.h" />
     <ClInclude Include="Render\FScreenFade.h" />
+    <ClInclude Include="Render\TextureLoader.h" />
     <ClInclude Include="Render\RenderQueue.h" />
     <ClInclude Include="Render\SpriteBatch.h" />
     <ClInclude Include="Render\USpriteComponent.h" />
@@ -331,6 +332,7 @@
     <ClCompile Include="Render\FDamagePopup.cpp" />
     <ClCompile Include="Render\FHitFlash.cpp" />
     <ClCompile Include="Render\FScreenFade.cpp" />
+    <ClCompile Include="Render\TextureLoader.cpp" />
     <ClCompile Include="Render\RenderQueue.cpp" />
     <ClCompile Include="Render\SpriteBatch.cpp" />
     <ClCompile Include="Render\USpriteComponent.cpp" />

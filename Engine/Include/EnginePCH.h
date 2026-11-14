@@ -29,6 +29,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#include <objbase.h>
 
 // -----------------------------------------------------------------------
 // DirectX SDK / DirectXTK 헤더
@@ -42,6 +43,7 @@
 #include <Effects.h>
 #include <PrimitiveBatch.h>
 #include <VertexTypes.h>
+#include <WICTextureLoader.h>
 
 // -----------------------------------------------------------------------
 // 기본 정수 타입 (언리얼 엔진 스타일)
@@ -81,6 +83,8 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "windowscodecs.lib")
 
 #ifdef _DEBUG
 #pragma comment(lib, "Engine_Debug.lib")

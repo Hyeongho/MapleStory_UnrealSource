@@ -69,6 +69,7 @@ private:
 	uint32 m_SyncInterval = 1;
 	bool m_bInitialized = false;
 	bool m_bLoggerInitialized = false;
+	bool m_bComInitialized = false;
 };
 
 extern UEngine* GEngine;

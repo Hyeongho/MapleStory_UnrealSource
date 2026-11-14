@@ -33,6 +33,18 @@ bool UEngine::Init(HWND hWnd, const FEngineInitParams& Params)
 
 	FLogger::Init();
 	m_bLoggerInitialized = true;
+
+	// 이미지 디코더가 사용하는 COM은 엔진 초기화 스레드에서 수명 전체에 걸쳐 유지한다.
+	const HRESULT ComResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(ComResult) && ComResult != RPC_E_CHANGED_MODE)
+	{
+		UE_LOG(LogCore, Error, L"[Engine] COM initialization failed: hr=0x%08X", (uint32)ComResult);
+		Shutdown();
+		return false;
+	}
+	// S_FALSE도 한 번 해제해야 한다. 다른 apartment가 이미 있으면 기존 초기화를 사용한다.
+	m_bComInitialized = SUCCEEDED(ComResult);
+
 	m_ClearColor = Params.m_ClearColor;
 	m_SyncInterval = Params.m_SyncInterval;
 
@@ -91,6 +103,7 @@ void UEngine::Shutdown()
 	}
 
 	delete m_pWorld;
+
 	if (GWorld == m_pWorld)
 	{
 		GWorld = nullptr;
@@ -129,6 +142,7 @@ void UEngine::Shutdown()
 	m_pSpriteBatch = nullptr;
 
 	delete m_pSwapChain;
+
 	if (GDXSwapChain == m_pSwapChain)
 	{
 		GDXSwapChain = nullptr;
@@ -137,6 +151,7 @@ void UEngine::Shutdown()
 	m_pSwapChain = nullptr;
 
 	delete m_pDevice;
+
 	if (GDXDevice == m_pDevice)
 	{
 		GDXDevice = nullptr;
@@ -147,6 +162,12 @@ void UEngine::Shutdown()
 	if (GEngine == this)
 	{
 		GEngine = nullptr;
+	}
+
+	if (m_bComInitialized)
+	{
+		CoUninitialize();
+		m_bComInitialized = false;
 	}
 
 	if (m_bLoggerInitialized)
