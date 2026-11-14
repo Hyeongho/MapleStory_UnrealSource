@@ -4,6 +4,17 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "검토할 끝 커밋 SHA 40자리 (비우면 최신 main)"
+        required: false
+        type: string
+        default: ""
+      base_sha:
+        description: "비교 시작 커밋 SHA 40자리 (비우면 끝 커밋의 첫 부모)"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -368,16 +379,24 @@ jobs:
               gaps = []
               pr = None
               if IS_PUSH:
-                  if "after" not in EVENT:
-                      commit = github(f"{ROOT}/commits/{os.environ['GITHUB_SHA']}")
+                  manual_run = "after" not in EVENT
+                  if manual_run:
+                      inputs = EVENT.get("inputs") or {}
+                      target_sha = str(inputs.get("target_sha") or "").strip()
+                      base_sha = str(inputs.get("base_sha") or "").strip()
+                      for label, value in (("target_sha", target_sha), ("base_sha", base_sha)):
+                          if value and (len(value) != 40 or any(c not in "0123456789abcdefABCDEF" for c in value)):
+                              raise ReviewConfigurationError(label + "에는 전체 커밋 SHA 40자리를 입력하세요.")
+                      target_sha = target_sha.lower() or os.environ["GITHUB_SHA"]
+                      commit = github(f"{ROOT}/commits/{target_sha}")
                       EVENT["after"] = commit["sha"]
-                      EVENT["before"] = (commit.get("parents") or [{"sha": "0" * 40}])[0]["sha"]
+                      EVENT["before"] = base_sha.lower() or (commit.get("parents") or [{"sha": "0" * 40}])[0]["sha"]
                       EVENT["head_commit"] = {"message": commit["commit"]["message"]}
                   sha, base = EVENT["after"], EVENT["before"]
                   if EVENT.get("deleted") or not sha.strip("0"):
                       print("브랜치가 삭제되어 이번 검토를 건너뜁니다.")
                       return
-                  title = "main 브랜치 푸시"
+                  title = "수동 커밋 검토" if manual_run else "main 브랜치 푸시"
                   description = (EVENT.get("head_commit") or {}).get("message", "")
                   files = []
                   if not base.strip("0"):
@@ -432,7 +451,7 @@ jobs:
                   if (not patch and not rename_only) or added != f["additions"] or removed != f["deletions"]:
                       gaps.append(f["filename"] + ": 바이너리 또는 누락·생략된 diff")
                   selected.append({k: f[k] for k in ("filename", "previous_filename", "status", "patch") if k in f})
-              context = {"source": "main push" if IS_PUSH else "pull_request",
+              context = {"source": "commit comparison" if IS_PUSH else "pull_request",
                          "title": title, "body": description,
                          "head_sha": sha, "base_sha": base, "files": selected}
               if len(json.dumps(context, ensure_ascii=False)) > LIMIT:
@@ -450,7 +469,7 @@ jobs:
                   decision = "HOLD"
 
               review_event = "COMMENT"
-              actual = "main 푸시 후 검토 결과" if IS_PUSH else "승인 판단을 기록했습니다. GitHub 자동 승인 기능은 꺼져 있습니다."
+              actual = title + " 결과" if IS_PUSH else "승인 판단을 기록했습니다. GitHub 자동 승인 기능은 꺼져 있습니다."
               if not IS_PUSH and decision == "APPROVE" and os.environ.get("AI_AUTO_APPROVE", "").lower() == "true":
                   ci_ok, actual = ci_allows_approval(sha)
                   if ci_ok and pr["user"]["login"] != "github-actions[bot]":
@@ -459,7 +478,7 @@ jobs:
                   elif pr["user"]["login"] == "github-actions[bot]":
                       actual = "동일한 GitHub Actions 봇이 작성한 PR이므로 자기 승인 불가"
               label = DECISION_LABELS[decision]
-              scope = f"main 푸시 커밋 범위: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
+              scope = f"검토 커밋 범위: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
               body = [f"## AI 교차 검토: {label}", f"검토 커밋: `{sha}`", scope,
                       "Claude Opus 5.5 / GPT 6.1 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
                       "설정된 인증 방식: Claude Pro 구독 · GPT ChatGPT/Codex 구독",
