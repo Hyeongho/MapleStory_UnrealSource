@@ -7,6 +7,7 @@
 
 class ACharacter;
 class UAnimStateMachine;
+class UMapleHUD;
 
 class UMapleGameInstance :
     public UGameInstance
@@ -21,6 +22,8 @@ public:
 	// 게임 수명 / 프레임 갱신
 	virtual bool Init(UEngine& Engine) override;
 	
+	virtual void Shutdown() override;
+
 	// 물리 갱신이 끝난 실제 이동 상태로 플레이어 애니메이션을 선택한다.
 	virtual void Tick(float DeltaTime) override;
 
@@ -34,5 +37,10 @@ protected:
 
 	// 파일 경로와 볼륨 같은 오디오 사용 정책은 게임에서 설정한다.
 	void InitAudio();
+
+	void InitHUD();
+
+private:
+	TSharedPtr<UMapleHUD> m_HUD;
 };
 

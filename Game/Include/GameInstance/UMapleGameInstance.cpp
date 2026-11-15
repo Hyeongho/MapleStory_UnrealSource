@@ -15,6 +15,9 @@
 #include "Audio/FAudioManager.h"
 #include "Audio/WzSoundLoader.h"
 
+#include "UI/FUIViewport.h"
+#include "../UI/UMapleHUD.h"
+
 static const char* MAPLE_WZ_PATH = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
 static const char* MAPLE_MAP_PATH = R"(Map\Map\Map0\000010000.img)";
 static const char* MAPLE_LOADOUT_SPEC = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
@@ -35,9 +38,19 @@ static constexpr float MAPLE_CLIMB_REENTRY_DELAY = 0.2f;
 // 지면에서 떨어진 직후 첫 점프를 허용하는 시간(초).
 static constexpr float MAPLE_COYOTE_TIME = 0.1f;
 
+// 제공된 StatusBar3 XML의 기본 스킨. false면 기존 단색 HP바를 사용한다.
+static constexpr bool MAPLE_USE_WZ_HUD = true;
+static const char* MAPLE_HUD_BACKGROUND_NODE = R"(UI\StatusBar3.img\mainBar\status\backgrnd)";
+static const char* MAPLE_HUD_HEALTH_NODE = R"(UI\StatusBar3.img\mainBar\status\gauge\hp\layer:0)";
+static const char* MAPLE_HUD_MANA_NODE = R"(UI\StatusBar3.img\mainBar\status\gauge\mp\layer:0)";
+static const char* MAPLE_HUD_FRAME_NODE = R"(UI\StatusBar3.img\mainBar\status\layer:cover)";
+
 UMapleGameInstance::UMapleGameInstance() = default;
 
-UMapleGameInstance::~UMapleGameInstance() = default;
+UMapleGameInstance::~UMapleGameInstance()
+{
+	Shutdown();
+}
 
 bool UMapleGameInstance::Init(UEngine& Engine)
 {
@@ -56,10 +69,24 @@ bool UMapleGameInstance::Init(UEngine& Engine)
 
 	InitAudio();
 
+	InitHUD();
+
 	// 시작 위치만 지정하며 이후에는 방향키 입력으로 카메라를 움직인다.
 	Engine.GetCamera().SetLocation(FVector2D(100.0f, 300.0f));
 
 	return true;
+}
+
+void UMapleGameInstance::Shutdown()
+{
+	if (m_HUD && GEngine && GEngine->IsInitialized())
+	{
+		GEngine->GetUIViewport().RemoveWidget(m_HUD.Get());
+	}
+
+	m_HUD.Reset();
+
+	Super::Shutdown();
 }
 
 void UMapleGameInstance::Tick(float DeltaTime)
@@ -73,6 +100,17 @@ void UMapleGameInstance::Tick(float DeltaTime)
 	if (pCharacter)
 	{
 		pCharacter->UpdateAnimation();
+
+		if (m_HUD)
+		{
+			m_HUD->SetVisibility(ESlateVisibility::Visible);
+			m_HUD->UpdateHealth(pCharacter->GetHealth(), pCharacter->GetMaxHealth());
+		}
+	}
+
+	else if (m_HUD)
+	{
+		m_HUD->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
@@ -162,5 +200,58 @@ void UMapleGameInstance::InitAudio()
 	{
 		// 볼륨 1.0, 0.5초 페이드인 후 반복 재생.
 		Audio->PlayBGM(BGM, 1.0f, 0.5f);
+	}
+}
+
+void UMapleGameInstance::InitHUD()
+{
+	FUIViewport& Viewport = GetEngine().GetUIViewport();
+	if (!Viewport.IsInitialized())
+	{
+		return;
+	}
+
+	m_HUD = MakeShared<UMapleHUD>();
+
+	bool bInitialized = false;
+	if (MAPLE_USE_WZ_HUD)
+	{
+		FMapleHUDWzStyle Style;
+
+		Style.m_BackgroundPath = MAPLE_HUD_BACKGROUND_NODE;
+		Style.m_HealthFillPath = MAPLE_HUD_HEALTH_NODE;
+		Style.m_ManaFillPath = MAPLE_HUD_MANA_NODE;
+		Style.m_FramePath = MAPLE_HUD_FRAME_NODE;
+
+		bInitialized = m_HUD->InitializeFromWz(GetEngine().GetDevice(), MAPLE_WZ_PATH, Style);
+		if (!bInitialized)
+		{
+			UE_LOG(LogUI, Warning, L"[MapleHUD] WZ skin unavailable; using solid-color HP bar");
+		}
+	}
+
+	if (!bInitialized)
+	{
+		bInitialized = m_HUD->Initialize();
+	}
+
+	if (!bInitialized || !Viewport.AddWidget(m_HUD))
+	{
+		UE_LOG(LogUI, Warning, L"[MapleHUD] initialization failed");
+		m_HUD.Reset();
+		return;
+	}
+
+	const APlayerController* pController = GetEngine().GetWorld().GetFirstPlayerController();
+	const AMapleCharacter* pCharacter = pController ? Cast<AMapleCharacter>(pController->GetCharacter()) : nullptr;
+
+	if (pCharacter)
+	{
+		m_HUD->UpdateHealth(pCharacter->GetHealth(), pCharacter->GetMaxHealth());
+	}
+
+	else
+	{
+		m_HUD->SetVisibility(ESlateVisibility::Hidden);
 	}
 }

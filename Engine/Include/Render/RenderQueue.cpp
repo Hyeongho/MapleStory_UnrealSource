@@ -94,7 +94,7 @@ void FRenderQueue::Flush(FSpriteBatch& SpriteBatch)
 			{
 				FVector2D DrawPosition = BasePosition + FVector2D(Entry.m_TileOffset.m_X * (float)TileX, Entry.m_TileOffset.m_Y * (float)TileY);
 
-				SpriteBatch.DrawSprite(Entry.m_pTexture, DrawPosition, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
+				SpriteBatch.DrawSprite(Entry.m_pTexture, DrawPosition, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint, Entry.m_bUseSourceRect ? &Entry.m_SourceRect : nullptr);
 			}
 		}
 	}
@@ -147,7 +147,13 @@ void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
 			bBatchOpen = true;
 		}
 
-		SpriteBatch.DrawSprite(Entry.m_pTexture, Entry.m_Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint);
+		SpriteBatch.DrawSprite(Entry.m_pTexture, Entry.m_Position, Entry.m_Scale, Entry.m_RotationRadians, Entry.m_Tint, Entry.m_bUseSourceRect ? &Entry.m_SourceRect : nullptr);
+	}
+
+	// UI 배치도 종료해야 다음 프레임의 월드 Begin과 중첩되지 않는다.
+	if (bBatchOpen)
+	{
+		SpriteBatch.End();
 	}
 
 	Clear();

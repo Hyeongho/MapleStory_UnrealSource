@@ -64,6 +64,9 @@
     <Filter Include="10. Audio">
       <UniqueIdentifier>{2cede5fc-8569-4de5-bef7-59b410c3483b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="11. UI">
+      <UniqueIdentifier>{1fca39e2-a3cc-4a39-a238-f9e30c081ae5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
@@ -378,6 +381,36 @@
     <ClInclude Include="Audio\WzSoundLoader.h">
       <Filter>10. Audio</Filter>
     </ClInclude>
+    <ClInclude Include="UI\FSlateBrush.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UWidget.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\WidgetTypes.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UCanvasPanelSlot.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UCanvasPanel.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\FUIViewport.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UImage.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UProgressBar.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UUserWidget.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\WzUIBrushLoader.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -613,6 +646,36 @@
     </ClCompile>
     <ClCompile Include="Audio\AudioTypes.cpp">
       <Filter>10. Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FSlateBrush.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UWidget.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\WidgetTypes.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UCanvasPanelSlot.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UCanvasPanel.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FUIViewport.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UImage.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UProgressBar.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UUserWidget.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\WzUIBrushLoader.cpp">
+      <Filter>11. UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -80,6 +80,10 @@ struct FRenderQueueEntry
 	ELayer m_Layer = ELayer::Object;
 	EBlendMode m_Blend = EBlendMode::NonPremultiplied;
 
+	// UI 게이지 등에서 사용할 텍스처의 부분 영역. 기본값은 기존 전체 이미지 출력이다.
+	bool m_bUseSourceRect = false;
+	RECT m_SourceRect = {};
+
 	float m_ParallaxFactor = 1.0f; // 1.0 = 카메라와 완전히 같이 움직임(기본)
 
 	// 타일링 반복(back 전용) — [m_TileL, m_TileR) × [m_TileT, m_TileB) 범위의

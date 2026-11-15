@@ -22,6 +22,9 @@
     <Filter Include="Controller">
       <UniqueIdentifier>{5573c624-9bad-431b-afe0-db82eb2fc4e1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="UI">
+      <UniqueIdentifier>{377b8c84-7b66-442d-8aba-abd8c52f7bfd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,6 +39,9 @@
     <ClCompile Include="Controller\AMaplePlayerController.cpp">
       <Filter>Controller</Filter>
     </ClCompile>
+    <ClCompile Include="UI\UMapleHUD.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Character\AMapleCharacter.h">
@@ -46,6 +52,9 @@
     </ClInclude>
     <ClInclude Include="Controller\AMaplePlayerController.h">
       <Filter>Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UMapleHUD.h">
+      <Filter>UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
