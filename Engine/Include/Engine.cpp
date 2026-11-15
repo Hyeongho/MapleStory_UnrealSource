@@ -11,6 +11,7 @@
 #include "Physics/PhysicsWorld.h"
 #include "Object/APlayerController.h"
 #include "Audio/FAudioManager.h"
+#include "UI/FUIViewport.h"
 
 UEngine* GEngine = nullptr;
 
@@ -73,6 +74,9 @@ bool UEngine::Init(HWND hWnd, const FEngineInitParams& Params)
 	m_pRenderQueue = new FRenderQueue();
 	GRenderQueue = m_pRenderQueue;
 
+	m_pUIViewport = new FUIViewport();
+	m_pUIViewport->Initialize(*m_pDevice);
+
 	m_pCamera = new FCamera2D();
 	m_pCamera->SetViewportSize((float)Params.m_WindowWidth, (float)Params.m_WindowHeight);
 	m_pCamera->SetDisplayMode(Params.m_DisplayMode);
@@ -102,6 +106,10 @@ void UEngine::Shutdown()
 	{
 		m_pRenderQueue->Clear();
 	}
+
+	// 큐의 비소유 텍스처 참조를 비운 뒤 위젯과 UI 공통 자원을 정리한다.
+	delete m_pUIViewport;
+	m_pUIViewport = nullptr;
 
 	// 월드가 맵 씬과 액터를 정리한 뒤 마지막에 DirectX 디바이스를 해제한다.
 	delete m_pWorld;
@@ -201,6 +209,8 @@ void UEngine::Render()
 
 	// 게임의 카메라 갱신이 끝난 뒤 배경 반복 범위와 액터 위치를 제출한다.
 	m_pWorld->Render(*m_pRenderQueue);
+	m_pUIViewport->SetViewportSize(FVector2D((float)m_pSwapChain->GetWidth(), (float)m_pSwapChain->GetHeight()));
+	m_pUIViewport->Render(*m_pRenderQueue);
 	m_pSwapChain->Clear(m_ClearColor);
 	m_pRenderQueue->Flush(*m_pSpriteBatch);
 #ifdef _DEBUG
@@ -240,6 +250,12 @@ FTimerManager& UEngine::GetTimerManager() const
 const TSharedPtr<FAudioManager>& UEngine::GetAudioManager() const
 {
 	return m_AudioManager;
+}
+
+FUIViewport& UEngine::GetUIViewport() const
+{
+	check(m_pUIViewport);
+	return *m_pUIViewport;
 }
 
 UPlayerInput& UEngine::GetPlayerInput() const

@@ -3,6 +3,8 @@
 #include "EnginePCH.h"
 #include "UGameInstance.h"
 
+class UMapleHUD;
+
 // 맵과 플레이어 캐릭터의 초기화 등 MapleStory 전용 설정을 담당한다.
 class UMapleGameInstance : public UGameInstance
 {
@@ -15,6 +17,7 @@ public:
 
 	// 게임 수명
 	virtual bool Init(UEngine& Engine) override;
+	virtual void Shutdown() override;
 	// 물리 갱신 후 게임 캐릭터에 애니메이션 선택을 위임한다.
 	virtual void Tick(float DeltaTime) override;
 
@@ -26,4 +29,8 @@ protected:
 	void InitPlayer();
 	// 파일 경로와 볼륨 같은 오디오 사용 정책은 게임에서 설정한다.
 	void InitAudio();
+	void InitHUD();
+
+private:
+	TSharedPtr<UMapleHUD> m_HUD;
 };

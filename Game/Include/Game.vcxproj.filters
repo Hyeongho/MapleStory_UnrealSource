@@ -19,6 +19,9 @@
     <Filter Include="02. Gameplay\02. Controller">
       <UniqueIdentifier>{528E710C-D939-51F1-A595-960A3AD9355A}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03. UI">
+      <UniqueIdentifier>{8E677D8D-6D24-50E4-BC2F-B8CD9E3F028F}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Launch\main.cpp">
@@ -33,6 +36,9 @@
     <ClCompile Include="Controller\AMaplePlayerController.cpp">
       <Filter>02. Gameplay\02. Controller</Filter>
     </ClCompile>
+    <ClCompile Include="UI\UMapleHUD.cpp">
+      <Filter>03. UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameInstance\UMapleGameInstance.h">
@@ -43,6 +49,9 @@
     </ClInclude>
     <ClInclude Include="Controller\AMaplePlayerController.h">
       <Filter>02. Gameplay\02. Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UMapleHUD.h">
+      <Filter>03. UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

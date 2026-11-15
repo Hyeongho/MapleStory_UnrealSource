@@ -18,6 +18,7 @@ Engine의 큰 분류 안에서 다음처럼 역할을 나눈다.
                 Components → Collision / Body / Climbing
 09. Input     → Types / PlayerInput / Bindings
 10. Audio     → Assets / Playback / Components / WZ
+11. UI        → Types / Widgets / Layout / Viewport / Loaders
 ```
 
 오디오 필터는 다음 파일을 포함한다.
@@ -32,6 +33,7 @@ Game은 다음처럼 실행 설정과 게임플레이 코드를 나눈다.
 ```text
 01. Runtime  → Launch / GameInstance
 02. Gameplay → Character / Controller
+03. UI       → UMapleHUD
 ```
 
 수정 파일은 `Engine/Include/Engine.vcxproj.filters`, `Game/Include/Game.vcxproj.filters`다. 새 파일은 vcxproj와 filters 양쪽에 등록한다. 파일을 찾기 어렵다면 솔루션 탐색기의 ‘모든 파일 표시’ 대신 위 기능별 필터를 기준으로 탐색한다. 이미 VS에 프로젝트가 열려 있다면 외부 파일 변경 알림에서 다시 로드한다.

@@ -8,9 +8,9 @@ DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따�
 목표 게임: MapleStory 스타일 2D 플랫포머 RPG  
 포트폴리오 목적: 넥슨 MapleStory 팀 등 대형 스튜디오 지원
 
-## 현재 진행 상태 (2026-11-14)
+## 현재 진행 상태 (2026-11-15)
 
-현재는 Phase 10의 기본 이동·물리를 구현했고, **Phase 11 Audio 소스 구현 후 사용자 검증 대기** 상태다. 이 문서는
+현재는 Phase 10의 기본 이동·물리를 구현했고, **Phase 12 UI/HUD의 최소 HP바 소스 구현 후 사용자 검증 대기** 단계다. 이 문서는
 `codex/safety-debt-fixes`의 `CLAUDE.md`를 바탕으로 현재 작업 코드와 사용자 확인 내용을 반영했다.
 Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 입력·엔진 루프·맵 로더는 선행 구현했다.
 
@@ -42,6 +42,18 @@ Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 
   새 DLL 게시·교체가 필요하며, 기존 맵 정보 API의 ABI는 유지했다. 맵 전환 시 음악 교체 정책은 Game에서 호출한다.
 - VS 표시 구조: Engine/Game의 .vcxproj.filters를 역할별 하위 필터로 나눴다.
   실제 파일 위치와 include 경로는 유지하며, 헤더·cpp는 같은 기능 필터에 표시한다. Docs/PROJECT_FILTERS.md 참고.
+- 사용자 확인(2026-11-15): 실제 Game에서 WZ BGM이 들리는 것을 확인했다. 반복 구간·페이드 전환까지 확인된 것으로 확대하지 않는다.
+- Weapon.img XML에서 공격음 경로를 확인해 Game 기본값을 Sound\Weapon.img\swordL\Attack으로 설정했다.
+  무기 종류별 자동 매핑은 아직 하지 않으며 경로는 Game에서 선택한다. main 수동 반영 시 필요한 캐릭터 연결은 Docs/AUDIO.md 참고.
+- UI 소스 구현됨: UWidget / UUserWidget / UCanvasPanel / UCanvasPanelSlot / UImage / UProgressBar.
+  UEngine의 FUIViewport가 화면 좌표로 렌더링하고 Game의 UMapleHUD가 화면 하단의 가로 중앙에 HP바를 구성한다.
+  GameInstance가 물리 갱신 뒤 현재 Health/MaxHealth를 전달하며, 기존 Debug F1/F2로 감소·회복을 확인할 수 있다.
+  Game은 StatusBar3의 WZ 배경·HP 채움·프레임을 사용하고, 로딩 실패 시 기존 단색 HP바를 유지한다.
+  빌드·실행은 하지 않았다. UTextBlock, 마우스 UI 입력과 나머지 HUD는 미구현이며 Docs/UI_HUD.md를 따른다.
+- 사용자 확인(2026-11-15): FlushUI의 End 누락 수정 후 기존 UI 출력이 정상 동작한다고 확인했다.
+- WZ UI 소스 구현됨: UImage::SetBrushFromWz와 FWzUIBrushLoader, 원본 origin에 따른 StatusBar3 조합.
+  제공된 XML의 PNG는 1x1 참조이므로 DLL의 wz_read_canvas에 UOL/source/_inlink/_outlink 해석을 추가했다.
+  새 DLL의 wz_canvas_api_version=2를 확인하며 구 DLL에서는 단색 HUD를 유지한다. DLL 게시·교체 후 사용자 확인 대기다.
 - 최신 구조: UFlipbook 공유 에셋, Flipbook 컴포넌트의 직접 렌더링, 에셋 참조 기반 상태 전환.
 - 맵 VR 또는 지형 기반 대체 경계를 캐릭터 이동에도 적용한다. 카메라 줌·뷰포트와 독립적이다.
 - 이번 구조 변경과 이동 경계 수정은 소스 검토 상태이며 빌드·테스트는 실행하지 않았다.
@@ -98,6 +110,7 @@ MyEngine.sln
 │       ├── GameInstance/    → UMapleGameInstance, 맵·플레이어 생성과 시작 설정
 │       ├── Character/       → AMapleCharacter, 아바타·애니메이션·체력·피격
 │       ├── Controller/      → AMaplePlayerController, 키 매핑과 조작
+│       ├── UI/              → UMapleHUD, 게임별 HUD 디자인과 체력 표시
 │       └── Game.vcxproj     → 프로젝트 위치는 유지, 필터도 기능별 폴더에 맞춤
 └── Tests/           → 단위 테스트 (.exe)  Engine 참조
 ```
@@ -918,13 +931,23 @@ Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출�
 
 ### Phase 12 — UI / HUD 시스템 (1.5주)
 
-파일 위치: `Engine/UI/`
+파일 위치: `Engine/Include/UI/`, 게임 HUD는 `Game/Include/UI/`
 
-- [ ] `UWidget.h / .cpp` — UI 베이스
-- [ ] `UCanvas.h / .cpp` — HUD
-- [ ] `UTextBlock.h / .cpp` / `UImage.h / .cpp`
-- [ ] UI 앵커 / 레이아웃 시스템 (해상도 대응)
-- [ ] HP / MP 바 / 경험치 바
+- [x] `UWidget.h / .cpp` — UI 베이스, 표시 상태와 계층 불투명도
+- [x] `UUserWidget.h / .cpp` — 게임별 복합 위젯의 루트 소유
+- [x] `UCanvasPanel.h / .cpp`, `UCanvasPanelSlot.h / .cpp` — 자식 배치와 Z 순서
+- [x] `UImage.h / .cpp`, `FSlateBrush.h / .cpp` — 이미지·단색 사각형과 텍스처 참조 관리
+- [x] `WzUIBrushLoader.h / .cpp`, `UImage::SetBrushFromWz` — 링크된 WZ Canvas 브러시 로딩
+- [x] `UProgressBar.h / .cpp` — 0~1 게이지, 채움 영역의 소스 이미지 자르기
+- [x] 기본 앵커 / 정렬 / 오프셋과 기준 해상도 배율 (자동 크기·클리핑·창 리사이즈 구현은 제외)
+- [x] `FUIViewport.h / .cpp` — 엔진 수명과 UI 렌더 패스 연결
+- [x] `UMapleHUD.h / .cpp` — Game에서 HP바 디자인·배치, 현재 체력 연결
+- [x] Game의 StatusBar3 WZ 스킨 선택, 실제 이미지 크기·원점·계층 순서에 따른 조합
+- [x] 사용자 Game 확인: FlushUI 배치 종료 수정 후 기존 UI 정상 출력
+- [ ] 사용자 Game 확인: 새 DLL로 StatusBar3 WZ 스킨 출력과 HP 채움 확인
+- [ ] 사용자 Game 확인: F1 피해·F2 초기화에 따른 HP바 감소·회복, 카메라와 독립된 화면 고정
+- [ ] `UTextBlock.h / .cpp` — 텍스트와 HP 수치 표시
+- [ ] MP 바 / 경험치 바
 - [ ] 퀵슬롯 (스킬바 F1~F8)
 - [ ] 인벤토리 창 (96칸 그리드) / 장비 창 / 스탯 창
 - [ ] 데미지 숫자 팝업 (크리티컬 노란색)
@@ -932,7 +955,9 @@ Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출�
 - [ ] NPC 대화 말풍선 / 채팅 창 / 퀘스트 트래커
 - [ ] 이름표 / 레벨 표시 (캐릭터 머리 위)
 
-완료 기준: HP바 실시간 감소 확인
+첫 구현은 최소 HP바이며, 현재는 WZ 이미지 스킨과 단색 대체 경로가 있다. UCanvas라는 직접 그리기 도구에 배치를 몰지 않고,
+UUserWidget과 UCanvasPanel/Slot으로 위젯 구성과 레이아웃을 나눴다. GC·Slate 런타임·Blueprint는 구현하지 않았다.
+완료 기준: 사용자 Game 실행에서 HP바 실시간 감소 확인. 현재는 소스 구현 상태이며 빌드·실행은 수행하지 않았다.
 
 ---
 
@@ -1324,7 +1349,7 @@ C++ 표준·경고 수준은 "vcxproj 유지, 문서를 고친다"로 확정(위
 두 항목의 구현을 선행 조건으로 두지 않고 **Phase 11 Audio**로 진행한다.
 
 1. Phase 11 Audio: 새 DLL 배포 후 FAudioManager / USoundWave / UAudioComponent / FWzSoundLoader와 맵 BGM을 Game에서 수동 검증한다.
-2. Phase 12 UI.
+2. Phase 12 UI: 최소 HP바를 Game에서 확인한 뒤 텍스트·UI 이미지·나머지 HUD를 확장한다.
 3. Phase 13 Input 확장.
 4. Phase 14 Resource.
 5. Phase 15 World 확장.

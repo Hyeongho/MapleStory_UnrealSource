@@ -20,6 +20,9 @@ struct FCanvasMeta
 class FWzTextureLoader
 {
 public:
+	// 구 DLL은 1, 링크된 Canvas 픽셀을 해석하는 DLL은 2 이상이다. 로드 실패는 0이다.
+	static int32 GetCanvasApiVersion();
+
 	// WzPath: WZ 파일 경로 또는 WZ 폴더 경로
 	// NodePath: IMG 내부 Canvas 노드까지의 백슬래시 구분 경로
 	//           (예: "Face.img\\00020000\\face\\0")

@@ -11,7 +11,7 @@
 ```cpp
 static constexpr bool MAPLE_USE_MAP_BGM = true;
 static const char* MAPLE_BGM_WZ_NODE = nullptr;
-static const char* MAPLE_ATTACK_SOUND_WZ_NODE = nullptr;
+static const char* MAPLE_ATTACK_SOUND_WZ_NODE = R"(Sound\Weapon.img\swordL\Attack)";
 ```
 
 `InitAudio()`는 현재 맵의 `info/bgm`을 읽어 Sound 리소스를 한 번 로딩하고 반복 재생한다. `Bgm00/GoPicnic` 같은 값은 `Sound\Bgm00.img\GoPicnic`으로 변환한다. 맵 `info/link`가 있더라도 BGM은 요청한 맵 자신의 info를 사용한다. UOL 링크와 기본 multi BGM 선택은 MapRender2처럼 처리하며, 여러 후보가 있으면 첫 사운드/UOL을 선택한다. 조건에 따른 multi BGM 전환은 아직 구현하지 않았다.
@@ -21,11 +21,70 @@ static const char* MAPLE_ATTACK_SOUND_WZ_NODE = nullptr;
 ```cpp
 // 예시 BGM. 실제 WZ에 해당 노드가 있는지 확인한다.
 static const char* MAPLE_BGM_WZ_NODE = R"(Sound\Bgm00.img\GoPicnic)";
-// 공격 효과음에는 WZ에서 확인한 사운드 노드 경로를 지정한다.
-static const char* MAPLE_ATTACK_SOUND_WZ_NODE = nullptr;
+// 제공된 Weapon.img XML에 존재하는 테스트용 공격음.
+static const char* MAPLE_ATTACK_SOUND_WZ_NODE = R"(Sound\Weapon.img\swordL\Attack)";
 ```
 
 BGM 선택 우선순위는 일반 파일 경로 → 직접 지정한 WZ 노드 → 맵 info/bgm이다. 효과음은 일반 파일 경로 → 직접 지정한 WZ 노드 순서다. BGM을 끄려면 두 BGM 경로를 nullptr로 두고 `MAPLE_USE_MAP_BGM = false`로 설정한다. 공격 사운드는 무기·스킬마다 다르므로 경로를 자동으로 추측하지 않는다.
+
+### Weapon.img 공격 효과음
+
+사용자가 제공한 `Sound.Weapon.img.xml`의 루트는 `Weapon.img`이고, 무기 종류 아래에 `Attack` 사운드가 있다. 따라서 `Sound\Weapon`만으로는 재생할 사운드를 고를 수 없으며 `Sound\Weapon.img\swordL\Attack`처럼 마지막 노드까지 지정한다. 이번 테스트용 기본값은 swordL이며 실제 장착 무기와의 자동 매핑은 아직 하지 않는다. 사용할 종류를 Game 설정에서 바꾼다.
+
+| XML의 무기 종류 | 사운드 노드 |
+| --- | --- |
+| swordL, swordS, mace, poleArm, spear, swordB, swordZL, swordZB | Attack |
+| bow, cBow, tGlove, knuckle, barehands, gun, cannon, dualBow | Attack, Attack2 |
+
+`Attack2`는 별도 사운드이며 자동으로 번갈아 재생하지 않는다. 필요하면 Game 경로의 마지막 구간을 Attack2로 선택한다. 예를 들어 `Sound\Weapon.img\bow\Attack2`다. 이 경로들은 기존 `wz_read_sound` API가 처리하므로 이번 Weapon 설정을 위해 DLL을 다시 수정할 필요는 없다.
+
+작업 브랜치에는 `InitAudio()`에서 에셋을 로딩해 `AMapleCharacter::SetAttackSound()`로 전달하고, 실제 공격 시작 시 오디오 컴포넌트를 재생하는 코드가 있다. main에 직접 옮길 때 캐릭터의 연결이 아직 없다면 다음 부분도 함께 반영한다. main의 기존 `void Attack()` 시그니처와 공격 허용 조건은 유지한다.
+
+1. `AMapleCharacter.h`에 `UAudioComponent`, `USoundWave` 전방 선언과 아래 멤버를 추가한다.
+
+```cpp
+// public
+void SetAttackSound(const TSharedPtr<USoundWave>& Sound);
+
+// private
+UAudioComponent* m_pAttackAudio = nullptr;
+```
+
+2. `AMapleCharacter.cpp`에 `#include "Audio/UAudioComponent.h"`를 추가하고 생성자에서 컴포넌트를 만든다.
+
+```cpp
+m_pAttackAudio = AddComponent<UAudioComponent>();
+m_pAttackAudio->SetAttachParent(GetFlipbookComponent());
+```
+
+3. 에셋 전달 함수를 구현하고, `Attack()`에서 애니메이션 재생을 시작한 뒤에만 Play를 호출한다. 공격 거부 조건으로 반환하는 부분 뒤에 둔다.
+
+```cpp
+void AMapleCharacter::SetAttackSound(const TSharedPtr<USoundWave>& Sound)
+{
+    m_pAttackAudio->SetSound(Sound);
+}
+
+// Attack(): PlayFromStart()와 m_bAttacking = true 다음에 추가.
+if (m_pAttackAudio->GetSound())
+{
+    m_pAttackAudio->Play();
+}
+```
+
+4. Game의 `InitAudio()`에서 BGM 설정 다음에 아래 코드를 넣는다. 사운드는 여기서 한 번 로딩하고 공격 시에는 로딩하지 않는다.
+
+```cpp
+const APlayerController* pController = GetEngine().GetWorld().GetFirstPlayerController();
+AMapleCharacter* pCharacter = pController ? Cast<AMapleCharacter>(pController->GetCharacter()) : nullptr;
+if (pCharacter)
+{
+    pCharacter->SetAttackSound(FWzSoundLoader::LoadSound(
+        MAPLE_WZ_PATH, MAPLE_ATTACK_SOUND_WZ_NODE));
+}
+```
+
+Weapon XML의 경로 확인은 정적으로 수행했다. 2026-11-15 사용자 확인으로 WZ BGM 로딩·출력은 확인됐으며, 공격 효과음 재생과 BGM 반복·전환 검증은 별도다.
 
 다른 액터나 UI에서도 동일한 에셋 로더를 사용할 수 있다.
 

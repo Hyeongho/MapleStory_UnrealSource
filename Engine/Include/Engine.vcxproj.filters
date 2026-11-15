@@ -184,6 +184,24 @@
     <Filter Include="10. Audio\04. WZ">
       <UniqueIdentifier>{0502DE70-2A66-5E0B-B739-5AEA7D355B10}</UniqueIdentifier>
     </Filter>
+    <Filter Include="11. UI">
+      <UniqueIdentifier>{B5B0E79E-4A8B-5EB7-ABC8-008D49ACE71F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. UI\01. Types">
+      <UniqueIdentifier>{92B6E480-8D2B-5437-BA52-919528267BE6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. UI\02. Widgets">
+      <UniqueIdentifier>{69D3627A-E4E2-594C-8AD9-B3DF4F30C2EA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. UI\03. Layout">
+      <UniqueIdentifier>{630A8281-294D-589E-9624-A4219C613273}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. UI\04. Viewport">
+      <UniqueIdentifier>{F8BD2430-9A08-5E67-84B9-064AE0A624F0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="11. UI\05. Loaders">
+      <UniqueIdentifier>{EF714C4C-1AD4-560A-A0AD-CDFD9C42B3DB}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -419,6 +437,36 @@
     </ClCompile>
     <ClCompile Include="Audio\WzSoundLoader.cpp">
       <Filter>10. Audio\04. WZ</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\WidgetTypes.cpp">
+      <Filter>11. UI\01. Types</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FSlateBrush.cpp">
+      <Filter>11. UI\01. Types</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UWidget.cpp">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UUserWidget.cpp">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UImage.cpp">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UProgressBar.cpp">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UCanvasPanel.cpp">
+      <Filter>11. UI\03. Layout</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UCanvasPanelSlot.cpp">
+      <Filter>11. UI\03. Layout</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FUIViewport.cpp">
+      <Filter>11. UI\04. Viewport</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\WzUIBrushLoader.cpp">
+      <Filter>11. UI\05. Loaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -733,6 +781,36 @@
     </ClInclude>
     <ClInclude Include="Audio\WzSoundLoader.h">
       <Filter>10. Audio\04. WZ</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\WidgetTypes.h">
+      <Filter>11. UI\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\FSlateBrush.h">
+      <Filter>11. UI\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UWidget.h">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UUserWidget.h">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UImage.h">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UProgressBar.h">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UCanvasPanel.h">
+      <Filter>11. UI\03. Layout</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UCanvasPanelSlot.h">
+      <Filter>11. UI\03. Layout</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\FUIViewport.h">
+      <Filter>11. UI\04. Viewport</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\WzUIBrushLoader.h">
+      <Filter>11. UI\05. Loaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
