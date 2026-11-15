@@ -16,13 +16,15 @@
 #include "Audio/WzSoundLoader.h"
 
 static const char* MAPLE_WZ_PATH = R"(C:\Nexon\Maple\Data\Base\Base.wz)";
-static const char* MAPLE_MAP_PATH = R"(Map\Map\Map4\410017300.img)";
+static const char* MAPLE_MAP_PATH = R"(Map\Map\Map0\000010000.img)";
 static const char* MAPLE_LOADOUT_SPEC = "2015,12015,53003,65007,,,1054087,,1073816,,,,1703431,,,,,,,,,,,,,,,,";
 
 // 사용할 오디오 파일의 절대 경로 또는 실행 작업 폴더 기준 경로를 지정한다.
 // 예: LR"(D:\MapleAssets\Audio\BGM.mp3)". nullptr이면 해당 사운드를 사용하지 않는다.
-static const wchar_t* MAPLE_BGM_FILE = nullptr;
-static const wchar_t* MAPLE_ATTACK_SOUND_FILE = nullptr;
+// WZ 사운드 선택은 Game에서 한다. BGM 노드를 지정하지 않으면 현재 맵의 info/bgm을 사용한다.
+static constexpr bool MAPLE_USE_MAP_BGM = true;
+static const char* MAPLE_BGM_WZ_NODE = nullptr;
+static const char* MAPLE_ATTACK_SOUND_WZ_NODE = nullptr;
 
 // 실제 클라이언트에서 확인할 ladderRope 배치 번호. INDEX_NONE이면 기본 시작점을 쓴다.
 static constexpr int32 MAPLE_START_LADDER_ROPE_INDEX = INDEX_NONE;
@@ -145,4 +147,20 @@ void UMapleGameInstance::InitPlayer()
 
 void UMapleGameInstance::InitAudio()
 {
+	const TSharedPtr<FAudioManager>& Audio = GetEngine().GetAudioManager();
+	if (!Audio || !Audio->IsInitialized())
+	{
+		return;
+	}
+
+	Audio->SetBGMVolume(0.5f);
+	Audio->SetSFXVolume(1.0f);
+
+	TSharedPtr<USoundWave> BGM = FWzSoundLoader::LoadMapBGM(MAPLE_WZ_PATH, MAPLE_MAP_PATH);
+
+	if (BGM)
+	{
+		// 볼륨 1.0, 0.5초 페이드인 후 반복 재생.
+		Audio->PlayBGM(BGM, 1.0f, 0.5f);
+	}
 }
