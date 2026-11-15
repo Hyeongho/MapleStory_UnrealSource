@@ -11,7 +11,7 @@ class URigidbody;
 class UBoxCollision;
 class UClimbableComponent;
 #ifdef _DEBUG
-class FSpriteBatch;
+class FDebugDraw;
 class FCamera2D;
 #endif
 
@@ -50,7 +50,7 @@ public:
 
 #ifdef _DEBUG
 	// Debug 화면에 실제 충돌 도형과 접촉 상태를 그린다. 빨강은 접촉, 초록은 비접촉이다.
-	void DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera) const;
+	void DrawDebug(FDebugDraw& DebugDraw, const FCamera2D& Camera) const;
 #endif
 
 private:

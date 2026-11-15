@@ -6,6 +6,8 @@
 
 class FRenderQueue;
 class FSlateBrush;
+class FUITextRenderer;
+class FLinearColor;
 
 enum class ESlateVisibility : uint8
 {
@@ -38,10 +40,17 @@ struct FMargin
 class FWidgetPaintContext
 {
 public:
-	FWidgetPaintContext(FRenderQueue& Queue, ID3D11ShaderResourceView* pWhiteTexture, float Scale);
+	FWidgetPaintContext(FRenderQueue& Queue, ID3D11ShaderResourceView* pWhiteTexture, float Scale,
+		FUITextRenderer* pTextRenderer = nullptr);
 	FWidgetPaintContext(const FWidgetPaintContext&) = delete;
 	FWidgetPaintContext& operator=(const FWidgetPaintContext&) = delete;
-	void DrawBox(const FSlateBrush& Brush, const FRect& Rect, float WidthFraction = 1.0f);
+	void DrawBox(const FSlateBrush& Brush, const FRect& Rect, float WidthFraction = 1.0f,
+		const FLinearColor* pTint = nullptr);
+	// 이미지 글자의 아틀라스 영역을 슬롯 안에서 잘라 그린다.
+	void DrawImage(const FSlateBrush& Brush, const FRect& Rect, const RECT& SourceRect,
+		const FRect& ClipRect, const FLinearColor& Tint);
+	FUITextRenderer* GetTextRenderer() const;
+	float GetLayoutScale() const;
 
 	int32 m_ZOrder = 0;
 	float m_Opacity = 1.0f;
@@ -50,5 +59,6 @@ private:
 	FRenderQueue& m_Queue;
 	ID3D11ShaderResourceView* m_pWhiteTexture;
 	float m_Scale;
+	FUITextRenderer* m_pTextRenderer;
 	int32 m_PaintOrder = 0;
 };

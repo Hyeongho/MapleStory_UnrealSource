@@ -107,6 +107,11 @@ void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
 {
 	SortEntries();
 
+#ifdef _DEBUG
+	m_UIFrameNumber++;
+	int32 UIEntryCount = 0;
+#endif
+
 	bool bBatchOpen = false;
 	EBlendMode CurrentBlend = EBlendMode::NonPremultiplied;
 
@@ -118,6 +123,9 @@ void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
 		{
 			continue;
 		}
+#ifdef _DEBUG
+		UIEntryCount++;
+#endif
 		if (Entry.m_pSpine)
 		{
 			if (bBatchOpen)
@@ -151,6 +159,19 @@ void FRenderQueue::FlushUI(FSpriteBatch& SpriteBatch)
 	{
 		SpriteBatch.End();
 	}
+
+#ifdef _DEBUG
+	const bool bHasUIEntries = UIEntryCount > 0;
+	if (m_bHadUIEntries && !bHasUIEntries)
+	{
+		UE_LOG(LogUI, Warning, L"[UIFrame] no UI entries: frame=%llu", m_UIFrameNumber);
+	}
+	else if (!m_bHadUIEntries && bHasUIEntries)
+	{
+		UE_LOG(LogUI, Log, L"[UIFrame] UI entries available: frame=%llu count=%d", m_UIFrameNumber, UIEntryCount);
+	}
+	m_bHadUIEntries = bHasUIEntries;
+#endif
 
 	Clear();
 }

@@ -202,6 +202,9 @@
     <Filter Include="11. UI\05. Loaders">
       <UniqueIdentifier>{EF714C4C-1AD4-560A-A0AD-CDFD9C42B3DB}</UniqueIdentifier>
     </Filter>
+    <Filter Include="11. UI\06. Text">
+      <UniqueIdentifier>{755E6791-F1A8-48B1-8D84-718F24AF2D64}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -339,6 +342,9 @@
     <ClCompile Include="Render\SpriteBatch.cpp">
       <Filter>05. Render\03. Pipeline</Filter>
     </ClCompile>
+    <ClCompile Include="Render\FDebugDraw.cpp">
+      <Filter>05. Render\03. Pipeline</Filter>
+    </ClCompile>
     <ClCompile Include="Render\USpriteComponent.cpp">
       <Filter>05. Render\04. Components</Filter>
     </ClCompile>
@@ -443,6 +449,18 @@
     </ClCompile>
     <ClCompile Include="UI\FSlateBrush.cpp">
       <Filter>11. UI\01. Types</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\TextTypes.cpp">
+      <Filter>11. UI\01. Types</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UTextBlock.cpp">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FUITextRenderer.cpp">
+      <Filter>11. UI\06. Text</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UImageFont.cpp">
+      <Filter>11. UI\06. Text</Filter>
     </ClCompile>
     <ClCompile Include="UI\UWidget.cpp">
       <Filter>11. UI\02. Widgets</Filter>
@@ -677,6 +695,9 @@
     <ClInclude Include="Render\SpriteBatch.h">
       <Filter>05. Render\03. Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="Render\FDebugDraw.h">
+      <Filter>05. Render\03. Pipeline</Filter>
+    </ClInclude>
     <ClInclude Include="Render\USpriteComponent.h">
       <Filter>05. Render\04. Components</Filter>
     </ClInclude>
@@ -787,6 +808,18 @@
     </ClInclude>
     <ClInclude Include="UI\FSlateBrush.h">
       <Filter>11. UI\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\TextTypes.h">
+      <Filter>11. UI\01. Types</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UTextBlock.h">
+      <Filter>11. UI\02. Widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\FUITextRenderer.h">
+      <Filter>11. UI\06. Text</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UImageFont.h">
+      <Filter>11. UI\06. Text</Filter>
     </ClInclude>
     <ClInclude Include="UI\UWidget.h">
       <Filter>11. UI\02. Widgets</Filter>

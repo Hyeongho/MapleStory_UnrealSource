@@ -4,6 +4,7 @@
 #include "Core/Containers/TArray.h"
 #include "Core/Math/FVector2D.h"
 #include "UI/UUserWidget.h"
+#include "UI/FUITextRenderer.h"
 
 class FDXDevice;
 class FRenderQueue;
@@ -41,6 +42,7 @@ private:
 	};
 	TArray<FViewportEntry> m_Widgets;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_WhiteTexture;
+	FUITextRenderer m_TextRenderer;
 	FVector2D m_ViewportSize = FVector2D(1366.0f, 768.0f);
 	FVector2D m_ReferenceResolution = FVector2D(1366.0f, 768.0f);
 	bool m_bPainting = false;

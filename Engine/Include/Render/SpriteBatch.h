@@ -46,11 +46,6 @@ public:
 	void DrawSpine(const FWzSpineAnimation& Animation, const FVector2D& Position, const FVector2D& Scale,
 		float RotationRadians, const FLinearColor& Tint, DirectX::FXMMATRIX Transform);
 
-#ifdef _DEBUG
-	// Begin/End 사이에서 호출한다. 1픽셀 텍스처로 월드 좌표의 선분을 그린다.
-	void DrawDebugLine(const FVector2D& Start, const FVector2D& End, const FLinearColor& Tint, float Thickness = 1.5f);
-#endif
-
 	// 아직 Resource Manager(Phase 14)/WZ 텍스처 로딩이 없으므로,
 	// 파일 없이 코드로 직접 텍스처를 만들어 스프라이트 렌더링을 검증하기 위한 헬퍼.
 	static ID3D11ShaderResourceView* CreateSolidColorTexture(FDXDevice& Device, FColor Color, uint32 Width = 1, uint32 Height = 1);
@@ -69,10 +64,6 @@ private:
 	ID3D11InputLayout* m_pSpineInputLayout = nullptr;
 	ID3D11BlendState* m_pMultiplyBlend = nullptr;
 	ID3D11BlendState* m_pScreenBlend = nullptr;
-#ifdef _DEBUG
-	// 충돌 디버그 선분용 텍스처는 SpriteBatch가 생성하고 해제한다.
-	ID3D11ShaderResourceView* m_pDebugLineTexture = nullptr;
-#endif
 };
 
 

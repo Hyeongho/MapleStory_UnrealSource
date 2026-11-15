@@ -10,7 +10,7 @@ DirectX 11 기반 2D 엔진을 STL 없이 언리얼 엔진 아키텍처를 따�
 
 ## 현재 진행 상태 (2026-11-15)
 
-현재는 Phase 10의 기본 이동·물리를 구현했고, **Phase 12 UI/HUD의 최소 HP바 소스 구현 후 사용자 검증 대기** 단계다. 이 문서는
+현재는 Phase 10의 기본 이동·물리를 구현했고, **Phase 12 UI/HUD의 HP·MP 게이지와 텍스트 표시 소스 구현 후 사용자 검증 대기** 단계다. 이 문서는
 `codex/safety-debt-fixes`의 `CLAUDE.md`를 바탕으로 현재 작업 코드와 사용자 확인 내용을 반영했다.
 Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 입력·엔진 루프·맵 로더는 선행 구현했다.
 
@@ -48,13 +48,37 @@ Phase 11 이후의 순서는 유지하되, 실제 플레이에 필요한 최소 
 - UI 소스 구현됨: UWidget / UUserWidget / UCanvasPanel / UCanvasPanelSlot / UImage / UProgressBar.
   UEngine의 FUIViewport가 화면 좌표로 렌더링하고 Game의 UMapleHUD가 화면 하단의 가로 중앙에 HP바를 구성한다.
   GameInstance가 물리 갱신 뒤 현재 Health/MaxHealth를 전달하며, 기존 Debug F1/F2로 감소·회복을 확인할 수 있다.
-  Game은 StatusBar3의 WZ 배경·HP 채움·프레임을 사용하고, 로딩 실패 시 기존 단색 HP바를 유지한다.
-  빌드·실행은 하지 않았다. UTextBlock, 마우스 UI 입력과 나머지 HUD는 미구현이며 Docs/UI_HUD.md를 따른다.
+  Game은 StatusBar3의 WZ 배경·HP·MP 채움·프레임을 사용하고, 로딩 실패 시 단색 HP·MP바를 유지한다.
+  빌드·실행은 하지 않았다. 마우스 UI 입력과 나머지 HUD는 미구현이며 Docs/UI_HUD.md를 따른다.
 - 사용자 확인(2026-11-15): FlushUI의 End 누락 수정 후 기존 UI 출력이 정상 동작한다고 확인했다.
 - WZ UI 소스 구현됨: UImage::SetBrushFromWz와 FWzUIBrushLoader, 원본 origin에 따른 StatusBar3 조합.
   제공된 XML의 PNG는 1x1 참조이므로 DLL의 wz_read_canvas에 UOL/source/_inlink/_outlink 해석을 추가했다.
-  새 DLL의 wz_canvas_api_version=2를 확인하며 구 DLL에서는 단색 HUD를 유지한다. DLL 게시·교체 후 사용자 확인 대기다.
+  Canvas API 2 이상에서 링크된 WZ UI를 사용하며 구 DLL에서는 단색 HUD를 유지한다. 현재 DLL 소스는 API 3이다.
+- 4차 UI 검토 보완: 단색 모드의 HP·MP 슬롯을 각각 생성·검사하고 빨강/파랑으로 위아래 배치한다.
+  WZ 전체 경계는 MP까지 포함한 네 부품의 합집합을 사용하며 가로 중앙의 기본 X 오프셋은 0이다.
+  사용자 main의 MP 출력 구성을 작업 브랜치에 반영했다. MP 실제 마나 값 연동은 아직 없고 표시용이다.
+  종료·인코딩 관련 추정은 수정 범위에 포함하지 않았다. 빌드·실행은 하지 않았다.
 - 최신 구조: UFlipbook 공유 에셋, Flipbook 컴포넌트의 직접 렌더링, 에셋 참조 기반 상태 전환.
+- UI 텍스트 소스 구현됨: UTextBlock / FSlateFontInfo / FUITextRenderer. DirectWrite와 Direct2D/WIC로
+  흰색 글자를 텍스처에 만들고 기존 UI 큐로 출력한다. 문구·글꼴·정렬·줄바꿈·크기·배율이 바뀔 때만
+  다시 생성하며, 색상·그림자·위치 변경은 기존 텍스처를 재사용한다. 장치 재초기화 시에는 다시 생성한다.
+  Game은 HP를 현재값 / 최대값으로 표시하며, MP는 실제 값이 연결되기 전까지 -- / --로 표시한다.
+  UpdateMana API는 준비했지만 실제 마나 속성·소모 규칙은 추가하지 않았다. 빌드·실행과 사용자 확인은 대기다.
+- 이미지 글꼴 소스 구현됨: UImageFont에 문자별 파일/WZ 이미지 또는 아틀라스 RECT를 등록하고
+  UTextBlock::SetImageFont로 선택한다. 이미지는 에셋이 소유하고 문구 변경 시 배치만 갱신한다.
+  정렬·배율·문자 단위 줄바꿈·문자 영역 자르기를 지원한다. 미등록 문자는 ? 이미지 또는 빈 폭이다.
+  Game은 StatusBar3의 0~9와 역슬래시 이름의 구분자 이미지를 HP 숫자에 연결했다.
+  DLL Canvas API 3은 특수 노드 이름과 이미지 링크 경로를 보존하며 API 2에서는 Windows 숫자로 대체한다.
+  실제 값이 없는 MP는 Windows 글꼴의 -- / --를 유지한다. 새 DLL 게시·교체와 사용자 확인은 대기다.
+- HUD 깜박임 조사 중: 사용자 영상 약 3.55초에서 HUD가 잠깐 흰색 사각형으로 덮이는 현상을 확인했다.
+  제공 로그에 리소스 로딩 실패·HUD 숨김·빈 UI 프레임은 없다. 원인은 미확정이다.
+  Debug의 표시 전환/UI 항목 로그에 이어 Direct3D InfoQueue의 경고·오류도 파일 로그에 연결했다.
+  같은 GPU 메시지 ID는 한 번만 기록하며, 실제 렌더링 변경이나 수정 완료로 간주하지 않는다.
+- HUD 깜박임 후속 보완: 추가 사용자 로그에 Direct3D 경고는 없고 Debug에서만 발생하는 것 같다는 제보를 받았다.
+  Debug 충돌 도형을 FDebugDraw의 텍스처 없는 색상 PrimitiveBatch로 옮겨 월드·HUD SpriteBatch와 분리했다.
+  기존 충돌용 흰색 1픽셀 텍스처를 제거하고 빨강/초록·선 두께를 유지했다.
+  FEngineInitParams::m_bDrawCollisionDebug=false로 Debug 충돌 표시만 제외해 비교할 수 있다.
+  배치 공유가 실제 원인이었다고 확정하지 않았으며, 빌드·실행 없이 소스 구현 후 사용자 재현 확인 대기다.
 - 맵 VR 또는 지형 기반 대체 경계를 캐릭터 이동에도 적용한다. 카메라 줌·뷰포트와 독립적이다.
 - 이번 구조 변경과 이동 경계 수정은 소스 검토 상태이며 빌드·테스트는 실행하지 않았다.
 
@@ -946,8 +970,12 @@ Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출�
 - [x] 사용자 Game 확인: FlushUI 배치 종료 수정 후 기존 UI 정상 출력
 - [ ] 사용자 Game 확인: 새 DLL로 StatusBar3 WZ 스킨 출력과 HP 채움 확인
 - [ ] 사용자 Game 확인: F1 피해·F2 초기화에 따른 HP바 감소·회복, 카메라와 독립된 화면 고정
-- [ ] `UTextBlock.h / .cpp` — 텍스트와 HP 수치 표시
-- [ ] MP 바 / 경험치 바
+- [x] `UTextBlock.h / .cpp`, `TextTypes.h / .cpp`, `FUITextRenderer.h / .cpp` — 글꼴·정렬·캐시와 HP 수치 표시
+- [x] `UImageFont.h / .cpp` — 공유 이미지 글꼴, 문자별 파일/WZ/아틀라스와 HUD 숫자 연결
+- [ ] 사용자 Game 확인: Canvas API 3의 WZ 이미지 숫자, 일반 파일·아틀라스 글자 출력과 배치
+- [ ] 사용자 Game 확인: WZ/단색 HUD의 HP 숫자, F1/F2 갱신, 한글 글꼴·배율과 그림자 출력
+- [x] MP 게이지 출력과 HP·MP를 분리한 단색 대체 디자인
+- [ ] 실제 MP 수치 연동 / 경험치 바
 - [ ] 퀵슬롯 (스킬바 F1~F8)
 - [ ] 인벤토리 창 (96칸 그리드) / 장비 창 / 스탯 창
 - [ ] 데미지 숫자 팝업 (크리티컬 노란색)
@@ -955,7 +983,8 @@ Debug에서는 콘솔을 연결해 UE_LOG를 실시간 출력하며, 한글 출�
 - [ ] NPC 대화 말풍선 / 채팅 창 / 퀘스트 트래커
 - [ ] 이름표 / 레벨 표시 (캐릭터 머리 위)
 
-첫 구현은 최소 HP바이며, 현재는 WZ 이미지 스킨과 단색 대체 경로가 있다. UCanvas라는 직접 그리기 도구에 배치를 몰지 않고,
+현재는 HP·MP 게이지와 HP 숫자 표시, WZ 이미지 스킨과 단색 대체 경로가 있다. 실제 MP 값은 아직 연결하지 않았다.
+UCanvas라는 직접 그리기 도구에 배치를 몰지 않고,
 UUserWidget과 UCanvasPanel/Slot으로 위젯 구성과 레이아웃을 나눴다. GC·Slate 런타임·Blueprint는 구현하지 않았다.
 완료 기준: 사용자 Game 실행에서 HP바 실시간 감소 확인. 현재는 소스 구현 상태이며 빌드·실행은 수행하지 않았다.
 
