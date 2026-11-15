@@ -427,7 +427,7 @@ jobs:
                   files = pages(PR + "/files")
                   if len(files) != pr["changed_files"]:
                       gaps.append("변경 파일 목록이 완전하지 않음")
-              ignored_suffixes = {".exe", ".idb"}
+              ignored_suffixes = {".exe", ".idb", ".dll"}
               skipped_files = [
                   f["filename"] for f in files
                   if Path(f["filename"]).suffix.lower() in ignored_suffixes
