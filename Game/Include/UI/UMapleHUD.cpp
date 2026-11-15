@@ -32,7 +32,7 @@ bool UMapleHUD::Initialize()
 	pHealthSlot->SetAnchors(FAnchors(0.5f, 1.0f));
 	pHealthSlot->SetAlignment(FVector2D(0.5f, 1.0f));
 	pHealthSlot->SetPosition(FVector2D(0.0f, -24.0f));
-	pHealthSlot->SetSize(FVector2D(320.0f, 32.0f));
+	pHealthSlot->SetSize(FVector2D(320.0f, 64.0f));
 
 	Frame->SetColorAndOpacity(FLinearColor(0.62f, 0.57f, 0.43f, 1.0f));
 	UCanvasPanelSlot* pFrameSlot = HealthPanel->AddChildToCanvas(Frame);
@@ -56,17 +56,29 @@ bool UMapleHUD::Initialize()
 	ManaBar->SetFillColorAndOpacity(FLinearColor(0.88f, 0.12f, 0.18f));
 	ManaBar->SetPadding(FMargin(2.0f));
 
-	UCanvasPanelSlot* pBarSlot = HealthPanel->AddChildToCanvas(HealthBar);
-	pBarSlot = HealthPanel->AddChildToCanvas(ManaBar);
-
-	if (!pBarSlot)
+	UCanvasPanelSlot* pHealthBarSlot = HealthPanel->AddChildToCanvas(HealthBar);
+	if (!pHealthBarSlot)
 	{
 		return false;
 	}
 
-	pBarSlot->SetAnchors(FAnchors(0.0f, 0.0f, 1.0f, 1.0f));
-	pBarSlot->SetOffsets(FMargin(3.0f));
-	pBarSlot->SetZOrder(1);
+	pHealthBarSlot->SetAnchors(FAnchors(0.0f, 0.0f, 1.0f, 0.5f));
+	pHealthBarSlot->SetOffsets(FMargin(3.0f, 3.0f, 3.0f, 2.0f));
+	pHealthBarSlot->SetZOrder(1);
+
+	ManaBar->SetBackgroundBrush(Background);
+	ManaBar->SetFillColorAndOpacity(FLinearColor(0.16f, 0.42f, 0.92f));
+	ManaBar->SetPadding(FMargin(2.0f));
+
+	UCanvasPanelSlot* pManaBarSlot = HealthPanel->AddChildToCanvas(ManaBar);
+	if (!pManaBarSlot)
+	{
+		return false;
+	}
+
+	pManaBarSlot->SetAnchors(FAnchors(0.0f, 0.5f, 1.0f, 1.0f));
+	pManaBarSlot->SetOffsets(FMargin(3.0f, 2.0f, 3.0f, 3.0f));
+	pManaBarSlot->SetZOrder(1);
 
 	if (!SetRootWidget(Root))
 	{
@@ -95,7 +107,7 @@ bool UMapleHUD::InitializeFromWz(FDXDevice& Device, const char* WzPath, const FM
 	}
 
 	// 원본 origin을 같은 기준점에 겹친 뒤 전체 경계만 화면 하단에 맞춘다.
-	const FWzUIBrush* Parts[] = { &BackgroundBrush, &HealthBrush, &FrameBrush };
+	const FWzUIBrush* Parts[] = { &BackgroundBrush, &HealthBrush, &ManaBrush, &FrameBrush };
 	FRect Bounds;
 	bool bFirst = true;
 

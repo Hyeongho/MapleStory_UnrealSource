@@ -226,7 +226,7 @@ void UMapleGameInstance::InitHUD()
 		bInitialized = m_HUD->InitializeFromWz(GetEngine().GetDevice(), MAPLE_WZ_PATH, Style);
 		if (!bInitialized)
 		{
-			UE_LOG(LogUI, Warning, L"[MapleHUD] WZ skin unavailable; using solid-color HP bar");
+			UE_LOG(LogUI, Warning, L"[MapleHUD] WZ skin unavailable; using solid-color HP/MP bars");
 		}
 	}
 
