@@ -44,6 +44,9 @@
 #include <PrimitiveBatch.h>
 #include <VertexTypes.h>
 #include <WICTextureLoader.h>
+#include <d2d1.h>
+#include <dwrite.h>
+#include <wincodec.h>
 
 // 오디오 출력과 파일 디코딩에 사용하는 Windows SDK 헤더.
 #include <mmreg.h>
@@ -93,6 +96,8 @@ using uint64 = uint64_t;
 // -----------------------------------------------------------------------
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "xaudio2.lib")

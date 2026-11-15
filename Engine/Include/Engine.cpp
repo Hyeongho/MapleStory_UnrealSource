@@ -13,6 +13,10 @@
 #include "Audio/FAudioManager.h"
 #include "UI/FUIViewport.h"
 
+#ifdef _DEBUG
+#include "Render/FDebugDraw.h"
+#endif
+
 UEngine* GEngine = nullptr;
 
 UEngine::UEngine() = default;
@@ -77,6 +81,20 @@ bool UEngine::Init(HWND hWnd, const FEngineInitParams& Params)
 
 	m_pRenderQueue = new FRenderQueue();
 	GRenderQueue = m_pRenderQueue;
+
+#ifdef _DEBUG
+	if (Params.m_bDrawCollisionDebug)
+	{
+		m_pDebugDraw = new FDebugDraw();
+
+		if (!m_pDebugDraw->Initialize(*m_pDevice))
+		{
+			UE_LOG(LogRenderer, Warning, L"[DebugDraw] initialization failed; collision overlay disabled");
+			delete m_pDebugDraw;
+			m_pDebugDraw = nullptr;
+		}
+	}
+#endif
 
 	m_pUIViewport = new FUIViewport();
 	m_pUIViewport->Initialize(*m_pDevice);
@@ -159,6 +177,11 @@ void UEngine::Shutdown()
 
 	m_pRenderQueue = nullptr;
 
+#ifdef _DEBUG
+	delete m_pDebugDraw;
+	m_pDebugDraw = nullptr;
+#endif
+
 	delete m_pSpriteBatch;
 	m_pSpriteBatch = nullptr;
 
@@ -236,13 +259,20 @@ void UEngine::Render()
 	m_pRenderQueue->Flush(*m_pSpriteBatch);
 
 #ifdef _DEBUG
-	// 맵과 액터 위에 충돌 범위를 겹쳐 그리고, UI는 그 뒤에 화면 좌표로 출력한다.
-	m_pSpriteBatch->Begin(m_pCamera->GetViewMatrix());
-	m_pWorld->GetPhysicsWorld().DrawDebug(*m_pSpriteBatch, *m_pCamera);
-	m_pSpriteBatch->End();
+	// 충돌 도형은 텍스처 없는 전용 배치로 출력하고, HUD는 기존 스프라이트 배치로 그린다.
+	if (m_pDebugDraw && m_pDebugDraw->Begin(m_pCamera->GetViewMatrix(), (float)m_pSwapChain->GetWidth(), (float)m_pSwapChain->GetHeight()))
+	{
+		m_pWorld->GetPhysicsWorld().DrawDebug(*m_pDebugDraw, *m_pCamera);
+		m_pDebugDraw->End();
+	}
 #endif
 
 	m_pRenderQueue->FlushUI(*m_pSpriteBatch);
+
+#ifdef _DEBUG
+	m_pDevice->LogDebugMessages();
+#endif
+
 	m_pSwapChain->Present(m_SyncInterval);
 }
 

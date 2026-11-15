@@ -411,6 +411,21 @@
     <ClInclude Include="UI\WzUIBrushLoader.h">
       <Filter>11. UI</Filter>
     </ClInclude>
+    <ClInclude Include="UI\FUITextRenderer.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\TextTypes.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UTextBlock.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="UI\UImageFont.h">
+      <Filter>11. UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Render\FDebugDraw.h">
+      <Filter>05. Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp">
@@ -676,6 +691,21 @@
     </ClCompile>
     <ClCompile Include="UI\WzUIBrushLoader.cpp">
       <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FUITextRenderer.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\TextTypes.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UTextBlock.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UImageFont.cpp">
+      <Filter>11. UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Render\FDebugDraw.cpp">
+      <Filter>05. Render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

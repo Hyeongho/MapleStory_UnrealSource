@@ -45,6 +45,11 @@ static const char* MAPLE_HUD_HEALTH_NODE = R"(UI\StatusBar3.img\mainBar\status\g
 static const char* MAPLE_HUD_MANA_NODE = R"(UI\StatusBar3.img\mainBar\status\gauge\mp\layer:0)";
 static const char* MAPLE_HUD_FRAME_NODE = R"(UI\StatusBar3.img\mainBar\status\layer:cover)";
 
+// nullptr로 바꾸면 HUD 숫자를 Windows 글꼴로 표시한다.
+static const char* MAPLE_HUD_NUMBER_FOLDER = R"(UI/StatusBar3.img/mainBar/status/gauge/number)";
+// 마지막 역슬래시는 경로 구분자가 아니라 WZ Canvas의 실제 이름이다.
+static const char* MAPLE_HUD_NUMBER_SEPARATOR = R"(UI/StatusBar3.img/mainBar/status/gauge/number/\)";
+
 UMapleGameInstance::UMapleGameInstance() = default;
 
 UMapleGameInstance::~UMapleGameInstance()
@@ -103,6 +108,13 @@ void UMapleGameInstance::Tick(float DeltaTime)
 
 		if (m_HUD)
 		{
+#ifdef _DEBUG
+			if (m_HUD->GetVisibility() != ESlateVisibility::Visible)
+			{
+				UE_LOG(LogUI, Log, L"[MapleHUD] visible: controller=%p character=%p", (void*)pController, (void*)pCharacter);
+			}
+#endif
+
 			m_HUD->SetVisibility(ESlateVisibility::Visible);
 			m_HUD->UpdateHealth(pCharacter->GetHealth(), pCharacter->GetMaxHealth());
 		}
@@ -110,6 +122,13 @@ void UMapleGameInstance::Tick(float DeltaTime)
 
 	else if (m_HUD)
 	{
+#ifdef _DEBUG
+		if (m_HUD->GetVisibility() != ESlateVisibility::Hidden)
+		{
+			UE_LOG(LogUI, Warning, L"[MapleHUD] hidden: player unavailable; controller=%p controlledCharacter=%p", (void*)pController, pController ? (void*)pController->GetCharacter() : nullptr);
+		}
+#endif
+
 		m_HUD->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
@@ -222,6 +241,8 @@ void UMapleGameInstance::InitHUD()
 		Style.m_HealthFillPath = MAPLE_HUD_HEALTH_NODE;
 		Style.m_ManaFillPath = MAPLE_HUD_MANA_NODE;
 		Style.m_FramePath = MAPLE_HUD_FRAME_NODE;
+		Style.m_NumberFontPath = MAPLE_HUD_NUMBER_FOLDER;
+		Style.m_NumberSeparatorPath = MAPLE_HUD_NUMBER_SEPARATOR;
 
 		bInitialized = m_HUD->InitializeFromWz(GetEngine().GetDevice(), MAPLE_WZ_PATH, Style);
 		if (!bInitialized)

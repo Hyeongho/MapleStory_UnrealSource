@@ -123,6 +123,12 @@ private:
 	void SortEntries();
 
 	TArray<FRenderQueueEntry> m_Entries;
+
+#ifdef _DEBUG
+	// UI 항목이 사라지거나 돌아온 프레임만 기록한다.
+	uint64 m_UIFrameNumber = 0;
+	bool m_bHadUIEntries = false;
+#endif
 };
 
 extern FRenderQueue* GRenderQueue;

@@ -51,12 +51,17 @@ bool FUIViewport::Initialize(FDXDevice& Device)
 		return false;
 	}
 
+	// 글꼴 초기화 실패는 이미지와 게이지 출력까지 중단시키지 않는다.
+	m_TextRenderer.Initialize(Device);
+
 	return true;
 }
 
 void FUIViewport::Shutdown()
 {
 	ClearWidgets();
+
+	m_TextRenderer.Shutdown();
 	m_WhiteTexture.Reset();
 }
 
@@ -149,7 +154,8 @@ void FUIViewport::Render(FRenderQueue& Queue)
 	}
 
 	m_bPainting = true;
-	FWidgetPaintContext Context(Queue, m_WhiteTexture.Get(), Scale);
+
+	FWidgetPaintContext Context(Queue, m_WhiteTexture.Get(), Scale, &m_TextRenderer);
 
 	const FRect RootRect(0.0f, 0.0f, m_ViewportSize.m_X / Scale, m_ViewportSize.m_Y / Scale);
 

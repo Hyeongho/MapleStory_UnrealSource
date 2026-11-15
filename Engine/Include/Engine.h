@@ -15,6 +15,7 @@ class UPlayerInput;
 class APlayerController;
 class FAudioManager;
 class FUIViewport;
+class FDebugDraw;
 
 // 실행 파일은 설정만 전달하고 실제 시스템 생성과 해제는 엔진이 담당한다.
 struct FEngineInitParams
@@ -25,6 +26,9 @@ struct FEngineInitParams
 	int32 m_DisplayMode = 2;
 	uint32 m_SyncInterval = 1;
 	FLinearColor m_ClearColor = FLinearColor(0.1f, 0.1f, 0.15f, 1.0f);
+
+	// Debug 충돌 표시만 제어한다. Release에서는 사용하지 않는다.
+	bool m_bDrawCollisionDebug = true;
 };
 
 class UEngine : public UObject
@@ -74,7 +78,13 @@ private:
 	FDXSwapChain* m_pSwapChain = nullptr;
 	FSpriteBatch* m_pSpriteBatch = nullptr;
 	FRenderQueue* m_pRenderQueue = nullptr;
+
+#ifdef _DEBUG
+	FDebugDraw* m_pDebugDraw = nullptr;
+#endif
+
 	FLinearColor m_ClearColor;
+
 	uint32 m_SyncInterval = 1;
 	bool m_bInitialized = false;
 	bool m_bLoggerInitialized = false;

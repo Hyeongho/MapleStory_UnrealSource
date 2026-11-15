@@ -12,7 +12,7 @@
 #include "Object/ACharacter.h"
 
 #ifdef _DEBUG
-#include "Render/SpriteBatch.h"
+#include "Render/FDebugDraw.h"
 #include "Render/FCamera2D.h"
 #endif
 
@@ -1174,7 +1174,7 @@ void FPhysicsWorld::FindOverlaps(TArray<FOverlapResult>& OutOverlaps) const
 }
 
 #ifdef _DEBUG
-void FPhysicsWorld::DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera) const
+void FPhysicsWorld::DrawDebug(FDebugDraw& DebugDraw, const FCamera2D& Camera) const
 {
 	TArray<UPrimitiveComponent*> Primitives;
 	GatherPrimitives(Primitives);
@@ -1253,7 +1253,7 @@ void FPhysicsWorld::DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera
 
 		if (Bounds.Overlaps(Clip))
 		{
-			SpriteBatch.DrawDebugLine(Foothold.GetStart(), Foothold.GetEnd(), bContact ? ContactColor : ClearColor, Thickness);
+			DebugDraw.DrawLine(Foothold.GetStart(), Foothold.GetEnd(), bContact ? ContactColor : ClearColor, Thickness);
 		}
 	}
 
@@ -1285,7 +1285,7 @@ void FPhysicsWorld::DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera
 		const FRect Bounds(Wall.m_Start.m_X, FMath::Min(Wall.m_Start.m_Y, Wall.m_End.m_Y), Wall.m_Start.m_X, FMath::Max(Wall.m_Start.m_Y, Wall.m_End.m_Y));
 		if (Bounds.Overlaps(Clip))
 		{
-			SpriteBatch.DrawDebugLine(Wall.m_Start, Wall.m_End, bContact ? ContactColor : ClearColor, Thickness);
+			DebugDraw.DrawLine(Wall.m_Start, Wall.m_End, bContact ? ContactColor : ClearColor, Thickness);
 		}
 	}
 
@@ -1311,7 +1311,7 @@ void FPhysicsWorld::DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera
 			const FVector2D Corners[] = { Center - AxisX - AxisY, Center + AxisX - AxisY, Center + AxisX + AxisY, Center - AxisX + AxisY };
 			for (int32 Edge = 0; Edge < 4; Edge++)
 			{
-				SpriteBatch.DrawDebugLine(Corners[Edge], Corners[(Edge + 1) % 4], Color, Thickness);
+				DebugDraw.DrawLine(Corners[Edge], Corners[(Edge + 1) % 4], Color, Thickness);
 			}
 		}
 
@@ -1324,7 +1324,7 @@ void FPhysicsWorld::DrawDebug(FSpriteBatch& SpriteBatch, const FCamera2D& Camera
 			{
 				const float Angle = FMath::TWO_PI * Segment / 32.0f;
 				const FVector2D Next = Center + FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Radius;
-				SpriteBatch.DrawDebugLine(Previous, Next, Color, Thickness);
+				DebugDraw.DrawLine(Previous, Next, Color, Thickness);
 				Previous = Next;
 			}
 		}

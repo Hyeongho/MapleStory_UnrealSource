@@ -255,6 +255,7 @@
     <ClInclude Include="Render\DXSwapChain.h" />
     <ClInclude Include="Render\FDamageFont.h" />
     <ClInclude Include="Render\FDamagePopup.h" />
+    <ClInclude Include="Render\FDebugDraw.h" />
     <ClInclude Include="Render\FHitFlash.h" />
     <ClInclude Include="Render\FScreenFade.h" />
     <ClInclude Include="Render\TextureLoader.h" />
@@ -269,7 +270,11 @@
     <ClInclude Include="Timer\FTimerManager.h" />
     <ClInclude Include="UGameInstance.h" />
     <ClInclude Include="UI\FSlateBrush.h" />
+    <ClInclude Include="UI\FUITextRenderer.h" />
     <ClInclude Include="UI\FUIViewport.h" />
+    <ClInclude Include="UI\TextTypes.h" />
+    <ClInclude Include="UI\UImageFont.h" />
+    <ClInclude Include="UI\UTextBlock.h" />
     <ClInclude Include="UI\WzUIBrushLoader.h" />
     <ClInclude Include="UI\UCanvasPanel.h" />
     <ClInclude Include="UI\UCanvasPanelSlot.h" />
@@ -350,6 +355,7 @@
     <ClCompile Include="Render\DXSwapChain.cpp" />
     <ClCompile Include="Render\FDamageFont.cpp" />
     <ClCompile Include="Render\FDamagePopup.cpp" />
+    <ClCompile Include="Render\FDebugDraw.cpp" />
     <ClCompile Include="Render\FHitFlash.cpp" />
     <ClCompile Include="Render\FScreenFade.cpp" />
     <ClCompile Include="Render\TextureLoader.cpp" />
@@ -362,7 +368,11 @@
     <ClCompile Include="Timer\FTimerManager.cpp" />
     <ClCompile Include="UGameInstance.cpp" />
     <ClCompile Include="UI\FSlateBrush.cpp" />
+    <ClCompile Include="UI\FUITextRenderer.cpp" />
     <ClCompile Include="UI\FUIViewport.cpp" />
+    <ClCompile Include="UI\TextTypes.cpp" />
+    <ClCompile Include="UI\UImageFont.cpp" />
+    <ClCompile Include="UI\UTextBlock.cpp" />
     <ClCompile Include="UI\WzUIBrushLoader.cpp" />
     <ClCompile Include="UI\UCanvasPanel.cpp" />
     <ClCompile Include="UI\UCanvasPanelSlot.cpp" />
