@@ -203,7 +203,7 @@ jobs:
           """
           DECISION_LABELS = {"APPROVE": "검토 통과", "REQUEST_CHANGES": "수정 필요", "HOLD": "판단 보류"}
           SEVERITY_LABELS = {"blocking": "수정 필수", "warning": "주의", "info": "참고"}
-          MODEL_LABELS = {"opus": "Claude Opus 5.5", "sol": "GPT 6.1 Sol"}
+          MODEL_LABELS = {"opus": "Claude Opus 5.5", "sol": "GPT 6.2 Sol"}
 
           def report_lines(reports):
               lines = []
@@ -296,7 +296,7 @@ jobs:
                   output_path = Path(folder) / "result.json"
                   schema_path.write_text(json.dumps(SCHEMA, ensure_ascii=False), encoding="utf-8")
                   args = [executable, "--ask-for-approval", "never", "exec",
-                          "--model", "gpt-6.1-sol", "--sandbox", "read-only",
+                          "--model", "gpt-6.2-sol", "--sandbox", "read-only",
                           "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check",
                           "--ephemeral", "--color", "never",
                           "-c", 'model_provider="openai"',
@@ -321,7 +321,7 @@ jobs:
                       elif any(word in detail for word in ("login", "log in", "401", "refresh", "authentication")):
                           hint = "codex login으로 다시 로그인하세요. GitHub에서는 OPENAI_API_KEY도 갱신하세요."
                       elif "model" in detail:
-                          hint = "계정의 GPT 6.1 Sol 이용 권한과 Codex CLI 버전을 확인하세요."
+                          hint = "계정의 GPT 6.2 Sol 이용 권한과 Codex CLI 버전을 확인하세요."
                       else:
                           hint = "구독 로그인, 이용 한도와 CLI 설치 상태를 확인하세요."
                       raise ReviewConfigurationError("Codex 구독 검토에 실패했습니다. " + hint)
@@ -480,7 +480,7 @@ jobs:
               label = DECISION_LABELS[decision]
               scope = f"검토 커밋 범위: `{base}..{sha}`" if IS_PUSH else f"PR #{NUMBER} 변경 내용"
               body = [f"## AI 교차 검토: {label}", f"검토 커밋: `{sha}`", scope,
-                      "Claude Opus 5.5 / GPT 6.1 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
+                      "Claude Opus 5.5 / GPT 6.2 Sol · 추론 수준: xhigh · 각각 2회" if reports else "검토 범위를 확보하지 못해 AI를 호출하지 않았습니다.",
                       "설정된 인증 방식: Claude Pro 구독 · GPT ChatGPT/Codex 구독",
                       "AI 검토 응답: 4/4회 수신" if reports else "AI 미호출 — 이번 실행에서는 서버 인증 유효성을 확인하지 않았습니다.",
                       "검토 기준: 버그·기능 회귀·동시성·객체 수명·최적화. 성능 제안은 코드 분석에 따른 것으로 실측 결과가 아닙니다.",
